@@ -1,0 +1,61 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+
+function __PLUGIN_SH_NOTICE__
+{
+	echo "   plugin-SH         Shell script; eol=CR+LF"
+}
+
+function __PLUGIN_SH_SAMPLE__
+{
+	echo "#plugin-SH:       --gitignore  version.sh"
+}
+
+function __PLUGIN_SH_GETVER__
+{
+	sed --binary --regexp-extended --silent \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}\s*=\s*\")(.*)(\".*)$/\\2/p"
+}
+
+function __PLUGIN_SH_CREATE__
+{
+	__STORE_LF__ "$1" <<-END_OF_TEXT
+		#!/bin/bash
+
+		${VERSION_LEADER}VERSION${VERSION_TRAILER}=0x${VERSION_HEX}
+		${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}="${VERSION_TEXT}"
+		${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}="${VERSION_DATE}"
+		${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}=${VERSION_SHORTDATE}
+		${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}="${VERSION_BRANCH}${VERSION_DIRTY}"
+		${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}="${VERSION_HOSTINFO//\"/\\\"}"
+		${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}="${VERSION_AUTHORSHIP//\"/\\\"}"
+		${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}="${VERSION_DECLARATION//\"/\\\"}"
+		# information below based on parent commit hash
+		${VERSION_LEADER}VERSION_SHA_ABBREV${VERSION_TRAILER}="${VERSION_SHA_ABBREV}"
+		${VERSION_LEADER}VERSION_SHA${VERSION_TRAILER}="${VERSION_SHA}"
+END_OF_TEXT
+	[ "Windows_NT" != "${OS}" ] && chmod a+x "$1"
+}
+
+function __PLUGIN_SH_MODIFY__
+{
+	sed --binary --regexp-extended \
+		-e "s/^(\s*${VERSION_LEADER}VERSION${VERSION_TRAILER}\s*=\s*)(0x[0-9A-Fa-f]+L?|[0-9]*)(.*)$/\\10x${VERSION_HEX}\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}\s*=\s*)(\".*\")(.*)$/\\1\"${VERSION_TEXT}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}\s*=\s*)(\".*\")(.*)$/\\1\"${VERSION_BRANCH}${VERSION_DIRTY}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}\s*=\s*)(\".*\"|[0-9][0-9: -/]+)(.*)$/\\1\"${VERSION_DATE}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}\s*=\s*\"?)([0-9]+)(\"?.*)$/\\1${VERSION_SHORTDATE}\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}\s*=\s*)(\".*\")(.*)$/\\1\"${VERSION_HOSTINFO//\"/\\\\\"}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}\s*=\s*)(\".*\")(.*)$/\\1\"${VERSION_AUTHORSHIP//\"/\\\\\"}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}\s*=\s*)(\".*\")(.*)$/\\1\"${VERSION_DECLARATION//\"/\\\\\"}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_SHA_ABBREV${VERSION_TRAILER}\s*=\s*)(\".*\"|[0-9a-fA-F+]+)(.*)$/\\1\"${VERSION_SHA_ABBREV}\"\\3/" \
+		-e "s/^(\s*${VERSION_LEADER}VERSION_SHA${VERSION_TRAILER}\s*=\s*)(\".*\"|[0-9a-fA-F+]+)(.*)$/\\1\"${VERSION_SHA}\"\\3/" | __STORE_LF__ "$1"
+}
+
+function __PLUGIN_SH_ATTRIB__
+{
+	echo "eol=lf"
+}

@@ -1,0 +1,18 @@
+#
+# text=true   text    allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
+# text=false  -text   disable CRLF translation
+# text=auto           try to detect type of file and apply CRLF translation to text files
+# <text is missing>   use core.autocrlf
+# eol=crlf            force CRLF translation (CRLF in worktree, LF in git)
+# eol=lf              replace CRLF with LF on worktree->repo, do nothing on repo->worktree
+# ---
+# crlf        text    old-style crlf option
+# -crlf       -text   ---------
+# crlf=input  eol=lf  ---------
+#
+.gitattributes  eol=lf
+.gitignore      eol=lf
+*.sh            eol=lf
+*.bat           eol=crlf
+*.md            text
+*               eol=lf

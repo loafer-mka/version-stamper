@@ -1,0 +1,105 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+
+function __PLUGIN_CS_NOTICE__
+{
+	echo "   plugin-CS         C# assembly properties file, normally it must be created by Studio; eol=CR+LF"
+}
+
+function __PLUGIN_CS_SAMPLE__
+{
+	echo "#plugin-CS:       --gitattributes  Properties/AssemblyInfo.cs"
+}
+
+function __PLUGIN_CS_GETVER__
+{
+	sed --binary --regexp-extended --silent \
+		-e  "s/^(\s*\[\s*assembly\s*:\s*AssemblyInformationalVersion\s*\(\s*\")([^ ]+)(.*\".*)$/\\2/p"
+}
+
+function __PLUGIN_CS_CREATE__
+{
+	echo "NOTE: Normally the assembly file \"$2\" must exist, it is generated and maintained by visual studio!" >&2
+	echo "      The title, product, description and some other attributes are empty, use Project Properties tab to set them." >&2
+	echo "      The Type library's GUID is set to random value." >&2
+	# 2019-12-23 23:40:55
+	# get day starting from 2000-01-01
+	# the AssemblyVersion and AssemblyFileVersion members must be 0..65535 (16-bit unsigned)
+	((cday=($(date --date="${VERSION_DATE}" "+%s")-946674000)/86400))
+	cguid="$(dd if=/dev/random bs=15 count=1 2>/dev/null \
+			|xxd -p \
+			|awk '{ srand($0); printf "%08X-%04X-4%03X-%04X-%06X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
+
+	# |awk 'match( $0, /\s*<ProjectGuid>{([1-9a-fA-F-]+)}<\/ProjectGuid>/, A ) { print A[1]; }'
+	__STORE_CRLF__ "$1" <<-END_OF_TEXT
+		using System.Reflection;
+		using System.Runtime.CompilerServices;
+		using System.Runtime.InteropServices;
+
+		// General Information about an assembly is controlled through the following
+		// set of attributes. Change these attribute values to modify the information
+		// associated with an assembly.
+		[assembly: AssemblyTitle("")]
+		[assembly: AssemblyDescription("")]
+		[assembly: AssemblyConfiguration("")]
+		[assembly: AssemblyCompany( "${VERSION_AUTHORSHIP//\"/\\\"}" )]
+		[assembly: AssemblyProduct("")]
+		[assembly: AssemblyCopyright( "${VERSION_DECLARATION//\"/\\\"}" )]
+		[assembly: AssemblyTrademark("")]
+		[assembly: AssemblyCulture("")]
+
+		// Setting ComVisible to false makes the types in this assembly not visible
+		// to COM components.  If you need to access a type in this assembly from
+		// COM, set the ComVisible attribute to true on that type.
+		[assembly: ComVisible(false)]
+
+		// The following GUID is for the ID of the typelib if this project is exposed to COM
+		[assembly: Guid("$cguid")]
+
+		// Version information for an assembly consists of the following four values:
+		//
+		//      Major Version
+		//      Minor Version
+		//      Build Number
+		//      Revision
+		//
+		// You can specify all the values or you can default the Build and Revision Numbers
+		// by using the '*' as shown below:
+		// [assembly: AssemblyVersion("1.0.*")]
+		[assembly: AssemblyVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.0")]
+		[assembly: AssemblyFileVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.${cday}")]
+		[assembly: AssemblyInformationalVersion( "${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\"} ${VERSION_SHA_ABBREV}" )]
+END_OF_TEXT
+}
+
+function __PLUGIN_CS_MODIFY__
+{
+	# 2019-12-23 23:40:55
+	# get day starting from 2000-01-01
+	((cday=($(date --date="${VERSION_DATE}" "+%s")-946674000)/86400))
+	# the AssemblyVersion and AssemblyFileVersion members must be 0..65535 (16-bit unsigned)
+	awk \
+		-v VN="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}" \
+		-v VR="${cday}" \
+		-v VT="${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\\\"} ${VERSION_SHA_ABBREV}" \
+		-v AU="${VERSION_AUTHORSHIP//\"/\\\\\"}" \
+		-v DC="${VERSION_DECLARATION//\"/\\\\\"}" \
+		'BEGIN{ iv=0; }
+		match( $0, /^(\s*\[\s*assembly\s*:\s*AssemblyCompany\s*\(\s*")(.+)(".*)$/, A ) { print A[1] AU A[3]; next; }
+		match( $0, /^(\s*\[\s*assembly\s*:\s*AssemblyCopyright\s*\(\s*")(.+)(".*)$/, A ) { print A[1] DC A[3]; next; }
+		match( $0, /^(\s*\[\s*assembly\s*:\s*AssemblyVersion\s*\(\s*")([0-9.*]*)(".*)$/, A ) { print A[1] VN ".0" A[3]; next; }
+		match( $0, /^(\s*\[\s*assembly\s*:\s*AssemblyFileVersion\s*\(\s*")([0-9.*]*)(".*)$/, A ) { print A[1] VN "." VR A[3]; next; }
+		match( $0, /^(\s*\[\s*assembly\s*:\s*AssemblyInformationalVersion\s*\(\s*")(.+)(".*)$/, A ) { print A[1] VT A[3]; iv=1; next; }
+		{ print; }
+		END{
+			if ( iv == 0 ) print "[assembly: AssemblyInformationalVersion( \"" VT "\" )]";
+		}' | __STORE_CRLF__ "$1"
+}
+
+function __PLUGIN_CS_ATTRIB__
+{
+	echo "eol=crlf"
+}

@@ -1,0 +1,53 @@
+#
+#   o p t i o n s
+#
+# verbose mode
+verbose:         false
+#
+# abbreviation length
+# if not set, assumes 8 characters
+#abbrev:          8
+#
+# leading text before version identifier; for example VERSION_TEXT becomes LEADER_VERSION_TEXT
+leader:          STAMPER_
+#
+# trailing text after version identifier; for example VERSION_TEXT becomes VERSION_TEXT_TRAILER
+#trailer:         _XXX
+#
+# the company/person title
+# if not set, then used:
+# a) under Windows - 'HKLM\Software\Microsoft\WIndows NT\registered organization';
+# b) under Linux - username;
+# c) otherwise 'Unknown Author' will be assumed.
+authorship:       Andrey Makarov
+#
+# the copyright/copyleft declaration
+# if not set, then used \"\${DEFAULT_DECL} (c) AUTHORSHIP YEAR\" were:
+#    DEFAULT_DECL is set by the 'STAMPER_DEFAULT_DECL' parameter of the file ./version-stamper-config;
+#    AUTHORSHIP is specified by the 'authorship:' parameter above;
+#    YEAR is the current year or year of initial commit.
+declaration: Copyright (c) Andrey Makarov 2022
+#
+# activate hooks
+# available hooks are:  pre-commit  post-commit  post-checkout  post-rewrite  post-merge
+# if not set, then will be used:  pre-commit  post-checkout  post-rewrite  post-merge  (all but post-commit)
+#hooks:           pre-commit post-commit post-checkout post-rewrite post-merge
+hooks:          version-stamper pre-commit post-checkout post-rewrite post-merge
+# note: if pre-commit is used then post-commit is useless
+#
+# the default command
+# it will be used if stamper is running without argumentss (if not set, --help is ssumed)
+default-cmd:     --list
+
+#   p l u g i n s
+#
+# path to version target file which will created or updated by given plugin
+plugin-BAT:      ./tests/samples/sample-BAT.bat
+plugin-C:        ./tests/samples/sample-C.h
+plugin-CS:       ./tests/samples/sample-AssemblyInfo.cs
+plugin-M:        ./tests/samples/sample-M.m
+plugin-MAKEFILE: ./tests/samples/sample-MAKEFILE.mk
+plugin-SH:       ./tests/samples/sample-SH.sh
+plugin-SH:       ./version-stamper-this
+
+#   t h e   e n d

@@ -858,12 +858,12 @@ Available options are:
 -g       --generate
               Execute all configured plugins. This only applies to configured plugins in ${STAMPER_CONFIG_NAME}.
          --git-hook GITHOOK
-              Use this option when ${STAMPER_SCRIPT_NAME} is running from git hook and pass.
-              hook name (without path and leading '/' and/or '.'.
-              This option turns on special processing during hook execution.
+              Use this option when version-stamper is running from git hook. It passes hook name (without path
+              and leading '/' and/or '.'). This option turns on special processing during hook execution.
+              Note: do not set it manually (except for test only), it must be used by corrresponding git hooks.
   
-commands
-              Commands to execute plugins: PLUGIN [plugin_options] FILE
+Available сommands are
+              PLUGIN [plugin_options] FILE
                   
 Available plugin_options are:
 -i       --gitignore
@@ -1436,8 +1436,8 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 
 			#   t h e   e n d
 		END_OF_TEXT
-		__VERBOSE__ ".   git --no-pager add --force -- \"${STAMPER_CONFIG_NAME}\""
-		git --no-pager add --force -- "${STAMPER_CONFIG_NAME}"
+		__VERBOSE__ ".   git --no-pager add --force -- \"${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}\""
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}"
 		# add config into .gitattributes
 		STAMPER_FILL_ATTRIB["${STAMPER_CONFIG_NAME}"]="text"
 	fi
@@ -1556,8 +1556,8 @@ if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
 					# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 					__VERBOSE__ "git --no-pager check-ignore -- \":/:${target}\""
 					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-						__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${target}\""
-						git --no-pager add --force -- "${target}"
+						__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${VERSION_ROOT_DIR}/${target}\""
+						git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
 					else
 						__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 					fi
@@ -1576,8 +1576,8 @@ if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
 				# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 				__VERBOSE__ "git --no-pager check-ignore -- \":/:${target}\""
 				if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-					__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${target}\""
-					git --no-pager add --force -- "${target}"
+					__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${VERSION_ROOT_DIR}/${target}\""
+					git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
 				else
 					__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 				fi
@@ -1594,10 +1594,10 @@ fi
 if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 	# list after generation, file data may be changed
 	echo "Folders:"
-	echo "   CURRENT_DIR=        ${VERSION_CURRENT_DIR}"
-	echo "   GIT_DIR=            ${VERSION_GIT_DIR}"
-	echo "   ROOT_DIR=           ${VERSION_ROOT_DIR}"
-	echo "   SUPERPROJECT_DIR=   ${VERSION_SUPER_DIR}"
+	echo "   VERSION_CURRENT_DIR= ${VERSION_CURRENT_DIR}"
+	echo "   VERSION_GIT_DIR=     ${VERSION_GIT_DIR}"
+	echo "   VERSION_ROOT_DIR=    ${VERSION_ROOT_DIR}"
+	echo "   VERSION_SUPER_DIR=   ${VERSION_SUPER_DIR}"
 	echo ""
 
 	declare -A temp_plugin
@@ -1716,9 +1716,9 @@ done)
 .gitmodules     eol=lf"
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitattributes\n.   git --no-pager add --force .gitattributes"
+		__VERBOSE__ ".   update .gitattributes\n.   git --no-pager add --force ${VERSION_ROOT_DIR}/.gitattributes"
 		__STORE_LF__ ".gitattributes" <<<"${text_b}"
-		git --no-pager add --force -- .gitattributes
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitattributes"
 	else
 		__VERBOSE__ ".   OK .gitattributes, use it as-is"
 	fi
@@ -1942,9 +1942,9 @@ $[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 	fi
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitignore\n.   git --no-pager add --force .gitignore"
+		__VERBOSE__ ".   update .gitignore\n.   git --no-pager add --force ${VERSION_ROOT_DIR}/.gitignore"
 		__STORE_LF__ ".gitignore" <<<"${text_b}"
-		git --no-pager add --force -- .gitignore
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitignore"
 	else
 		__VERBOSE__ ".   OK .gitignore, use it as-is"
 	fi

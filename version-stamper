@@ -2080,6 +2080,11 @@ function __update_hooks__
 				case "${hook}" in
 				pre-commit)
 					echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
 #
 # This hook script is called by 'git commit' with no arguments.
 # The hook should exit with non-zero status after issuing an
@@ -2096,6 +2101,11 @@ exit \$?
 					;;
 				post-checkout)
 					echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
 #
 # This hook is invoked when a 'git checkout' or 'git switch' is run after having updated the worktree.
 # It is also run after 'git clone' and 'git worktree add', unless the --no-checkout (-n) option is used.
@@ -2116,6 +2126,11 @@ fi
 					;;
 				post-commit)
 					echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
 #
 # This hook is invoked by git-commit. It takes no parameters, and is invoked
 # after a commit is made.
@@ -2143,6 +2158,11 @@ fi
 					;;
 				post-rewrite)
 					echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
 #
 # This hook is invoked by commands that rewrite commits (git-commit when called
 # with --amend and git-rebase; however, full-history (re)writing tools like
@@ -2170,6 +2190,11 @@ fi
 					;;
 				post-merge)
 					echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       }
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
 #
 # This hook is invoked by git-merge, which happens when a git pull is done on a
 # local repository. The hook takes a single parameter, a status flag specifying

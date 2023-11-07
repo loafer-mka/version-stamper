@@ -1,4 +1,10 @@
 ﻿
+# License
+
+This Source Code Form is subject to the terms of the Mozilla
+Public License, v. 2.0. If a copy of the MPL was not distributed
+with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 # About
 
 Version-stamper is a simple script for generating text files in different
@@ -117,16 +123,16 @@ Available options:
 
 - `-V` or `--version`<br/>
   Print the version of version-stamper itself and exit.
-  
+
 - `-h` or `/?` or `--help` or `/help`<br/>
   Print this help and exit.
 
 - `-v` or `--verbose`<br/>
   Print a lot of debugging information onto stderr.
-  
+
 - `-q` or `--quiet`<br/>
   Turn off verbose mode.
-  
+
 - `-cd PATH` or `--directory PATH`<br/>
   Specify the directory in which version-stamper should be executed.
   This can be any subdirectory of the project, the utility will determine
@@ -134,12 +140,12 @@ Available options:
   folder belongs (or the current one if `--directory` was not used).
   Note: version-stamper also tries to detect the fact that the folder
   being used belongs not just to the project, but to one of its submodules.
-  
+
 - `-l` or `--list`<br/>
   List available plugins and display their configuration - generated files
   with version stamps and inclusion of these files in `.gitignore` and
   `.gitattributes`.
-  
+
 ```
   your_project> ../version-stamper/version-stamper -l
   Folders:
@@ -163,17 +169,17 @@ Available options:
   this file in the file system (size and date) and information about this
   file in the git repository - date and hash of the commit. Some information
   may be missing.
-  
+
   `VERSION_CURRENT_DIR` is the current directory in which version-stamper
   is executed. `VERSION_ROOT_DIR` is the root directory of the project's
   working tree (git worktree), `VERSION_GIT_DIR` is the `.git` folder of
   the repository, and `VERSION_SUPER_DIR` is an empty string in normal
   cases or the path to the root of the super project's working tree if
   this project is included as a submodule .
-  
+
 - `-p` or `--print`<br/>
   Print parsed information about current version.
-  
+
 ```
   your_project> ../version-stamper/version-stamper -p
   A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
@@ -210,25 +216,25 @@ Available options:
   Computation cannot guarantee the correctness of the calculation or
   selection if there may be more than one matching branch for a given
   commit.
-  
+
   `VERSION_DIRTY` - flag of the changed working tree (not taking into
   account changes in version stamps). Indicated by the `+` symbol if there
   are changes unsaved in the repository. In this case, the `+` character
   is also appended to the branch name in `VERSION_TEXT`.
-  
+
   `VERSION_DATE` and `VERSION_SHORTDATE` - contain the current date (may
   differ from the commit date; especially for a modified working tree).
-  
+
   `VERSION_SHA` and `VERSION_SHA_ABBREV` - contain information about the
   current commit and its ancestors (in this case, the prefix `p:` is
   added before the hash). The ancestor hash is used in the `pre-commit`
   hook because the hash of the new commit is not yet known at this time.
-  
+
   `VERSION_AUTHORSHIP` and `VERSION_DECLARATION` - taken from the
   `.version-stamper` configuration file, when it is created, they are
   initially assigned based on the username and the standard configuration
   in the `version-stamper-config` parameter file.
-  
+
   `VERSION_LEADER` and `VERSION_TRAILER` - are taken from the
   `.version-stamper` configuration file, when it is created, they
   initially remain either empty lines, and in the case of a submodule,
@@ -236,7 +242,7 @@ Available options:
   prefixes and suffixes of symbol names in version stamps (they determine
   the modification, for example, of the general `VERSION_TEXT` into a
   specific `YOURPROJECT_VERSION_TEXT`).
-  
+
   The `--print` command always displays notations without a prefix and
   suffix for two reasons: firstly, it simplifies parsing in some scripts
   and, secondly, the prefix and suffix to the names are added by plugins;
@@ -247,7 +253,7 @@ Available options:
   `VERSION_SUBMOD_NAME` and `VERSION_SUBMOD_PATH` match empty strings
   unless stamps are created for a project submodule. In this case, the
   `VERSION_SUPER_DIR` parameter also becomes non-empty.
-  
+
 - `-c` or `--config`<br/>
   Create a .version-stamper configuration file if it is missing and
   install the standard set of git hooks. The list of installed hooks is
@@ -266,7 +272,7 @@ Available options:
   on special processing during hook execution.
   Note: do not set it manually (except for test only), it must be used
   by corrresponding git hooks.
-  
+
 ## Commands of version-stamper
 
 Along with the parameters listed above, the command line may contain
@@ -286,13 +292,13 @@ Several commands can be specified on the command line to create version's
 stamps; it is possible to create several stamps of the same plugin with
 different file names (however, their content may be identical, so it’s
 dubious)
-                  
+
 There are only two valid parameters for the `plugin_options` plugin, and
 they are mutually exclusive:
 
 - `-i` or `--gitignore`<br/>
    When creating a stamp, include it in `.gitignore` as well
-  
+
 - `-a` or `--gitattributes`<br/>
    Add stamp parameters (usually the type of line ending used is eol=lf
    or eol=crlf) to the `.gitattributes` file.
@@ -356,7 +362,7 @@ by the first non-whitespace character, starting with the value of the
 parameter and continuing until the end of the line. If this name is a
 file name and it contains spaces, then there is no need to put it in
 quotes or escape it in any way.
-  
+
 Valid parameters:
 
 1. `verbose` - talkative mode. true corresponds to the `--verbose` option
@@ -422,17 +428,27 @@ Valid parameters:
 If measures are taken to ensure that `version-stamper --generate` is
 executed every time during the build process, then keeping the stamps
 more or less up to date is not required, but may still be recommended.
-  
+
 If you do not need to install hooks, then leave `hooks` as an empty
 line (commented out corresponds to the standard set). It makes sense to
 change the proposed set in cases where the project requires the installation
 of its own hooks and they begin to conflict with version-stamper's hooks.
 Reducing the set of resellers will simply reduce the number of cases in
 which stamps will be automatically rebuilt.
-  
+
 Specifying `pre-commit` and `post-commit` at the same time is redundant,
 but not critical.
-  
+
+Hooks are updated when the version of version-stamper itself is updated
+and when the path in which it should be executed changes. Calling
+version-stamper from a hook is done in the same way that was used when
+executing the version-stamper command, leading to updating hooks. If
+version-stamper was launched using an explicitly specified path, then the
+same path will be used in the hook. This makes it easy to include
+version-stamper in your project - you simply place it somewhere in your
+project tree and call it on a relative path, then it adapts the hooks to
+run version-stamper from that location.
+
 Some properties of hooks:
 
 - `pre-commit`
@@ -508,5 +524,182 @@ Some properties of hooks:
    they are tracked by the repository, then the working tree becomes
    changed (which looks strange when there are still changes after the
    commit and you can’t get rid of it).
-   
+
+Below are some typical execution sequences for git hooks. These sequences
+should not be considered as a strict guide - they were obtained experimentally
+and in reality can be modified depending on the actual situation (an empty
+repository with no commits at all, a repository with history and a clean
+working tree, a repository with local or prepared changes, etc.).
+
+*Notes:* the word `old` denotes the "topmost" commit in history,
+`new` - the new commit created by this operation. Sometimes
+`new temp` is used - which denotes a new intermediate commit created to
+apply changes sequentially. The term `distance` should be understood as
+some kind of "commit number" or build number returned by the `git describe`
+command. Can be thought of as a conditional "distance" from the current
+commit to some commit in the past, perhaps to the initial commit.
+
+**Regular** commit:
+
+```
+pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit
+<---------------- o l d   c o m m i t ----------------><-- n e w -->
+                                                       (distance increased)
+```
+                                                           
+**Amend** commit:
+
+```
+pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit  ->  post-rewrite amend
+<---------------- o l d   c o m m i t ----------------><------- n e w   c o m m i t ------->
+                                                        (distance not changed)
+```
+
+**Squash** commit (**squash**):<br/>
+Merging multiple commits is done in a loop where each new commit that is
+merged is applied to an intermediate commit, thus summing up all the changes
+in that intermediate commit. The final state of the intermediate commit
+matches the desired result. However, if a failure occurs during such a
+merge (which could be caused by an eavesdropper), then the entire sequence
+can be rejected.
+
+```
+pre-rebase  ->  post-checkout  ->  (  prepare-commit-msg  ->  post-commit  ->  post-rewrite amend  ) ->  post-rewrite rebase
+<-- o l d --><-- f i r s t -->        <----- p r e v -----><--- n e w   t e m p   c o m m i t ---><--- l a s t   c o m m i t --->
+            (distance reduced here)  -------------------------------------------------------->    (distance remains reduced)
+            (HEAD detached)                               (detached HEAD is promoted to temp commit)     (HEAD attached to branch)
+                                    (ORIG_HEAD:old_sha)
+                                    (AUTO_MERGE:other_sha)
+```
+
+The loop running for each commit in the merge calls the hooks
+( prepare-commit-msg -> post-commit -> post-rewrite amend ). During this
+cycle, ORIG_HEAD does not change. MERGE_MSG contains the text of the
+message of the commit being added, and COMMIT_EDITMSG accumulates all
+messages.
+
+In the last iteration of the loop, the accumulated COMMIT_EDITMSG is
+copied to SQUASH_MSG during prepare-commit-msg, after which the
+COMMIT_EDITMSG is recreated from the SQUASH_MSG and additional text.
+A REBASE_HEAD corresponding to the ORIG_HEAD is also added at the
+beginning of the entire operation.
+
+By post-commit time, the COMMIT_MSG file has been copied into the new
+commit message, and SQUASH_MSG and AUTO_MERGE have been removed.
+
+**Merge** commit; only partially tested, too many strategies and
+methods of merging, incl. merging more than two branches at once
+(octopus).
+
+```
+prepare-commit-msg  ->  commit-msg  ->  post-merge 0
+<------- o l d   c o m m i t --------><--- n e w --->
+                                      (distance increased by count of new commits on all ways)
+(MERGE_HEAD - one or few SHAs to merge, one per line)
+(ORIG_HEAD)
+(MERGE_MODE - this is not strategy name, this is strategy options)
+(MERGE_MSG)
+```
+
 # Plugin internals
+
+To create your own plugin, just create a file with a name corresponding
+to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
+the plugin and place this file next to `version-stamper`. The plugin must
+contain several functions; The easiest way is to take any existing plugin
+as a basis and make the necessary changes to it.
+
+**`__PLUGIN_CS_NOTICE__`**<br/>
+This function prints a short description of this plugin to stdout. This
+description is used by the `version-stamper --help` command when generating
+a list of supported plugins.
+
+**`__PLUGIN_CS_SAMPLE__`**<br/>
+This function prints a one-line example of using the plugin to stdout.
+This example is included in the `.version-stamper` configuration file
+created by the `version-stamper --config` command. Normally, the output
+line should begin with a comment character `#`, since the created
+configuration file initially does not contain configured plugins - this
+must be done by the project author. However, in special cases it may be
+different.
+
+**`__PLUGIN_CS_ATTRIB__`**<br/>
+This function prints to stdout a set of parameters applied to the
+generated version stamp in `.gitattributes`.
+
+*Note:* Updates to the `.gitattributes` and `.gitignore` files only occur
+when a new version stamp file is created.
+
+**`__PLUGIN_CS_GETVER__`**<br/>
+This function receives the text of the existing stamp on stdin and must
+output to stdout the text with the version designation corresponding to
+the contents of `VERSION_TEXT` (i.e. a string like "v1.2-333.branchname").
+This text is used to compare the existing version of the stamp with the
+one being created. If the version designation text is the same and the
+working directory is “clean”, then the stamp file is not changed.
+
+Typically this function can be implemented using simple sed or awk that
+recognizes the desired pattern and returns the result.
+
+*Note:* The existing template file is read before this function is
+executed and line termination characters are converted to single
+LF (Unix-style), this allows tools like grep, awk, sed, etc. to be used
+without worrying about line breaks.
+
+**`__PLUGIN_CS_CREATE__`**<br/>
+This function is designed to create a new stamp file and is called when
+the target file does not exist. The function receives an argument, which
+is the name of the file to be created with a version stamp, into which
+the required text should be written. When writing a stamp, you must use
+the correct line ending characters (LF or CR+LF), for which it is
+convenient to use one of the three available functions:
+
+- `__STORE_LF__` - saves a file with single LFs
+
+- `__STORE_CRLF__` - saves a file with CR+LF
+
+- `__STORE_NATIVE_EOL__` - saves the file with LF delimiters on a unix-like
+  system and CR+LF on Windows.
+
+The text of the saved file is supplied to stdin, and the argument of the
+function contains the name of the saved file. A typical implementation
+pattern for such a function:
+
+```
+function __PLUGIN_CS_CREATE__
+{
+     __STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
+        version stamp text here
+END_OF_TEXT
+}
+```
+
+**`__PLUGIN_CS_MODIFY__`**<br/>
+This function is used in cases where a stamp file already exists and
+changes need to be made to it. The existing stamp is fed to stdin (with
+LF line termination characters), and the function's only argument is the
+name of the stamp file to write to. Like `__PLUGIN_CS_CREATE__` the function
+must write a new stamp with the correct line ending characters.
+
+The recommended practice is to find the required substrings in the original
+stamp and replace them to match the new stamp. So in a typical case this
+might be a call to sed or awk with a set of patterns to replace the old
+version information with new ones.
+
+It is not recommended to recreate the file again - the general idea is
+that the stamp can be shortened compared to the one automatically created
+or, conversely, supplemented with something new. That is why it is
+recommended to simply replace the found values in the existing stamp,
+leaving everything else unchanged.
+
+In a particular case, the project authors may remove some unused part of
+the version information from the stamp file (for example, commit hashes,
+which sometimes correspond to the current commit and sometimes to its
+ancestors). The behavior of the plugin in this case is at the discretion
+of the plugin developer - the missing information can be ignored, or it
+can be supplemented so that it is always present in this stamp.
+
+Among the existing plugins, most ignore the absence of deleted information
+(only what is found is updated), with the exception of a single plugin for
+C# that ensures that the `AssemblyInformationalVersion` parameter is
+present in the stamp.

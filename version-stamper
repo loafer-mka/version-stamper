@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
@@ -67,11 +67,13 @@ else
 fi
 
 #
-# NOTE: the argument --directory changes current folder and results of 'git rev-parse --is-bare-repo', 'git rev-parse --show-toplevel' etc.
-# so check for repo type, folders, read configuration _after_ preliminary command line parsing;
-# also: verbosity level - if given by arg - can be set here, or later - defaulkt value from configuration file.
-# So split arg parsing in three points: a) preliminary now; b) rest of options after loading configuration and
-# c) plugin commands after getting all properties and version stamping
+# NOTE: the argument --directory changes current folder and results of
+# 'git rev-parse --is-bare-repo', 'git rev-parse --show-toplevel' also
+# may be changed. So check for repo type, folders, read configuration
+# _after_ preliminary command line parsing;
+# Split arg parsing in two passes: a) preliminary now; b) rest of options
+# and plugin commands after loading configuration and getting all properties
+# and version data.
 #
 
 #
@@ -320,7 +322,7 @@ unset VERSION_SUBMOD_OK
 function __normalize_filename__
 {
 	local    local_temp_filename
-	
+
 	local_temp_filename="${2//\\//}"
 	local_temp_filename="${local_temp_filename##./}"
 	local_temp_filename="${local_temp_filename##./}"
@@ -861,10 +863,10 @@ Available options are:
               Use this option when version-stamper is running from git hook. It passes hook name (without path
               and leading '/' and/or '.'). This option turns on special processing during hook execution.
               Note: do not set it manually (except for test only), it must be used by corrresponding git hooks.
-  
+
 Available сommands are
               PLUGIN [plugin_options] FILE
-                  
+
 Available plugin_options are:
 -i       --gitignore
               Add generated file (on creation) into .gitignore file
@@ -1151,71 +1153,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 fi
 
 #
-# take in account run-time situation - running from command line on dirty repo, running from hook etc.
-#
-# normal commit
-#    pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit
-#    <---------------- o l d   c o m m i t ----------------><-- n e w -->
-#                                                           (distance increased)
-# amend commit
-#    pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit  ->  post-rewrite amend
-#    <---------------- o l d   c o m m i t ----------------><------- n e w   c o m m i t ------->
-#                                                            (distance not changed)
-# squash commit
-#    pre-rebase  ->  post-checkout  ->  (  prepare-commit-msg  ->  post-commit  ->  post-rewrite amend  ) ->  post-rewrite rebase
-#    <-- o l d --><-- f i r s t -->        <----- p r e v -----><--- n e w   t e m p   c o m m i t ---><--- l a s t   c o m m i t --->
-#                (distance reduced here)  -------------------------------------------------------->  (distance remains reduced)
-#                (HEAD detached)                               (detached HEAD is promoted to temp commit)     (HEAD attached to branch)
-#                                        (ORIG_HEAD:old_sha)
-#                                        (AUTO_MERGE:other_sha)
-#
-# notes: old - commit on the top, 'latest'
-#        a) when few commits squashed then foreach commit performed loop ( prepare-commit-msg  ->  post-commit  ->  post-rewrite amend )
-#        b) during loop ORIG_HEAD remains unchanged at latest commit; step-by-step created new commit from previouse.
-#        c) MERGE_MSG contains message of added commit; COMMIT_EDITMSG accumulates all of them.
-#        d) on the last iteration
-#           - on prepare-commit-msg: the accumulated COMMIT_EDITMSG is copied into SQUASH_MSG,
-#             then COMMIT_EDITMSG is build from SQUASH_MSG and some extra text.
-#             added REBASE_HEAD equal to ORIG_HEAD (old latest commit sha)
-#           - on post-commit COMMIT_EDITMSG is set to new message; removed SQUASH_MSG and removed AUTO_MERGE
-#
-# merge -s ours second   <- ort? will be used
-# merge second master    <- octopus must be used
-#    prepare-commit-msg  ->  commit-msg  ->  post-merge 0
-#    <------- o l d   c o m m i t --------><--- n e w --->
-#                                          (distance increased by count of new commits on all ways)
-#    (MERGE_HEAD - one or few SHAs to merge, one per line)
-#    (ORIG_HEAD)
-#    (MERGE_MODE - this is not and strategy, it is strategy options)
-#    (MERGE_MSG)
-#
-# --- s o m e   r e s u l t s ---
-# hooks below are subject to catch by this utility:
-# pre-commit
-#    + changed (if tracked) version files may be included into commit (with actual version information)
-#    - SHA contains _parent_ commit if normal commit; SHA contains _replaced_ (i.e. wrong) commit if amend -- it will be replaced with grandparent, but ... in any case sha is parent sha, not an actual sha (use 'p' prefix)
-#    - detection of type of commit is (very) difficult and tricky :(
-# post-commit
-#    - version files will be updated after creation of commit, so working tree becomes dirty after commit, this is not conventional behavior
-#    + SHA is actual sha
-#    - can be invoked few times per one git command ('post-rewrite amend' on squash)
-#    + environment variable GIT_REFLOG_ACTION may be used to distinct simple commit (git commit) from special (rebase, merge etc) comits
-# post-checkout
-#    + SHA is actual
-#    - version files need to be rebuilded because some of them may not be under git control
-#    - post-checkout damages rebase operation: changing tracked version files during squash will damage and interrupt rebase operation
-#    + environment variable GIT_REFLOG_ACTION may be used to distinct simple checkout (git checkout) from special (rebase, merge etc) checkout
-# post-rewrite
-#    - can be invoked few times per one git command ('post-rewrite amend' on squash)
-#    + argument 'amend' or 'rebase' is helpfull here
-#    - version files will be updated after creation of commit, so working tree becomes dirty after commit, this is not conventional behavior
-#    + SHA is actual sha
-# post-merge
-#    - version files will be updated after merge, so working tree becomes dirty after commit, this is not conventional behavior
-#
-
-#
-# note: VERSION_SHA may be changed during reflection on situation.
+# note: VERSION_SHA may be changed depnded on situation (executing hook).
 #
 VERSION_DIRTY=""
 case "${STAMPER_EXECUTING_HOOK}" in
@@ -1534,7 +1472,7 @@ if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
 
 		__VERBOSE__ "\n+ Use \"${plugin}\" with \"${target}\"; try to read it"
 		indata="$(__READ_LF__ "${target}")"
-		
+
 		if [ -n "${indata}" ]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
 			existing_version="$(__PLUGIN_${plugin}_GETVER__ <<<"${indata}")"
@@ -1639,7 +1577,7 @@ if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 					else
 						info="fs: len=$(ls -l --time-style="+%Y-%m-%d %H:%M:%S" "${VERSION_ROOT_DIR}/${target}" |cut -d " " -f 5-7)"
 					fi
-					
+
 					git_info="$(git --no-pager log -n 1 --date="format:%Y-%m-%d %H:%M:%S" --format="%ad @%h" -- "${target}" 2>/dev/null)"
 					[ -n "${git_info}" ] && info="git: ${git_info}, ${info}"
 					[ "true" == "${temp_ignore[${target}]}" ] && info=".gitignore, ${info}"
@@ -2013,7 +1951,7 @@ function __update_hooks__
 	# all_hooks contains all existing hooks AND all our hooks for given stamper which may be missing
 	for hook in "${!all_hooks[@]}"; do
 		hook_path="${all_hooks[$hook]}"
-		
+
 		# try to get suite version
 		if [ -f "${hook_path}" ]; then
 			# today 'stamper-'
@@ -2081,7 +2019,7 @@ function __update_hooks__
 				pre-commit)
 					echo "#!/bin/sh
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
@@ -2102,7 +2040,7 @@ exit \$?
 				post-checkout)
 					echo "#!/bin/sh
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
@@ -2127,7 +2065,7 @@ fi
 				post-commit)
 					echo "#!/bin/sh
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
@@ -2159,7 +2097,7 @@ fi
 				post-rewrite)
 					echo "#!/bin/sh
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
@@ -2191,7 +2129,7 @@ fi
 				post-merge)
 					echo "#!/bin/sh
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+

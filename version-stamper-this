@@ -1,17 +1,17 @@
 # +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       }
+# | This Source Code Form is subject to the terms of the Mozilla       |
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
 
-STAMPER_VERSION=0x00000003
-STAMPER_VERSION_TEXT="v0.0-3.master"
-STAMPER_VERSION_DATE="2023-11-07 01:36:39"
-STAMPER_VERSION_SHORTDATE=2311070136
+STAMPER_VERSION=0x00000004
+STAMPER_VERSION_TEXT="v0.0-4.master"
+STAMPER_VERSION_DATE="2023-11-08 00:56:23"
+STAMPER_VERSION_SHORTDATE=2311080056
 STAMPER_VERSION_BRANCH="master"
 STAMPER_VERSION_HOSTINFO="andrey@makarov.local openSUSE Leap 15.5"
 STAMPER_VERSION_AUTHORSHIP="Andrey Makarov"
 STAMPER_VERSION_DECLARATION="Copyright (c) Andrey Makarov 2022"
 # information below based on parent commit hash
-STAMPER_VERSION_SHA_ABBREV="p:5bd4cc04"
-STAMPER_VERSION_SHA="p:5bd4cc0490add96a61f779c6fbd3e2530dbd152d"
+STAMPER_VERSION_SHA_ABBREV="p:fd23add1"
+STAMPER_VERSION_SHA="p:fd23add18d5bbee103a6655ef8c400a52dbaf5a7"

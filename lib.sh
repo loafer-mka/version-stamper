@@ -35,11 +35,11 @@ function LEN
 }
 function LOAD_A
 {
-	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*(\w.*)?$/A["\1"]="\2"/; s/^(A\[\"VERSION_.*)$/\1/p'
+	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*(\w.*)?$/A["\1"]="\2"/; s/^(A\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L; done
 }
 function LOAD_B
 {
-	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*(\w.*)?$/B["\1"]="\2"/; s/^(B\[\"VERSION_.*)$/\1/p'
+	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*(\w.*)?$/B["\1"]="\2"/; s/^(B\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L; done
 }
 function PRINT_A_B
 {

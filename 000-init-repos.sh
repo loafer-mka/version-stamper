@@ -8,6 +8,8 @@ pushd "$(dirname "$0")"
 [ -d "./repos/bare1.git" ] && rm -rf "./repos/bare1.git"
 [ -d "./repos/contrib" ] && rm -rf "./repos/contrib"
 [ -d "./repos/fresh" ] && rm -rf "./repos/fresh"
+[ -d "./repos/detach-f" ] && rm -rf "./repos/detach-f"
+[ -d "./repos/detach-p" ] && rm -rf "./repos/detach-p"
 [ -d "./repos/clone-a" ] && rm -rf "./repos/clone-a"
 [ -d "./repos/clone-e" ] && rm -rf "./repos/clone-e"
 [ -d "./repos/clone-m" ] && rm -rf "./repos/clone-m"
@@ -147,5 +149,37 @@ git --no-pager clone --branch SUBMOD ./repos/bare0.git ./repos/clone-e
 
 echo "> git --no-pager clone --branch SUBMOD --recurse-submodules ./repos/bare0.git ./repos/clone-m"
 git --no-pager clone --branch SUBMOD --recurse-submodules ./repos/bare0.git ./repos/clone-m
+
+# detached head above branch label (in future)
+# extra non-version tags were added
+git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-f
+pushd ./repos/detach-f
+git checkout $(git --no-pager rev-parse F)
+for n in 1 2 3 4 5 ; do
+	echo "Detach ${n}" >>README.txt
+	git commit -am "Detach ${n}"
+	sleep 1s
+done
+git tag tag-2 HEAD^^
+git tag tag-1 F^^
+git tag x1.2 F^^^^^^^^
+popd
+
+# detached head below branch label (in past)
+# extra non-version tags were added
+git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-p
+pushd ./repos/detach-p
+git checkout $(git --no-pager rev-parse F)
+for n in 1 2 3 4 5 ; do
+	echo "Detach ${n}" >>README.txt
+	git commit -am "Detach ${n}"
+	sleep 1s
+done
+git tag tag-3 HEAD
+git tag tag-2 HEAD^^
+git tag tag-1 F^^^^
+git checkout $(git --no-pager rev-parse F^^)
+git tag x1.2 HEAD^^^^
+popd
 
 popd

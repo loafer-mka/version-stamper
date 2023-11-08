@@ -1106,7 +1106,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 		fi
 		if [ -z "${VERSION_BRANCH}" ]; then
 			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" ${VERSION_SHA} 2>/dev/null)"
-			VERSION_BRANCH="${VERSION_BRANCH=%~[0-9]*}"
+			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
 			__VERBOSE__ "Is there local or remote head matching our head?\ngit --no-pager name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
 			if [ "undefined" == "${VERSION_BRANCH}" ]; then
 				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)

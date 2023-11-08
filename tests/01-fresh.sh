@@ -12,23 +12,32 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
 
 CLEAN_HOOKS "./fresh"
 
+# check for fresh repo
 pushd fresh >/dev/null 2>&1
-../../../version-stamper -p | LOAD_A | while read L ; do eval $L; done
+../../../version-stamper -p | LOAD_A
 popd >/dev/null 2>&1
-../../version-stamper -p -cd fresh | LOAD_B | while read L ; do eval $L; done
+# check for -cd option and fresh repo
+../../version-stamper -p -cd fresh | LOAD_B
 
 # PRINT_A_B
 
 [ \
-	-n "${A[VERSION_TEXT]}" -a -n "${B[VERSION_TEXT]}" -a "${A[VERSION_TEXT]}" == "${B[VERSION_TEXT]}" \
+	   "v0.0-0.master" == "${A[VERSION_TEXT]}" \
+	-a "v0.0-0.master" == "${B[VERSION_TEXT]}" \
+	-a "v" == "${A[VERSION_PREFIX]}" -a "v" == "${B[VERSION_PREFIX]}" \
+	-a "0" == "${A[VERSION_MAJOR]}" -a "0" == "${B[VERSION_MAJOR]}" \
+	-a "0" == "${A[VERSION_MINOR]}" -a "0" == "${B[VERSION_MINOR]}" \
+	-a "0" == "${A[VERSION_BUILD]}" -a "0" == "${B[VERSION_BUILD]}" \
 	-a "0000000000000000000000000000000000000000" == "${A[VERSION_SHA]}" \
 	-a "0000000000000000000000000000000000000000" == "${B[VERSION_SHA]}" \
 	-a "00000000" == "${A[VERSION_HEX]}" -a "00000000" == "${B[VERSION_HEX]}" \
+	-a "" == "${A[VERSION_SUBMOD_NAME]}" -a "" == "${B[VERSION_SUBMOD_NAME]}" \
+	-a "" == "${A[VERSION_SUBMOD_PATH]}" -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
 [ "true" == "$(HOOKS_EXIST "./fresh")" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
 
-echo "[ OK ]  $0"
+echo "[ OK ]  $0     empty repository; hooks were not set; -cd option ok"
 
 CLEAN_HOOKS "./fresh"
 

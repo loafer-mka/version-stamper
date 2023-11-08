@@ -720,6 +720,7 @@ version-stamper в свой проект ничего лишнего сверх 
 
 ```
 ./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> git rm -r --cached tests/
 ./tools/stamper> ./tests/unit-tests.sh
 ```
 

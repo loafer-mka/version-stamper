@@ -721,6 +721,7 @@ this will not affect the state of the working tree in any way):
 
 ```
 ./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> git rm -r --cached tests/
 ./tools/stamper> ./tests/unit-tests.sh
 ```
 

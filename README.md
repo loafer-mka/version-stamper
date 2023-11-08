@@ -147,7 +147,7 @@ Available options:
   `.gitattributes`.
 
 ```
-  your_project> ../version-stamper/version-stamper -l
+  your_project> ./tools/stamper/version-stamper -l
   Folders:
      CURRENT_DIR=        /home/your_name/your_project
      GIT_DIR=            /home/your_name/your_project/.git
@@ -181,7 +181,7 @@ Available options:
   Print parsed information about current version.
 
 ```
-  your_project> ../version-stamper/version-stamper -p
+  your_project> ./tools/stamper/version-stamper -p
   A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
      VERSION_HEX=         0102014D
      VERSION_TEXT=        v1.2-333.branchname
@@ -285,7 +285,7 @@ line.
 The command to execute the plugin looks like:
 
 ```
-    your_project> ../version-stamper/version-stamper ... PLUGIN [plugin_options] FILE
+    your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 ```
 
 Several commands can be specified on the command line to create version's
@@ -328,7 +328,7 @@ be saved from update to update.
 Example:
 
 ```
-    your_project> ../version-stamper/version-stamper ... MAKEFILE -i build/version.mk
+    your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
 ```
 
 Stamps created by command line are not automatically updated; if you use
@@ -703,3 +703,44 @@ Among the existing plugins, most ignore the absence of deleted information
 (only what is found is updated), with the exception of a single plugin for
 C# that ensures that the `AssemblyInformationalVersion` parameter is
 present in the stamp.
+
+# Unit-Tests
+
+The test system is being developed and updated in a separate branch
+`unit-tests`. The general idea is to keep everything related to tests in
+the `./tests/` folder, which is excluded from the repository (see
+`.gitignore`) in the main development branches. Thus, by simply cloning
+version-stamper into your project, nothing extra beyond the required main
+version-stamper working code will be cloned.
+
+However, if debugging is required, or you will develop your own plugins,
+then it makes sense to connect unit tests to the current branch. In the
+simplest case, it is enough to simply extract all unit test files from
+their branch to the current one (i.e. they are in an ignored folder,
+this will not affect the state of the working tree in any way):
+
+```
+./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> ./tests/unit-tests.sh
+```
+
+And in cases where you also need to make changes to the test system, it
+is advisable to merge your working branch (or `master`) with the
+`unit-tests` branch and perform test corrections/additions directly
+in the `unit-tests` branch:
+
+```
+./tools/stamper> git checkout unit-tests
+./tools/stamper> git merge master
+./tools/stamper> ...
+```
+
+In the `unit-tests` branch, the `.gitignore` file has been changed so
+that files from the `./tests/` folder are included in the project, and
+the `./tests/samples/` and `./tests/repos/` folders containing examples
+and test repositories.
+
+However, changes to unit tests can be made without merging branches, if
+you first test them in the working branch (without including them in the
+repository), and at the end simply switch to the `unit-tests` branch and
+add the already corrected unit test files there one operation.

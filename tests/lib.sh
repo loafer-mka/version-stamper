@@ -59,7 +59,7 @@ function CLEAN_HOOKS
 		prepare-commit-msg commit-msg applypatch-msg pre-applypatch post-applypatch pre-rebase pre-push pre-auto-gc \
 		pre-receive update post-receive fsmonitor-watchman post-update ; \
 	do
-		[ -f "$1/.git/hooks/$f" ] && rm -f "$1/.git/hooks/$f"
+		[ -f "$1/hooks/$f" ] && rm -f "$1/hooks/$f"
 	done
 }
 function HOOKS_EXIST
@@ -73,7 +73,7 @@ function HOOKS_EXIST
 			pre-receive update post-receive fsmonitor-watchman post-update
 	else
 		for h in "$@" ; do
-			if [ -f "${path}/.git/hooks/${h}" ]; then
+			if [ -f "${path}/hooks/${h}" ]; then
 				echo "true"
 				return
 			fi

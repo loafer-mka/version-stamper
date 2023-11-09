@@ -13,14 +13,16 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
 
 CLEAN_HOOKS fresh/.git
 
-# check for fresh repo
-pushd fresh >/dev/null 2>&1
-../../../version-stamper -p | LOAD_A
-popd >/dev/null 2>&1
-# check for -cd option and fresh repo
+../../version-stamper -p -cd fresh | LOAD_A
+sleep 2s
 ../../version-stamper -p -cd fresh | LOAD_B
+((D=B["VERSION_UNIXTIME"]-A["VERSION_UNIXTIME"]))
 
 # PRINT_A_B
+# echo "D=$D"
+
+# VERSION_DATE, VERSION_SHORTDATE, VERSION_UNIXTIME - is a time of
+# version-stamper run, so it may be same or may differs for 1..2 sec.
 
 [ \
 	   "v0.0-0.master" == "${A[VERSION_TEXT]}" \
@@ -34,16 +36,18 @@ popd >/dev/null 2>&1
 	-a "" == "${A[VERSION_DIRTY]}"        -a "" == "${B[VERSION_DIRTY]}" \
 	-a "" == "${A[VERSION_LEADER]}"       -a "" == "${B[VERSION_LEADER]}" \
 	-a "" == "${A[VERSION_TRAILER]}"      -a "" == "${A[VERSION_TRAILER]}"\
+	-a "${A[VERSION_UNIXTIME]}" != "${B[VERSION_UNIXTIME]}" \
+	-a "${A[VERSION_SHORTDATE]}" != "${B[VERSION_SHORTDATE]}" \
+	-a "${A[VERSION_DATE]}" != "${B[VERSION_DATE]}" \
 	-a "0000000000000000000000000000000000000000" == "${A[VERSION_SHA]}" \
 	-a "0000000000000000000000000000000000000000" == "${B[VERSION_SHA]}" \
-	-a "${A[VERSION_SHA_ABBREV]}" == "${B[VERSION_SHA_ABBREV]}" \
-	-a "${A[VERSION_SHA]:0:${#A[VERSION_SHA_ABBREV]}}" == "${A[VERSION_SHA_ABBREV]}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  -a "" == "${B[VERSION_SUBMOD_NAME]}" \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
+	-a $D -le 3 -a 1 -le $D \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
 [ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR fresh"
 
-echo "[ OK ]  $0      empty repository; hooks were not set; -cd option ok"
+echo "[ OK ]  $0       two query for empty repository with 2s pause - timestamps differs for $D seconds"
 
 popd >/dev/null 2>&1

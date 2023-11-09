@@ -24,7 +24,8 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 #       define  VERSION             0x0102014DL
 #       define  VERSION_TEXT        "v1.2-333.branchname"
 #       define  VERSION_DATE        "2023-11-06 20:16:40"
-#       define  VERSION_SHORTDATE   2311062016L
+#       define  VERSION_SHORTDATE   "231106201640"
+#       define  VERSION_UNIXTIME    1699291000LL
 #       define  VERSION_BRANCH      "branchname"
 #       define  VERSION_HOSTINFO    "your@email.org openSUSE Leap 15.5"
 #       define  VERSION_AUTHORSHIP  "Your Name"
@@ -192,7 +193,8 @@ Available options:
      VERSION_BRANCH=      branchname
      VERSION_DIRTY=       
      VERSION_DATE=        2023-11-06 22:17:09
-     VERSION_SHORTDATE=   2311062217
+     VERSION_SHORTDATE=   231106221709
+     VERSION_UNIXTIME     1699298229
      VERSION_SHA=         47920119e1110edeeda572e5612ab211096fdc6a
      VERSION_SHA_ABBREV=  47920119
      VERSION_HOSTINFO=    your@email.org openSUSE Leap 15.5
@@ -222,8 +224,9 @@ Available options:
   are changes unsaved in the repository. In this case, the `+` character
   is also appended to the branch name in `VERSION_TEXT`.
 
-  `VERSION_DATE` and `VERSION_SHORTDATE` - contain the current date (may
-  differ from the commit date; especially for a modified working tree).
+  `VERSION_DATE`, `VERSION_SHORTDATE` and `VERSION_UNIXTIME` - contain
+  the current date (may differ from the commit date; especially for a
+  modified working tree).
 
   `VERSION_SHA` and `VERSION_SHA_ABBREV` - contain information about the
   current commit and its ancestors (in this case, the prefix `p:` is

@@ -10,7 +10,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
 ] || ../00-init-repos.sh
 
-CLEAN_HOOKS "./fresh"
+CLEAN_HOOKS fresh/.git
 
 unset A B
 pushd fresh >/dev/null 2>&1
@@ -27,10 +27,10 @@ popd >/dev/null 2>&1
 	-a "00000000" == "${A[VERSION_HEX]}" -a "00000000" == "${B[VERSION_HEX]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST "./fresh")" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
+[ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
 
 echo "[ OK ]  $0"
 
-CLEAN_HOOKS "./fresh"
+CLEAN_HOOKS fresh/.git
 
 popd >/dev/null 2>&1

@@ -42,7 +42,7 @@ popd >/dev/null 2>&1
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR fresh"
+[ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0      UNWANTED HOOK FOUND FOR fresh"
 
 echo "[ OK ]  $0      empty repository; hooks were not set; -cd option ok"
 

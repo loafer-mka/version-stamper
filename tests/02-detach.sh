@@ -43,8 +43,8 @@ popd >/dev/null 2>&1
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST detach-p/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR detach-p"
-[ "true" == "$(HOOKS_EXIST detach-f/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR detach-f"
+[ "true" == "$(HOOKS_EXIST detach-p/.git)" ] && DIE 1 "[FAIL]  $0     UNWANTED HOOK FOUND FOR detach-p"
+[ "true" == "$(HOOKS_EXIST detach-f/.git)" ] && DIE 1 "[FAIL]  $0     UNWANTED HOOK FOUND FOR detach-f"
 
 echo "[ OK ]  $0     detached head in past and in future; hooks were not set; --directory option ok"
 

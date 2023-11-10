@@ -39,8 +39,8 @@ CLEAN_HOOKS clone-m/.git
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST contrib/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
-[ "true" == "$(HOOKS_EXIST clone-m/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
+[ "true" == "$(HOOKS_EXIST contrib/.git)" ] && DIE 1 "[FAIL]  $0      UNWANTED HOOK FOUND"
+[ "true" == "$(HOOKS_EXIST clone-m/.git)" ] && DIE 1 "[FAIL]  $0      UNWANTED HOOK FOUND"
 
 echo "[ OK ]  $0      original contributor and its clone gives same results"
 

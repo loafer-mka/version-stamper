@@ -53,17 +53,14 @@ B[DIR_B]="$(ls ./clone-e/sub1)"
 	-a "README.txt" == "${A[DIR_B]}"      -a "README.txt" == "${A[DIR_B]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin_one-U0)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR clone-e/sub0"
-[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin_one-U)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR clone-e/sub1"
+[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin_one-U0)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub0"
+[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin_one-U)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub1"
 
 echo "[ OK ]  $0   fresh non-updated submodules sub0 and sub1 where updated ok"
 
 # ======================================================================
-
-unset A
-unset B
-declare -A A
-declare -A B
+CLEANUP
+# ======================================================================
 
 CLEAN_HOOKS clone-e/.git/modules/origin-one_N
 CLEAN_HOOKS clone-e/.git/modules/origin-F
@@ -104,10 +101,9 @@ B[DIR_B]="$(ls ./clone-e/sub3)"
 	-a "README.txt" == "${A[DIR_B]}"      -a "README.txt" == "${A[DIR_B]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin-one_N)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR clone-e/sub2"
-[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin-F)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR clone-e/sub3"
+[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin-one_N)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub2"
+[ "true" == "$(HOOKS_EXIST clone-e/.git/modules/origin-F)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub3"
 
 echo "[ OK ]  $0   fresh non-updated submodules sub2 and sub3 where updated ok"
-
 
 popd >/dev/null 2>&1

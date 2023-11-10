@@ -46,7 +46,7 @@ sleep 2s
 	-a $D -le 3 -a 1 -le $D \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
-[ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND FOR fresh"
+[ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0       UNWANTED HOOK FOUND FOR fresh"
 
 echo "[ OK ]  $0       two query for empty repository with 2s pause - timestamps differs for $D seconds"
 

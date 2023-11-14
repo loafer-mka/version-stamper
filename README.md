@@ -24,7 +24,8 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 #       define  VERSION             0x0102014DL
 #       define  VERSION_TEXT        "v1.2-333.branchname"
 #       define  VERSION_DATE        "2023-11-06 20:16:40"
-#       define  VERSION_SHORTDATE   2311062016L
+#       define  VERSION_SHORTDATE   "231106201640"
+#       define  VERSION_UNIXTIME    1699291000LL
 #       define  VERSION_BRANCH      "branchname"
 #       define  VERSION_HOSTINFO    "your@email.org openSUSE Leap 15.5"
 #       define  VERSION_AUTHORSHIP  "Your Name"
@@ -147,7 +148,7 @@ Available options:
   `.gitattributes`.
 
 ```
-  your_project> ../version-stamper/version-stamper -l
+  your_project> ./tools/stamper/version-stamper -l
   Folders:
      CURRENT_DIR=        /home/your_name/your_project
      GIT_DIR=            /home/your_name/your_project/.git
@@ -181,7 +182,7 @@ Available options:
   Print parsed information about current version.
 
 ```
-  your_project> ../version-stamper/version-stamper -p
+  your_project> ./tools/stamper/version-stamper -p
   A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
      VERSION_HEX=         0102014D
      VERSION_TEXT=        v1.2-333.branchname
@@ -192,7 +193,8 @@ Available options:
      VERSION_BRANCH=      branchname
      VERSION_DIRTY=       
      VERSION_DATE=        2023-11-06 22:17:09
-     VERSION_SHORTDATE=   2311062217
+     VERSION_SHORTDATE=   231106221709
+     VERSION_UNIXTIME     1699298229
      VERSION_SHA=         47920119e1110edeeda572e5612ab211096fdc6a
      VERSION_SHA_ABBREV=  47920119
      VERSION_HOSTINFO=    your@email.org openSUSE Leap 15.5
@@ -222,8 +224,9 @@ Available options:
   are changes unsaved in the repository. In this case, the `+` character
   is also appended to the branch name in `VERSION_TEXT`.
 
-  `VERSION_DATE` and `VERSION_SHORTDATE` - contain the current date (may
-  differ from the commit date; especially for a modified working tree).
+  `VERSION_DATE`, `VERSION_SHORTDATE` and `VERSION_UNIXTIME` - contain
+  the current date (may differ from the commit date; especially for a
+  modified working tree).
 
   `VERSION_SHA` and `VERSION_SHA_ABBREV` - contain information about the
   current commit and its ancestors (in this case, the prefix `p:` is
@@ -285,7 +288,7 @@ line.
 The command to execute the plugin looks like:
 
 ```
-    your_project> ../version-stamper/version-stamper ... PLUGIN [plugin_options] FILE
+    your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 ```
 
 Several commands can be specified on the command line to create version's
@@ -328,7 +331,7 @@ be saved from update to update.
 Example:
 
 ```
-    your_project> ../version-stamper/version-stamper ... MAKEFILE -i build/version.mk
+    your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
 ```
 
 Stamps created by command line are not automatically updated; if you use
@@ -703,3 +706,45 @@ Among the existing plugins, most ignore the absence of deleted information
 (only what is found is updated), with the exception of a single plugin for
 C# that ensures that the `AssemblyInformationalVersion` parameter is
 present in the stamp.
+
+# Unit-Tests
+
+The test system is being developed and updated in a separate branch
+`unit-tests`. The general idea is to keep everything related to tests in
+the `./tests/` folder, which is excluded from the repository (see
+`.gitignore`) in the main development branches. Thus, by simply cloning
+version-stamper into your project, nothing extra beyond the required main
+version-stamper working code will be cloned.
+
+However, if debugging is required, or you will develop your own plugins,
+then it makes sense to connect unit tests to the current branch. In the
+simplest case, it is enough to simply extract all unit test files from
+their branch to the current one (i.e. they are in an ignored folder,
+this will not affect the state of the working tree in any way):
+
+```
+./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> git rm -r --cached tests/
+./tools/stamper> ./tests/unit-tests.sh
+```
+
+And in cases where you also need to make changes to the test system, it
+is advisable to merge your working branch (or `master`) with the
+`unit-tests` branch and perform test corrections/additions directly
+in the `unit-tests` branch:
+
+```
+./tools/stamper> git checkout unit-tests
+./tools/stamper> git merge master
+./tools/stamper> ...
+```
+
+In the `unit-tests` branch, the `.gitignore` file has been changed so
+that files from the `./tests/` folder are included in the project, and
+the `./tests/samples/` and `./tests/repos/` folders containing examples
+and test repositories.
+
+However, changes to unit tests can be made without merging branches, if
+you first test them in the working branch (without including them in the
+repository), and at the end simply switch to the `unit-tests` branch and
+add the already corrected unit test files there one operation.

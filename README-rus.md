@@ -30,7 +30,8 @@ Version-stamper является несложным скриптом для ге
 #       define  VERSION             0x0102014DL
 #       define  VERSION_TEXT        "v1.2-333.branchname"
 #       define  VERSION_DATE        "2023-11-06 20:16:40"
-#       define  VERSION_SHORTDATE   2311062016L
+#       define  VERSION_SHORTDATE   "231106201640"
+#       define  VERSION_UNIXTIME    1699291000LL
 #       define  VERSION_BRANCH      "branchname"
 #       define  VERSION_HOSTINFO    "your@email.org openSUSE Leap 15.5"
 #       define  VERSION_AUTHORSHIP  "Your Name"
@@ -158,7 +159,7 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
   `.gitattributes`.
 
 ```
-  your_project> ../version-stamper-clean/version-stamper -l
+  your_project> ./tools/stamper/version-stamper -l
   Folders:
      VERSION_CURRENT_DIR= /home/your_name/your_project
 	 VERSION_GIT_DIR=     /home/your_name/your_project/.git
@@ -190,7 +191,7 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
   Вывести вычисленные сведения о текущей версии.
 
 ```
-  your_project> ../version-stamper/version-stamper -p
+  your_project> ./tools/stamper/version-stamper -p
   A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
      VERSION_HEX=         0102014D
      VERSION_TEXT=        v1.2-333.branchname
@@ -201,7 +202,8 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
      VERSION_BRANCH=      branchname
      VERSION_DIRTY=       
      VERSION_DATE=        2023-11-06 22:17:09
-     VERSION_SHORTDATE=   2311062217
+     VERSION_SHORTDATE=   231106221709
+     VERSION_UNIXTIME     1699298229
      VERSION_SHA=         47920119e1110edeeda572e5612ab211096fdc6a
      VERSION_SHA_ABBREV=  47920119
      VERSION_HOSTINFO=    your@email.org openSUSE Leap 15.5
@@ -229,8 +231,9 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
   репозмитории изменения. В этом случае символ `+` также дописывается к
   имени ветви в `VERSION_TEXT`.
 
-  `VERSION_DATE` и `VERSION_SHORTDATE` - содержат текущую дату (может
-  отличаться от даты коммита; особенно для изменённого рабочего дерева).
+  `VERSION_DATE`, `VERSION_SHORTDATE` и `VERSION_UNIXTIME` - содержат
+  текущую дату (может отличаться от даты коммита; особенно для изменённого
+  рабочего дерева).
 
   `VERSION_SHA` и `VERSION_SHA_ABBREV` - содержат информацию о текущем
   коммите и о его предках (в этом случае дописывается префикс `p:` перед
@@ -289,7 +292,7 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
 Команда для выполнения плагина имеет вид:
 
 ```
-    your_project> ../version-stamper/version-stamper ... PLUGIN [plugin_options] FILE
+    your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 ```
 
 В командной строке может быть подряд указано несколько команд для создания
@@ -333,7 +336,7 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
 Пример:
 
 ```
-    your_project> ../version-stamper/version-stamper ... MAKEFILE -i build/version.mk
+    your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
 ```
 
 Автоматического обновления созданных "руками" штампов не выполняется, если
@@ -694,7 +697,7 @@ END_OF_TEXT
 В частном случае из файла штампа авторами проекта может быть удалена
 некоторая неиспользуемая часть информации о версии (например, хэши
 коммита, которые когда соответствуют текущему коммиту, а когда его предкам).
-На усмотрение разработчка плагина остаётся егоповедение в этом случае -
+На усмотрение разработчка плагина остаётся его поведение в этом случае -
 отсутствующую информацию можно проигнорировать, а можно дополнить, чтобы
 она всегда присутствовала в этом штампе.
 
@@ -702,3 +705,44 @@ END_OF_TEXT
 сведений (обновляется только то, что было обнаружено), за исключением
 единственного плагина для C#, который обеспечивает, чтобы параметр
 `AssemblyInformationalVersion` присутствовал в штампе.
+
+# Тестирование
+
+Система тестов разрабатывается и пополняется в отдельной ветке `unit-tests`.
+Общая идея в том, чтобы всё, относящееся к тестам, сосредоточить
+в папке `./tests/`, которая исключена из репозитория (см. `.gitignore`)
+в основных ветках разработки. Таким образом, при простом клонировании
+version-stamper в свой проект ничего лишнего сверх необходимого основного
+рабочего кода version-stamper не будет клонироваться.
+
+Однако, если потребуется отладка, или вы будете разрабатывать свои плагины,
+то имеет смысл подключить юнит-тесты к текущей ветке. В простейшем случае
+достаточно просто извлечь все файлы юнит-тестов из их ветки в текущую
+(т.е. они в игнорируемой папке, то на состоянии рабочего дерева это никак
+не отразится):
+
+```
+./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> git rm -r --cached tests/
+./tools/stamper> ./tests/unit-tests.sh
+```
+
+А в тех случаях, когда надо вносить изменения ещё и в систему тестов, то
+целесообразно объединить вашу рабочую ветку (или `master`) с веткой
+`unit-tests` и исправления/дополнения тестов выполнять непосредственно
+в ветке `unit-tests`.
+
+```
+./tools/stamper> git checkout unit-tests
+./tools/stamper> git merge master
+./tools/stamper> ...
+```
+
+В ветке `unit-tests` изменён файл `.gitignore` так, что файлы из папки
+`./tests/` включаются в проект, а игнорируются папки `./tests/samples/`
+и `./tests/repos/` содержащие примеры и тестовые репозитории.
+
+Впрочем, изменения в юнит-тесты можно вносить и без объединения веток,
+если их предварительно оттестировать в рабочей ветке (не включая их
+в репозиторий), а в конце просто переключиться на ветку `unit-tests`
+и внести туда уже исправленные файлы юнит-тестов одной операцией.

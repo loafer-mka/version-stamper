@@ -1014,8 +1014,8 @@ Config file$( [ -f "${STAMPER_CONFIG_PATH}" ] || echo " not found" ): \"${STAMPE
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
 .   leader= \"${VERSION_LEADER}\"
 .   leader= \"${VERSION_TRAILER}\"
-.   authorshiup= \"${VERSION_AUTHORSHIP}\"
-.   authorshiup declaration= \"${VERSION_DECLARATION}\"
+.   authorship= \"${VERSION_AUTHORSHIP}\"
+.   authorship declaration= \"${VERSION_DECLARATION}\"
 .   default command= \"${STAMPER_DEFAULT_CMD}\"
 .   Hooks to update= ${!STAMPER_HOOKS[@]}"
 for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
@@ -1053,9 +1053,8 @@ eval $(sed -r -e 's/^([A-Za-z]+)([0-9]*)\.([0-9]*)-([0-9]*)$/VERSION_PREFIX=\1\n
 __VERBOSE__ "parsed data:\n.   VERSION_PREFIX=${VERSION_PREFIX}\n.   VERSION_MAJOR=${VERSION_MAJOR}\n.   VERSION_MINOR=${VERSION_MINOR}\n.   VERSION_BUILD=${VERSION_BUILD}"
 
 # get date
-VERSION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
-VERSION_SHORTDATE="$(date '+%y%m%d%H%M')"
-__VERBOSE__ "\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}"
+eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
+__VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
 
 # get SHA1
 VERSION_SHA="$(git --no-pager rev-parse HEAD 2>/dev/null)"
@@ -1452,6 +1451,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "   VERSION_DIRTY=       ${VERSION_DIRTY}"
 	echo "   VERSION_DATE=        ${VERSION_DATE}"
 	echo "   VERSION_SHORTDATE=   ${VERSION_SHORTDATE}"
+	echo "   VERSION_UNIXTIME=    ${VERSION_UNIXTIME}"
 	echo "   VERSION_SHA=         ${VERSION_SHA}"
 	echo "   VERSION_SHA_ABBREV=  ${VERSION_SHA_ABBREV}"
 	echo "   VERSION_HOSTINFO=    ${VERSION_HOSTINFO}"

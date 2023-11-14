@@ -28,12 +28,13 @@ function __PLUGIN_C_CREATE__
 		#	define	${VERSION_LEADER}VERSION${VERSION_TRAILER}             0x${VERSION_HEX}L
 		#	define	${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}        "${VERSION_TEXT}"
 		#	define	${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}        "${VERSION_DATE}"
-		#	define	${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}   ${VERSION_SHORTDATE}L
+		#	define	${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}   "${VERSION_SHORTDATE}"
+		#	define	${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}    ${VERSION_UNIXTIME}LL
 		#	define	${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}      "${VERSION_BRANCH}${VERSION_DIRTY}"
 		#	define	${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}    "${VERSION_HOSTINFO//\"/\\\"}"
 		#	define	${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}  "${VERSION_AUTHORSHIP//\"/\\\"}"
 		#	define	${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER} "${VERSION_DECLARATION//\"/\\\"}"
-		// information below based on parent commit's hash
+		// information below may be based on parent commit's hash
 		#	define	${VERSION_LEADER}VERSION_SHA_ABBREV${VERSION_TRAILER}  "${VERSION_SHA_ABBREV}"
 		#	define	${VERSION_LEADER}VERSION_SHA${VERSION_TRAILER}         "${VERSION_SHA}"
 		#endif
@@ -47,7 +48,8 @@ function __PLUGIN_C_MODIFY__
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_TEXT}\"\\3/" \
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_BRANCH}${VERSION_DIRTY}\"\\3/" \
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_DATE}\"\\3/" \
-		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}\s+)([0-9]+L?)(.*)$/\\1${VERSION_SHORTDATE}L\\3/" \
+		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_SHORTDATE}\"\\3/" \
+		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}\s+)([0-9]+L?L?)(.*)$/\\1${VERSION_UNIXTIME}LL\\3/" \
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_HOSTINFO//\"/\\\\\"}\"\\3/" \
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_AUTHORSHIP//\"/\\\\\"}\"\\3/" \
 		-e "s/^(\s*#\s*define\s+${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}\s+)(\".*\")(.*)$/\\1\"${VERSION_DECLARATION//\"/\\\\\"}\"\\3/" \

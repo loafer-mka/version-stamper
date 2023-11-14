@@ -35,7 +35,7 @@ classdef $(basename -s .m -- "$1" | sed -r -e 's/\W/_/g; s/__+/_/g; s/_+$//; s/^
 		${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER} = '${VERSION_HOSTINFO}';
 		${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER} = '${VERSION_AUTHORSHIP}';
 		${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER} = '${VERSION_DECLARATION}';
-		% information below may be based on parent commit's hash
+		% if information below is based on parent commit's hash then prefix 'p:' will be used
 		${VERSION_LEADER}VERSION_SHA_ABBREV${VERSION_TRAILER} = '${VERSION_SHA_ABBREV}';
 		${VERSION_LEADER}VERSION_SHA${VERSION_TRAILER} = '${VERSION_SHA}';
 	end

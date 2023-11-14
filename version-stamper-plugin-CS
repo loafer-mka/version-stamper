@@ -22,7 +22,7 @@ function __PLUGIN_CS_GETVER__
 
 function __PLUGIN_CS_CREATE__
 {
-	echo "NOTE: Normally the assembly file \"$2\" must exist, it is generated and maintained by visual studio!" >&2
+	echo "NOTE: Normally the assembly file \"$1\" must exist, it is generated and maintained by visual studio!" >&2
 	echo "      The title, product, description and some other attributes are empty, use Project Properties tab to set them." >&2
 	echo "      The Type library's GUID is set to random value." >&2
 	#
@@ -69,6 +69,7 @@ function __PLUGIN_CS_CREATE__
 		// [assembly: AssemblyVersion("1.0.*")]
 		[assembly: AssemblyVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.*")]
 		[assembly: AssemblyFileVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.0")]
+		// if used hash below is based on parent commit's then prefix 'p:' will be used
 		[assembly: AssemblyInformationalVersion( "${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\"} ${VERSION_SHA_ABBREV}" )]
 END_OF_TEXT
 }

@@ -608,7 +608,7 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 			else
 				# use command-line assigned verbose mode
 				if [ "true" == "${STAMPER_VERBOSE,,}" ]; then
-					echo "Warning! ignore default verbose mode \"$value\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+					echo "Warning! ignore default verbose mode \"$value\" due command line --verbose option at ${STAMPER_CONFIG_PATH}:$cn" >&2
 				fi
 			fi
 			;;

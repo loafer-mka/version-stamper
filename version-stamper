@@ -2085,10 +2085,19 @@ function __update_this_hook_async__
 
 	# stdout and stderr both are redirectyed, so change __VERBOSE__ to use logger 
 	if [ "${STAMPER_VERBOSE}" == "true" ]; then
-		function __VERBOSE__
-		{
-			echo -e "$/${STAMPER_EXECUTING_HOOK}: $*" | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
-		}
+		if [ "Windows_NT" == "$OS" ]; then
+			# if stdout and stderr are closed ... I do'nt known how to
+			# access windows syslog from msys2 bash script
+			function __VERBOSE__
+			{
+				:
+			}
+		else
+			function __VERBOSE__
+			{
+				echo -e "${STAMPER_EXECUTING_HOOK}: $*" | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
+			}
+		fi
 		function __ARRAY_DUMP__
 		{
 			local -n ref=$1
@@ -2100,12 +2109,30 @@ function __update_this_hook_async__
 			done
 		}
 	fi
-	__VERBOSE__ "... Wait for pid $(ps --no-headers -o pid,comm "${STAMPER_HOOK_PID}")"
-	while "${ps}" --no-headers -o pid,comm "${STAMPER_HOOK_PID}" >/dev/null 2>&1 ; do
-		# sleep 1 ms
-		[ -n "${usleep}" ] && "${usleep}" 1000
-	done
-	__VERBOSE__ "... Done waiting $(ps --no-headers -o pid,comm "${STAMPER_HOOK_PID}")"
+	ps="${ps:-ps}"
+	if [ "Windows_NT" == "$OS" ]; then
+		__VERBOSE__ "... Wait for pid $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+		while "${ps}" -p "${STAMPER_HOOK_PID}" >/dev/null 2>&1 && [ "0" == "${PIPESTATUS[0]}" ]; do
+			# sleep 1 ms
+			if [ -n "${usleep}" ]; then
+				"${usleep}" 1000
+			else
+				sleep 0.001s
+			fi
+		done
+		__VERBOSE__ "... Done waiting $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+	else
+		__VERBOSE__ "... Wait for pid $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+		while "${ps}" --pid "${STAMPER_HOOK_PID}" >/dev/null 2>&1 ; do
+			# sleep 1 ms
+			if [ -n "${usleep}" ]; then
+				"${usleep}" 1000
+			else
+				sleep 0.001s
+			fi
+		done
+		__VERBOSE__ "... Done waiting $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+	fi
 	__update_this_hook_really__ "$1" "$2" "$3" "$4"
 }
 #

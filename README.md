@@ -265,6 +265,11 @@ Available options:
   accordance with the new configuration. Hooks will also be updated when
   the version-stamper utility is updated.
 
+- `-s` or `--setup`<br/>
+  Install the hooks specified in the configuration file. Running the
+  --generate or --config commands also installs hooks. This command is
+  used to force hooks to update.
+
 - `-g` or `--generate`<br/>
   Execute all configured plugins. This only applies to configured
   plugins in .version-stamper.

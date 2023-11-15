@@ -64,6 +64,7 @@ if [ "Windows_NT" == "$OS" ]; then
 	# under windows this is mandatry; under linux we will do same because some source files may have crlf EOLs
 else
 	[ -n "$(which whoami 2>/dev/null)" ] || DIE 100 "The 'whoami' must be installed and available from script"
+	[ -n "$(which ps 2>/dev/null)" ] || DIE 100 "The 'ps' must be installed and available from script"
 fi
 
 #
@@ -503,11 +504,11 @@ done
 #
 # parse config file
 #
-STAMPER_ABBREV_LEN=8
+STAMPER_ABBREV_LEN=""
 STAMPER_DEFAULT_CMD=""
 # operations
-STAMPER_DO_CONFIG="false"
-STAMPER_DO_GENERATE="false"
+STAMPER_SETUP_CONFIG="false"
+STAMPER_GENERATE="false"
 STAMPER_DO_LIST_PLUGINS="false"
 STAMPER_DO_PRINT_INFO="false"
 # list of installed hooks
@@ -765,6 +766,7 @@ fi
 #
 __VERBOSE__ "\nSecond arg parsing: <$*>"
 STAMPER_EXECUTING_HOOK=""
+STAMPER_SETUP_HOOKS="false"
 # plugins to execute (given by the command line and/or config)
 declare -a STAMPER_EXEC_PLUGIN
 declare -a STAMPER_EXEC_TARGET
@@ -857,8 +859,11 @@ Available options are:
               Print parsed information about current version.
 -c       --config
               Create default configuration if if missing.
+-s       --setup
+              Setup configured hooks force. This implies --config too.
 -g       --generate
               Execute all configured plugins. This only applies to configured plugins in ${STAMPER_CONFIG_NAME}.
+              This implies --config and --setup too.
          --git-hook GITHOOK
               Use this option when version-stamper is running from git hook. It passes hook name (without path
               and leading '/' and/or '.'). This option turns on special processing during hook execution.
@@ -898,12 +903,17 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		-c | --config)
 			# create configuration here
-			STAMPER_DO_CONFIG="true"
+			STAMPER_SETUP_CONFIG="true"
+			;;
+		-s | --setup)
+			STAMPER_SETUP_CONFIG="true"
+			STAMPER_SETUP_HOOKS="true"
 			;;
 		-g | --generate)
 			# if we will generate version file(s) using missing config file then create it
-			STAMPER_DO_CONFIG="true"
-			STAMPER_DO_GENERATE="true"
+			STAMPER_SETUP_CONFIG="true"
+			STAMPER_SETUP_HOOKS="update"
+			STAMPER_GENERATE="true"
 			;;
 		-l | --list)
 			STAMPER_DO_LIST_PLUGINS="true"
@@ -929,7 +939,10 @@ unset temp_plugin
 unset ref
 unset an
 
-if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
+if [ "false" == "${STAMPER_SETUP_HOOKS}" -a "true" == "${STAMPER_SETUP_CONFIG}" ]; then
+	STAMPER_SETUP_HOOKS="update"
+fi
+if [ "true" == "${STAMPER_GENERATE}" ]; then
 	# if option -g / --generate was used then add configured plugins to the list of executed
 	for iconf in "${!STAMPER_CONF_PLUGIN[@]}"; do
 		found="false"
@@ -958,7 +971,7 @@ if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
 	done
 	unset iconf
 else
-	[ 0 != ${#STAMPER_EXEC_PLUGIN[@]} ] && STAMPER_DO_GENERATE="true"
+	[ 0 != ${#STAMPER_EXEC_PLUGIN[@]} ] && STAMPER_GENERATE="true"
 fi
 
 # get summary list of executed targets
@@ -1017,12 +1030,15 @@ Config file$( [ -f "${STAMPER_CONFIG_PATH}" ] || echo " not found" ): \"${STAMPE
 .   authorship= \"${VERSION_AUTHORSHIP}\"
 .   authorship declaration= \"${VERSION_DECLARATION}\"
 .   default command= \"${STAMPER_DEFAULT_CMD}\"
-.   Hooks to update= ${!STAMPER_HOOKS[@]}"
+.   check/create config=\"${STAMPER_SETUP_CONFIG}\"
+.   setup hooks=\"${STAMPER_SETUP_HOOKS}\"
+.   Hooks to update=[${!STAMPER_HOOKS[@]}]
+.   generate stamps=\"${STAMPER_GENERATE}\" [${STAMPER_EXEC_PLUGIN[@]}]"
 for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 	plugin="${STAMPER_EXEC_PLUGIN[$index]}"
 	target="${STAMPER_EXEC_TARGET[$index]}"
 	if [ -n "${STAMPER_PLUGINS[$plugin]}" ]; then
-		__VERBOSE__ ".   Plugin to run \"$plugin\" with file \"${target}\", gitignore=${STAMPER_EXEC_IGNORE[$index]}, gitattributes=${STAMPER_EXEC_ATTRIB[$index]}"
+		__VERBOSE__ ".   .   run plugin \"$plugin\" with file \"${target}\", gitignore=${STAMPER_EXEC_IGNORE[$index]}, gitattributes=${STAMPER_EXEC_ATTRIB[$index]}"
 	else
 		DIE 3 "Unknown plugin 'plugin-$plugin: $plugin'; not found '${STAMPER_SCRIPT_PATH}-plugin-$plugin'."
 	fi
@@ -1308,7 +1324,7 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 		VERSION_LEADER="$(echo "${VERSION_SUBMOD_NAME}" | sed -r -e 's/\W/_/g; s/__+/_/g; s/_+$//; s/^_+//')"
 		VERSION_LEADER="${VERSION_LEADER^^}_"
 	fi
-	if [ "true" == "${STAMPER_DO_CONFIG}" ]; then
+	if [ "true" == "${STAMPER_SETUP_CONFIG}" ]; then
 		# create initial config file
 		if [ 0 -eq ${#STAMPER_HOOKS[@]} ]; then
 			STAMPER_HOOKS["pre-commit"]="true"
@@ -1380,7 +1396,7 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 	fi
 fi
 
-if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_DO_GENERATE}"  ]; then
+if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ]; then
 	#
 	# get build host and OS identification
 	#
@@ -1464,7 +1480,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "   Note. The identifier names listed here are exposed in the plugin, not in the target file."
 fi
 
-if [ "true" == "${STAMPER_DO_GENERATE}" ]; then
+if [ "true" == "${STAMPER_GENERATE}" ]; then
 	__VERBOSE__ "\nRun all configured plugins"
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		plugin="${STAMPER_EXEC_PLUGIN[${index}]}"
@@ -1892,38 +1908,238 @@ $[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 fi
 
 #
-# check/update/setup git hooks
+# setup or delete given hook
 #
-if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
-	# for version stamper project itself executed plugin may change
-	# current version data, so reload version file before updating hooks.
-	__VERBOSE__ "Reload version information before check/create hooks"
-	. "${STAMPER_SCRIPT_PATH}-this"
-	unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
+function __update_this_hook_really__
+{
+	local 	hook_action="$1"
+	local 	hook="$2"
+	local	hook_path="$3"
+	local	description="$4"
+
+	case "${hook_action}" in
+	remove)
+		__VERBOSE__ ".   rm -f \"${hook_path}\"    ${description}"
+		rm -f "${hook_path}"
+		;;
+	setup)
+		__VERBOSE__ ".   store \"${hook}\"    ${description}"
+		case "${hook}" in
+		pre-commit)
+			echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook script is called by 'git commit' with no arguments.
+# The hook should exit with non-zero status after issuing an
+# appropriate message if it wants to stop the commit.
+
+export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+\"${STAMPER_SCRIPT_CMD}\" --git-hook=pre-commit --generate
+exit \$?
+" >"${hook_path}"
+			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			;;
+		post-checkout)
+			echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked when a 'git checkout' or 'git switch' is run after having updated the worktree.
+# It is also run after 'git clone' and 'git worktree add', unless the --no-checkout (-n) option is used.
+# The hook is given three parameters: the ref of the previous HEAD, the ref of the new HEAD (which
+# may or may not have changed), and a flag indicating whether the checkout was a branch checkout
+# (changing branches, flag=1) or a file checkout (retrieving a file from the index, flag=0)
+
+export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+if [ \"\$3\" == \"1\" -a -z \"\$GIT_REFLOG_ACTION\" ]; then
+	\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-checkout --generate
+	exit \$?
 fi
+" >"${hook_path}"
+			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			;;
+		post-commit)
+			echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked by git-commit. It takes no parameters, and is invoked
+# after a commit is made.
+# This hook is meant primarily for notification, and cannot affect the outcome of 'git commit'.
+#
+# GIT_REFLOG_ACTION is not set for simple an amend commits; it is set when post-commit
+# is executed during merge, squash etc.
+
+export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
+	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-commit --generate)\"
+	RETVAL=\$?
+	git --no-pager diff --cached --quiet >/dev/null 2>&1
+	if [ \$? -ne 0 ]; then
+		# there are some indexed changes, create new commit now
+		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
+	fi
+	exit \$RETVAL
+fi
+" >"${hook_path}"
+			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			;;
+		post-rewrite)
+			echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked by commands that rewrite commits (git-commit when called
+# with --amend and git-rebase; however, full-history (re)writing tools like
+# git-fast-import or git-filter-repo typically do not call it!).
+# Its first argument denotes the command it was invoked by: currently one of
+# amend or rebase.
+#
+
+export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+if [ \"\${1,,}\" == \"rebase\" ]; then
+	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-rewrite --generate)\"
+	RETVAL=\$?
+	git --no-pager diff --cached --quiet >/dev/null 2>&1
+	if [ \$? -ne 0 ]; then
+		# there are some indexed changes, create new commit now
+		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
+	fi
+	exit \$RETVAL
+fi
+" >"${hook_path}"
+			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			;;
+		post-merge)
+			echo "#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked by git-merge, which happens when a git pull is done on a
+# local repository. The hook takes a single parameter, a status flag specifying
+# whether or not the merge being done was a squash merge.
+# This hook cannot affect the outcome of git merge and is not executed,
+# if the merge failed due to conflicts.
+#
+
+export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate)\"
+RETVAL=\$?
+git --no-pager diff --cached --quiet >/dev/null 2>&1
+if [ \$? -ne 0 ]; then
+	# there are some indexed changes, create new commit now
+	git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/MERGE_MSG |sed -e '/^\\s*#/d')\"
+fi
+exit \$RETVAL
+" >"${hook_path}"
+			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			;;
+		*)
+			__VERBOSE__ ".   ERROR: UNSUPPORTED HOOK TYPE \"${hook}\" FOR \"${hook_path}\" ${description}"
+			;;
+		esac
+			;;
+	*)
+		__VERBOSE__ ".   ERROR: UNSUPPORTED ACTION \"${hook_action}\" FOR \"${hook_path}\" ${description}"
+		;;
+	esac
+}
+#
+# wait wuile parent ends and then execute setup/remove operation
+#
+function __update_this_hook_async__
+{
+	local	usleep="$(which usleep)"
+	local	ps="$(which ps)"
+
+	# stdout and stderr both are redirectyed, so change __VERBOSE__ to use logger 
+	if [ "${STAMPER_VERBOSE}" == "true" ]; then
+		function __VERBOSE__
+		{
+			echo -e "$/${STAMPER_EXECUTING_HOOK}: $*" | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
+		}
+		function __ARRAY_DUMP__
+		{
+			local -n ref=$1
+			local i
+	
+			__VERBOSE__ "+   ============== $1.Count=${#ref[@]}"
+			for i in "${!ref[@]}"; do
+				__VERBOSE__ "+   $1[$i]=${ref[$i]}"
+			done
+		}
+	fi
+	__VERBOSE__ "... Wait for pid $(ps --no-headers -o pid,comm "${STAMPER_HOOK_PID}")"
+	while "${ps}" --no-headers -o pid,comm "${STAMPER_HOOK_PID}" >/dev/null 2>&1 ; do
+		# sleep 1 ms
+		[ -n "${usleep}" ] && "${usleep}" 1000
+	done
+	__VERBOSE__ "... Done waiting $(ps --no-headers -o pid,comm "${STAMPER_HOOK_PID}")"
+	__update_this_hook_really__ "$1" "$2" "$3" "$4"
+}
+#
+# update/remove hook inproc or async if hook is same as currently executed
+#	__update_this_hook__ 1=action 2=hook 3=path 4=description
+#
+function __update_this_hook__
+{
+	if [ "$2" != "${STAMPER_EXECUTING_HOOK}" ]; then
+		__update_this_hook_really__ "$1" "$2" "$3" "$4"
+	else
+		STAMPER_HOOK_PID=${PPID}
+		__VERBOSE__ ".   delayed hook \"$2\" update after ending of running hook pid ${STAMPER_HOOK_PID}"
+		# most of hooks terminates normally in parallel of async function execution
+		# most .. not all
+		# post-commit, for example, waits for releasing stdout and stderr channels
+		# so we must execute async function within redirected output chennels
+		__update_this_hook_async__ "$1" "$2" "$3" "$4" >/dev/null 2>&1 &
+		#
+		# note: nohup, disown does not resolve this trouble; they can detach current parent from async childs,
+		# then parent termination will not terminate async childs. This is not our case: we are in child process
+		# not parent, so these commands do not help us.
+		# 	SEE MORE https://unix.stackexchange.com/questions/3886/difference-between-nohup-disown-and?newreg=7d90868c862743ef9ad5997c3150bde0
+	fi
+}
 #
 # scan existing and missing hooks and update them to current version
 #
-function __update_hooks__
+function __update_all_hooks__
 {
 	local -A	all_hooks
-	local		main_script_cmd
 	local		hook_version
-	local		hook_action
 	local		hook_path
 	local		hook
-
-	[ -n "$1" ] && sleep $1
-
-	main_script_cmd="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
-	__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on_path=\"$main_script_cmd\""
-	if [ "$main_script_cmd" == "${STAMPER_SCRIPT_PATH}" ]; then
-		# version-stamper is installed and is used from install location
-		main_script_cmd="${STAMPER_SCRIPT_NAME}"
-	else
-		main_script_cmd="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" "${STAMPER_SCRIPT_PATH}")"
-	fi
-	__VERBOSE__ "Use path to script=\"$main_script_cmd\""
 
 	all_hooks["pre-commit"]="${VERSION_GIT_DIR}/hooks/pre-commit"
 	all_hooks["post-commit"]="${VERSION_GIT_DIR}/hooks/post-commit"
@@ -1960,7 +2176,7 @@ function __update_hooks__
 						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+\.[0-9]+-[0-9]+\.[[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 					')"
 			if [ -n "${hook_version}" ]; then
-				__VERBOSE__ "Suite version of \"${hook}\" is \"${hook_version}\" (out is \"stamper-${STAMPER_VERSION_TEXT}\") -- this is known hook"
+				__VERBOSE__ "Suite version of \"${hook}\" is \"${hook_version}\" (our is \"stamper-${STAMPER_VERSION_TEXT}\") -- this is known hook"
 			else
 				# hook_version is an empty string
 				__VERBOSE__ "Suite version of \"${hook}\" is unknown -- this is not our hook"
@@ -1974,208 +2190,52 @@ function __update_hooks__
 		# client-side
 		pre-commit | post-checkout | post-commit | post-rewrite | post-merge)
 			# one of our current hooks
-			hook_action=""
 			case "${hook_version}" in
 			stamper-"${STAMPER_VERSION_TEXT}")
 				# our hook, version OK
 				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
-					__VERBOSE__ ".   Hook's version OK \"${hook}\""
+					if [ "true" == "${STAMPER_SETUP_HOOKS}" ]; then
+						__update_this_hook__ "setup" "${hook}" "${hook_path}" "force setup \"${hook}\" ${STAMPER_VERSION_TEXT}"
+					else
+						__VERBOSE__ ".   version OK \"${hook}\""
+					fi
 				else
-					__VERBOSE__ ".   Remove \"${hook}\""
-					hook_action="remove"
+					__update_this_hook__ "remove" "${hook}" "${hook_path}" "unused \"${hook}\" ${STAMPER_VERSION_TEXT}"
 				fi
 				;;
 			stamper-*)
 				# our hook, version differs
 				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
-					__VERBOSE__ ".   Change \"${hook}\"   to ${STAMPER_VERSION_TEXT}"
-					hook_action="setup"
+					__update_this_hook__ "setup" "${hook}" "${hook_path}" "change \"${hook}\" to ${STAMPER_VERSION_TEXT}"
 				else
-					__VERBOSE__ ".   Remove \"$1\""
-					hook_action="remove"
+					__update_this_hook__ "remove" "${hook}" "${hook_path}" "unused \"${hook}\" ${hook_version}"
 				fi
 				;;
 			missing)
 				# missing file
 				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
-					__VERBOSE__ ".   Setup \"${hook}\"   of ${STAMPER_VERSION_TEXT}"
-					hook_action="setup"
+					__update_this_hook__ "setup" "${hook}" "${hook_path}" "setup \"${hook}\" ${STAMPER_VERSION_TEXT}"
 				else
-					__VERBOSE__ ".   Skip missing \"${hook}\""
+					__VERBOSE__ ".   skip missing \"${hook}\""
 				fi
 				;;
 			*)
 				# wrong or empty 'hook_version' -- hook is not our
-				__VERBOSE__ ".   DO NOT change \"${hook}\""
-				;;
-			esac
-			#
-			case "${hook_action}" in
-			remove)
-				rm -f "${hook_path}"
-				;;
-			setup)
-				case "${hook}" in
-				pre-commit)
-					echo "#!/bin/sh
-# +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       |
-# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
-# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
-# +--------------------------------------------------------------------+
-#
-# This hook script is called by 'git commit' with no arguments.
-# The hook should exit with non-zero status after issuing an
-# appropriate message if it wants to stop the commit.
-
-export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
-# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
-#
-
-\"${main_script_cmd}\" --git-hook=pre-commit --generate
-exit \$?
-" >"${hook_path}"
-					if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
-					;;
-				post-checkout)
-					echo "#!/bin/sh
-# +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       |
-# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
-# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
-# +--------------------------------------------------------------------+
-#
-# This hook is invoked when a 'git checkout' or 'git switch' is run after having updated the worktree.
-# It is also run after 'git clone' and 'git worktree add', unless the --no-checkout (-n) option is used.
-# The hook is given three parameters: the ref of the previous HEAD, the ref of the new HEAD (which
-# may or may not have changed), and a flag indicating whether the checkout was a branch checkout
-# (changing branches, flag=1) or a file checkout (retrieving a file from the index, flag=0)
-
-export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
-# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
-#
-
-if [ \"\$3\" == \"1\" -a -z \"\$GIT_REFLOG_ACTION\" ]; then
-	\"${main_script_cmd}\" --git-hook=post-checkout --generate
-	exit \$?
-fi
-" >"${hook_path}"
-					if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
-					;;
-				post-commit)
-					echo "#!/bin/sh
-# +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       |
-# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
-# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
-# +--------------------------------------------------------------------+
-#
-# This hook is invoked by git-commit. It takes no parameters, and is invoked
-# after a commit is made.
-# This hook is meant primarily for notification, and cannot affect the outcome of 'git commit'.
-#
-# GIT_REFLOG_ACTION is not set for simple an amend commits; it is set when post-commit
-# is executed during merge, squash etc.
-
-export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
-# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
-#
-
-if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
-	VERSION_TEXT=\"\$(\"${main_script_cmd}\" --git-hook=post-commit --generate)\"
-	RETVAL=\$?
-	git --no-pager diff --cached --quiet >/dev/null 2>&1
-	if [ \$? -ne 0 ]; then
-		# there are some indexed changes, create new commit now
-		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
-	fi
-	exit \$RETVAL
-fi
-" >"${hook_path}"
-					if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
-					;;
-				post-rewrite)
-					echo "#!/bin/sh
-# +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       |
-# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
-# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
-# +--------------------------------------------------------------------+
-#
-# This hook is invoked by commands that rewrite commits (git-commit when called
-# with --amend and git-rebase; however, full-history (re)writing tools like
-# git-fast-import or git-filter-repo typically do not call it!).
-# Its first argument denotes the command it was invoked by: currently one of
-# amend or rebase.
-#
-
-export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
-# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
-#
-
-if [ \"\${1,,}\" == \"rebase\" ]; then
-	VERSION_TEXT=\"\$(\"${main_script_cmd}\" --git-hook=post-rewrite --generate)\"
-	RETVAL=\$?
-	git --no-pager diff --cached --quiet >/dev/null 2>&1
-	if [ \$? -ne 0 ]; then
-		# there are some indexed changes, create new commit now
-		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
-	fi
-	exit \$RETVAL
-fi
-" >"${hook_path}"
-					if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
-					;;
-				post-merge)
-					echo "#!/bin/sh
-# +--------------------------------------------------------------------+
-# | This Source Code Form is subject to the terms of the Mozilla       |
-# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
-# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
-# +--------------------------------------------------------------------+
-#
-# This hook is invoked by git-merge, which happens when a git pull is done on a
-# local repository. The hook takes a single parameter, a status flag specifying
-# whether or not the merge being done was a squash merge.
-# This hook cannot affect the outcome of git merge and is not executed,
-# if the merge failed due to conflicts.
-#
-
-export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
-# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
-#
-
-VERSION_TEXT=\"\$(\"${main_script_cmd}\" --git-hook=post-merge --generate)\"
-RETVAL=\$?
-git --no-pager diff --cached --quiet >/dev/null 2>&1
-if [ \$? -ne 0 ]; then
-	# there are some indexed changes, create new commit now
-	git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/MERGE_MSG |sed -e '/^\\s*#/d')\"
-fi
-exit \$RETVAL
-" >"${hook_path}"
-					if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
-					;;
-				esac
-				;;
-			*)
-				# nothing
+				__VERBOSE__ "#   DO NOT change \"${hook}\""
 				;;
 			esac
 			;;
 		prepare-commit-msg | commit-msg | applypatch-msg | pre-applypatch | post-applypatch | pre-rebase | pre-push | pre-auto-gc)
 			# "missing" cannot be here because we enumerate existing files; so empty string for foreign or version string for our older hook
 			if [ -n "${hook_version}" ]; then
-				__VERBOSE__ ".   rm -f \"${hook_path}\"    too old verson suite"
-				rm -f "${hook_path}"
+				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			fi
 			;;
 		# server-side
 		pre-receive | update | post-receive)
 			# "missing" cannot be here because we enumerate existing files; so empty string for foreign or version string for our older hook
 			if [ -n "${hook_version}" ]; then
-				__VERBOSE__ ".   rm -f \"${hook_path}\"    too old verson suite"
-				rm -f "${hook_path}"
+				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			else
 				__VERBOSE__ "#   touch \"${hook_path}\"    server-side hook"
 			fi
@@ -2183,8 +2243,7 @@ exit \$RETVAL
 		# undocumented by 'pro git' book
 		fsmonitor-watchman | post-update)
 			if [ -n "${hook_version}" ]; then
-				__VERBOSE__ ".   rm -f \"${hook_path}\"    too old verson suite"
-				rm -f "${hook_path}"
+				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			else
 				__VERBOSE__ "#   touch \"${hook_path}\"    undocumented by 'pro git' book"
 			fi
@@ -2195,13 +2254,32 @@ exit \$RETVAL
 		esac
 	done
 }
-if [ "true" == "${STAMPER_DO_GENERATE}" -o  "true" == "${STAMPER_DO_CONFIG}" ]; then
-	if [ -z "${STAMPER_EXECUTING_HOOK}" ]; then
-		__VERBOSE__ "Update hooks now"
-		__update_hooks__
-	else
-		__VERBOSE__ "Delayed hooks update after 5s due to running hook"
-		__update_hooks__ 5s &
+
+#
+# check/update/setup git hooks
+#
+if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
+	__VERBOSE__ "Update hooks now"
+	
+	if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
+		# for version stamper project itself executed plugin may change
+		# current version data, so reload version file before updating hooks.
+		__VERBOSE__ "Reload version information before check/create hooks"
+		. "${STAMPER_SCRIPT_PATH}-this"
+		unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
 	fi
+
+	STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
+	__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on_path=\"$STAMPER_SCRIPT_CMD\""
+	if [ "$STAMPER_SCRIPT_CMD" == "${STAMPER_SCRIPT_PATH}" ]; then
+		# version-stamper is installed and is used from install location
+		STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
+	else
+		STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" "${STAMPER_SCRIPT_PATH}")"
+	fi
+	__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
+
+	__update_all_hooks__
 fi
 EXIT 0
+# - переработка для GIT-FOR-WINDOWS

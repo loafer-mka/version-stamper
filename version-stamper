@@ -1654,10 +1654,12 @@ done)
 }"
 	text_a="$(__READ_LF__ ".gitattributes")"
 	[ -z "${text_a}" ] && text_a="#
-# text=true   text    allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
-# text=false  -text   disable CRLF translation
-# text=auto           try to detect type of file and apply CRLF translation to text files
+# text=true   text    assume tex file, allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
+# text=false  -text   assume binary file, disable CRLF translation
+# text=auto           try to detect type of file and apply tetx/binary rules depend on its content
 # <text is missing>   use core.autocrlf
+#    the eol=... needs in text or text=true or text=auto before ('text eol=crlf' or 'text eol=lf')
+#    without 'text' it depends on 'core.crlf' configuration, so it vary one machine to another
 # eol=crlf            force CRLF translation (CRLF in worktree, LF in git)
 # eol=lf              replace CRLF with LF on worktree->repo, do nothing on repo->worktree
 # ---
@@ -1665,9 +1667,9 @@ done)
 # -crlf       -text   ---------
 # crlf=input  eol=lf  ---------
 #
-.gitignore      eol=lf
-.gitattributes  eol=lf
-.gitmodules     eol=lf"
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.gitmodules     text eol=lf"
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
 		__VERBOSE__ ".   update .gitattributes\n.   git --no-pager add --force ${VERSION_ROOT_DIR}/.gitattributes"
@@ -2309,4 +2311,4 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 	__update_all_hooks__
 fi
 EXIT 0
-# - переработка для GIT-FOR-WINDOWS
+

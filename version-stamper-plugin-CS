@@ -98,5 +98,5 @@ function __PLUGIN_CS_MODIFY__
 
 function __PLUGIN_CS_ATTRIB__
 {
-	echo "eol=crlf"
+	echo "text eol=crlf"
 }

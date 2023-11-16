@@ -58,5 +58,5 @@ function __PLUGIN_BAT_MODIFY__
 
 function __PLUGIN_BAT_ATTRIB__
 {
-	echo "eol=crlf"
+	echo "text eol=crlf"
 }

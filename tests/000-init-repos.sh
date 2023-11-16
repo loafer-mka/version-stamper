@@ -2,6 +2,10 @@
 
 pushd "$(dirname "$0")"
 
+if [ -z "${DELIM_ROW}" ]; then
+	source ./lib.sh
+fi
+
 [ -d "./repos" ] || mkdir -p "./repos"
 
 [ -d "./repos/bare0.git" ] && rm -rf "./repos/bare0.git"
@@ -15,16 +19,16 @@ pushd "$(dirname "$0")"
 [ -d "./repos/clone-m" ] && rm -rf "./repos/clone-m"
 
 echo "> git --no-pager init --bare \"./repos/bare0.git\""
-git --no-pager init --bare "./repos/bare0.git"
+GIT_INIT "./repos/bare0.git" --bare
 
 echo "> git --no-pager init --bare \"./repos/bare1.git\""
-git --no-pager init --bare "./repos/bare1.git"
+GIT_INIT "./repos/bare1.git" --bare
 
 echo "> git --no-pager init \"./repos/fresh\""
-git --no-pager init "./repos/fresh"
+GIT_INIT "./repos/fresh"
 
 echo "> git --no-pager init \"./repos/contrib\""
-git --no-pager init "./repos/contrib"
+GIT_INIT "./repos/contrib"
 
 echo "> pushd \"./repos/contrib\""
 pushd "./repos/contrib"
@@ -42,8 +46,10 @@ echo "> rm README.txt"
 rm README.txt 2>/dev/null
 N=1
 for A in A B C D E F G H I J K L M N O P Q R S T U V W X Y Z ; do
-	echo "${A}" >>README.txt
-	echo "> git --no-pager add README.txt"
+	echo -e ".gitattributes  text eol=lf\n.gitignore  text eol=lf\n.gitmodules  text eol=lf\n*.txt  text" >.gitattributes
+	echo "${A}${WIN_ECHO_EOL}" >>README.txt
+	echo "> git --no-pager add  .gitattributes  README.txt"
+	git --no-pager add .gitattributes
 	git --no-pager add README.txt
 	echo "> git --no-pager commit -m \"${A} : ${M} commit\""
 	git --no-pager commit -m "${A} : ${M} commit"
@@ -82,7 +88,7 @@ for B in F K P U "I/I" "M/M" "one/N"; do
 	echo "> git --no-pager checkout \"${B}\""
 	git --no-pager checkout "${B}"
 	for N in 1 2 3 4 5 6; do
-		echo "${B}${N}" >>README.txt
+		echo "${B}${N}${WIN_ECHO_EOL}" >>README.txt
 		echo "> git --no-pager commit -am \"${B}${N} commit\""
 		git --no-pager commit -am "${B}${N} commit"
 		sleep 1s
@@ -152,33 +158,47 @@ git --no-pager clone --branch SUBMOD --recurse-submodules ./repos/bare0.git ./re
 
 # detached head above branch label (in future)
 # extra non-version tags were added
+echo "> git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-f"
 git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-f
 pushd ./repos/detach-f
+echo "> git checkout \$(git --no-pager rev-parse F)"
 git checkout $(git --no-pager rev-parse F)
 for n in 1 2 3 4 5 ; do
-	echo "Detach ${n}" >>README.txt
+	echo "Detach ${n}${WIN_ECHO_EOL}" >>README.txt
+	echo "> git commit -am 'Detach ${n}'"
 	git commit -am "Detach ${n}"
 	sleep 1s
 done
+echo "> git tag tag-2 HEAD^^"
 git tag tag-2 HEAD^^
+echo "> git tag tag-1 F^^"
 git tag tag-1 F^^
+echo "> git tag x1.2 F^^^^^^^^"
 git tag x1.2 F^^^^^^^^
 popd
 
 # detached head below branch label (in past)
 # extra non-version tags were added
+echo "> git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-p"
 git --no-pager clone --branch F ./repos/bare1.git ./repos/detach-p
 pushd ./repos/detach-p
+echo "> git checkout \$(git --no-pager rev-parse F)"
 git checkout $(git --no-pager rev-parse F)
 for n in 1 2 3 4 5 ; do
-	echo "Detach ${n}" >>README.txt
+	echo "Detach ${n}${WIN_ECHO_EOL}" >>README.txt
+	echo "> git commit -am 'Detach ${n}'"
 	git commit -am "Detach ${n}"
 	sleep 1s
 done
+echo "> git tag tag-3 HEAD"
 git tag tag-3 HEAD
+echo "> git tag tag-2 HEAD^^"
 git tag tag-2 HEAD^^
+echo "> git tag tag-1 F^^^^"
 git tag tag-1 F^^^^
+echo "> git checkout \$(git --no-pager rev-parse F^^)"
 git checkout $(git --no-pager rev-parse F^^)
+echo "> git tag x1.2 HEAD^^^^"
 git tag x1.2 HEAD^^^^
 popd
 

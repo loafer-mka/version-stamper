@@ -9,7 +9,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 CLEAN_HOOKS fresh/.git
 CLEAN_WORKTREE fresh
@@ -47,13 +47,15 @@ done
 
 CLEAN_WORKTREE .
 
+#for i in "${!C[@]}" ; do echo "$i"; done | sort | while read i ; do echo "C[$i] = ${C[$i]}" ; done
+
 [ \
        "" == "${C[BAD]}" \
     -a "found" == "${C[F:.version-stamper]}"  -a "found" == "${C[F:.gitattributes]}" \
     -a "" != "${C[C:authorship]}"             -a "" != "${C[C:declaration]}" \
     -a "" != "${C[C:default-cmd]}"            -a "" != "${C[C:hooks]}" \
-    -a "eol=lf" == "${C[A:.gitignore]}"       -a "eol=lf" == "${C[A:.gitattributes]}" \
-    -a "eol=lf" == "${C[A:.gitmodules]}"      -a "text" == "${C[A:.version-stamper]}" \
+    -a "text eol=lf" == "${C[A:.gitignore]}"  -a "text eol=lf" == "${C[A:.gitattributes]}" \
+    -a "text eol=lf" == "${C[A:.gitmodules]}" -a "text" == "${C[A:.version-stamper]}" \
 ] || DIE 1 "[FAIL]  $0     Mandatory parameters were not set"
 
 [ "true" != "$(HOOKS_EXIST .git)" ] && DIE 1 "[FAIL]  $0     WANTED HOOKS ARE FOUND FOR fresh"

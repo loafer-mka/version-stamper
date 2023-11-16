@@ -8,7 +8,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./bare0.git" -a -d "./bare1.git" -a \
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 CLEAN_HOOKS fresh/.git
 

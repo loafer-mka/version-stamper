@@ -110,5 +110,39 @@ function CLEAN_WORKTREE
 	# echo "======== DONE CLEAN WORKTREE"
 	popd >/dev/null 2>&1
 }
+function GIT_INIT
+{
+	#
+	# "$1" must be folder path
+	#
+
+	#
+	# note: current git needs in renamed default branch; i.e. must be used:
+	#
+	# --initial-branch master 
+	#    or
+	# -c init.defaultBranch=master
+	#
+	# both are ok for my current git (v2.35.3) but ...
+	# git for windows 2.21.0.windows.1 does not known option --initial-branch (or -b) yet (unsupported option is an error)
+	# and it does not apply init.defaultBranch configuration (unsupported configuration parameter is not error)
+	#
+	# so ... use '-c init.defaultBranch=master' only, so you avoid warnings about
+	# branch renaming and have same branch 'master' as for old git.
+	#
+	git --no-pager -c init.defaultBranch=master init "$@"
+	pushd "$1" >/dev/null 2>&1
+	git --no-pager config --local user.name "Stamper Tests"
+	git --no-pager config --local user.name "stamper@test.org"
+	popd >/dev/null 2>&1
+}
+
+if [ "Windows_NT" == "$OS" ]; then
+	WIN_SED_EOL="-e s/$/\r/"
+	WIN_ECHO_EOL="$(echo -en "\r")"
+else
+	WIN_SED_EOL=""
+	WIN_ECHO_EOL=""
+fi
 
 CLEANUP

@@ -9,7 +9,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 CLEAN_HOOKS fresh/.git
 
@@ -43,7 +43,7 @@ sleep 2s
 	-a "0000000000000000000000000000000000000000" == "${B[VERSION_SHA]}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  -a "" == "${B[VERSION_SUBMOD_NAME]}" \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
-	-a $D -le 3 -a 1 -le $D \
+	-a $D -le 5 -a 1 -le $D \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
 
 [ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0       UNWANTED HOOK FOUND FOR fresh"

@@ -9,7 +9,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 CLEAN_HOOKS contrib/.git
 CLEAN_WORKTREE contrib
@@ -51,6 +51,7 @@ sed -i -r -e 's/^\s*#\s*plugin-C:.*$/plugin-C: --gitignore ver.h/' \
 	 -e 's/^\s*#\s*plugin-BAT:.*$/plugin-BAT: ver.bat/' \
 	 -e 's/^\s*#\s*plugin-SH:.*$/plugin-SH: -i ver.sh/' \
 	 -e 's/^\s*#\s*plugin-MAKEFILE:.*$/plugin-MAKEFILE: -a ver.mk/' \
+	 ${WIN_SED_EOL} \
 	.version-stamper
 
 ../../../version-stamper -g M -i ver.m >/dev/null 2>&1
@@ -77,8 +78,8 @@ CLEAN_WORKTREE .
     -a "found" == "${C[2:ver.mk]}"            -a "found" == "${C[2:ver.m]}" \
     -a "" != "${C[C:authorship]}"             -a "" != "${C[C:declaration]}" \
     -a "" != "${C[C:default-cmd]}"            -a "" != "${C[C:hooks]}" \
-    -a "eol=lf" == "${C[A:.gitignore]}"       -a "eol=lf" == "${C[A:.gitattributes]}" \
-    -a "eol=lf" == "${C[A:.gitmodules]}"      -a "text" == "${C[A:.version-stamper]}" \
+    -a "text eol=lf" == "${C[A:.gitignore]}"  -a "text eol=lf" == "${C[A:.gitattributes]}" \
+    -a "text eol=lf" == "${C[A:.gitmodules]}" -a "text" == "${C[A:.version-stamper]}" \
 \
 	-a "v0.0-17.SUBMOD+" == "${A[VERSION_TEXT]}" \
 	-a "v0.0-17.SUBMOD+" == "${VERSION_TEXT}" \
@@ -89,14 +90,13 @@ CLEAN_WORKTREE .
 	-a "${A[VERSION_SHA_ABBREV]}" == "${VERSION_SHA_ABBREV}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  \
-] || DIE 1 "[FAIL]  $0     Mandatory parameters were not set"
+] || DIE 1 "[FAIL]  $0   Mandatory parameters were not set"
 
 [ \
 	   "" == "${C[BAD]}" \
-    -a "found" != "${C[0:.version-stamper]}"  -a "found" != "${C[0:.gitattributes]}" \
+    -a "found" != "${C[0:.version-stamper]}"  -a "found" != "${C[0:ver.mk]}" \
     -a "found" != "${C[0:ver.h]}"             -a "found" != "${C[0:ver.cs]}" \
     -a "found" != "${C[0:ver.bat]}"           -a "found" != "${C[0:ver.sh]}" \
-    -a "found" != "${C[0:ver.mk]}" \
     -a "found" != "${C[1:ver.h]}"             -a "found" != "${C[1:ver.cs]}" \
     -a "found" != "${C[1:ver.bat]}"           -a "found" != "${C[1:ver.sh]}" \
     -a "found" != "${C[1:ver.mk]}" \

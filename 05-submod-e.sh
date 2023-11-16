@@ -9,7 +9,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 [ -d "./clone-e" ] && rm -rf "./clone-e"
 git --no-pager clone --branch SUBMOD ./bare0.git ./clone-e >/dev/null 2>&1

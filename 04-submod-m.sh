@@ -9,7 +9,7 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
   -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
-] || ../00-init-repos.sh
+] || ../000-init-repos.sh
 
 CLEAN_HOOKS contrib/.git/modules/origin_one-U0
 CLEAN_HOOKS clone-m/.git/modules/origin_one-U0

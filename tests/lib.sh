@@ -133,7 +133,7 @@ function GIT_INIT
 	git --no-pager -c init.defaultBranch=master init "$@"
 	pushd "$1" >/dev/null 2>&1
 	git --no-pager config --local user.name "Stamper Tests"
-	git --no-pager config --local user.name "stamper@test.org"
+	git --no-pager config --local user.email "stamper@test.org"
 	popd >/dev/null 2>&1
 }
 

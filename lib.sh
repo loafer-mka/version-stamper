@@ -149,4 +149,6 @@ else
 	WIN_ECHO_EOL=""
 fi
 
+[ -d "$(dirname "$0")/repos" ] || mkdir "$(dirname "$0")/repos"
+
 CLEANUP

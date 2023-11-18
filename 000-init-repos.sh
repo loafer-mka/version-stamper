@@ -1,10 +1,10 @@
 #!/bin/bash
 
-pushd "$(dirname "$0")" >/dev/null
-
 if [ -z "${DELIM_ROW}" ]; then
-    source ./lib.sh
+    source "$(dirname "$0")/lib.sh"
 fi
+
+pushd "$(dirname "$0")" >/dev/null
 
 [ -d "./repos" ] || mkdir -p "./repos"
 
@@ -245,13 +245,13 @@ git --no-pager add .gitmodules
 echo "Add submodules${WIN_ECHO_EOL}" >>README.txt
 echo "> git commit -am \"Add submodules\""
 git --no-pager commit -am "Add submodules"
-echo "> git push \"ORIGIN/ONE\" \"SUBMOD0:SUBMOD\""
+echo "> git push \"ORIGIN/ONE\" \"SUBMOD0:SUBMOD0\""
 git --no-pager push "ORIGIN/ONE" "SUBMOD0:SUBMOD0"
 
 # --- add workree ---
 echo "> pushd ./sub0"
 pushd ./sub0 >/dev/null
-echo "> git worktree add ../sub0F F"
+echo "> git worktree add ../sub0w F"
 git --no-pager worktree add ../sub0w F
 echo "> popd"
 popd >/dev/null

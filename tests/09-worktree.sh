@@ -15,7 +15,9 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
 [ -d "./worktree" ] && rm -rf "./worktree"
 mkdir worktree
 cd contrib
-git --no-pager worktree repair ../worktree 2>/dev/null 1>&2
+# repair is a new command, many git setups does not support it
+# git --no-pager worktree repair ../worktree 2>/dev/null 1>&2
+git --no-pager worktree add --force ../worktree SUBMOD0 2>/dev/null 1>&2
 cd ../worktree
 git reset --hard HEAD >/dev/null
 cd ..

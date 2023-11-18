@@ -5,11 +5,12 @@
 pushd "$(dirname "$0")/repos" >/dev/null 2>&1
 
 [ \
-  -d "./bare0.git" -a -d "./bare1.git" -a \
-  -d "./fresh"     -a -d "./contrib"   -a \
-  -d "./detach-f"  -a -d "./detach-p"   -a \
-  -d "./clone-a"   -a -d "./clone-e"   -a \
-  -d "./clone-m"   -a -d "./worktree" \
+  -d "./bare0.git" -a -d "./bare1.git"   -a \
+  -d "./fresh"     -a -d "./contrib"     -a \
+  -d "./detach-f"  -a -d "./detach-p"    -a \
+  -d "./clone-a"   -a -d "./clone-e"     -a \
+  -d "./clone-x"   -a -d "./clone-x.git" -a \
+  -d "./clone-m"   -a -d "./worktree"       \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS contrib/.git

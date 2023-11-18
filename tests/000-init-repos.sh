@@ -17,6 +17,8 @@ pushd "$(dirname "$0")" >/dev/null
 [ -d "./repos/clone-a" ] && rm -rf "./repos/clone-a"
 [ -d "./repos/clone-e" ] && rm -rf "./repos/clone-e"
 [ -d "./repos/clone-m" ] && rm -rf "./repos/clone-m"
+[ -d "./repos/clone-x" ] && rm -rf "./repos/clone-x"
+[ -d "./repos/clone-x.git" ] && rm -rf "./repos/clone-x.git"
 [ -d "./repos/worktree" ] && rm -rf "./repos/worktree"
 
 #
@@ -42,6 +44,8 @@ GIT_INIT "./repos/bare1.git" --bare
 #   clone-a     <- clone of master branch, no submodules
 #   clone-e     <- non-recusive clone of SUBMOD branch                      TODO: re-clone before test, because stamper updates submodules
 #   clone-m     <- recursive clone of SUBMOD branch
+#	clone-x		<- clone of bare1.git branch F with seprate git directory
+#	clone-x.git	<- seprate git directory of 'clone-x'
 # detach-* clones of bare1.git with detached head
 #   detach-f    <- we make few commits after detach, so HEAD position is in 'future' relative branch head
 #   detach-p    <- we detach head and move it below, so it is in 'past' relative branch head
@@ -100,28 +104,28 @@ git --no-pager fetch --all
 #                                 +-i/i1--i/i2--i/i3--i/i4--i/i5--I/I
 #
 #
-#    local   | ORIGIN/ONE |  ORIGIN  |
-# -----------+------------+----------+
-#     A0     |     A0     |          |
-#     F0     |            |          |
-#     F      |     F      |     F    |
-#     F5     |            |          |
-#     I0     |            |          |
-#    I/I     |    I/I     |          |
-#     K0     |            |          |
-#     K      |     K      |          |
-#     M0     |            |          |
-#    M/M     |    M/M     |          |
-#   MASTER   |   MASTER   |          |
-#   ONE/N0   |            |          |
-#    ONE/N   |     N      |  ONE/N   |
-#     P0     |            |          |
-#     P      |     P      |          |
-#     U0     |            |          |
-#     U      |            |          |
-#   SUBMOD0  |   SUBMOD0  |          |
-#   SUBMOD   |   SUBMOD   |          |
-# -----------+------------+----------+
+# |   local   | ORIGIN/ONE |  ORIGIN  |
+# +-----------+------------+----------+
+# |    A0     |     A0     |          |
+# |    F0     |            |          |
+# |    F      |     F      |     F    |
+# |    F5     |            |          |
+# |    I0     |            |          |
+# |   I/I     |    I/I     |          |
+# |    K0     |            |          |
+# |    K      |     K      |          |
+# |    M0     |            |          |
+# |   M/M     |    M/M     |          |
+# |  MASTER   |   MASTER   |          |
+# |  ONE/N0   |            |          |
+# |   ONE/N   |     N      |  ONE/N   |
+# |    P0     |            |          |
+# |    P      |     P      |          |
+# |    U0     |            |          |
+# |    U      |            |          |
+# |  SUBMOD0  |   SUBMOD0  |          |
+# |  SUBMOD   |   SUBMOD   |          |
+# +-----------+------------+----------+
 #
 # all brancehs except 'SUBMOD0' and 'SUBMOD' are "simple" - i.e. we did add one line to README.txt per each commit.
 # SUBMOD0 - 4 submodules were added:
@@ -292,6 +296,9 @@ git --no-pager clone --branch SUBMOD ./repos/bare0.git ./repos/clone-e
 
 echo "> git clone --branch SUBMOD --recurse-submodules ./repos/bare0.git ./repos/clone-m"
 git --no-pager clone --branch SUBMOD --recurse-submodules ./repos/bare0.git ./repos/clone-m
+
+echo "> git clone --branch F ./repos/bare1.git --branch F --separate-git-dir=./repos/clone-x.git ./repos/clone-x"
+git --no-pager clone --branch F ./repos/bare1.git --branch F --separate-git-dir=./repos/clone-x.git ./repos/clone-x
 
 # --- detached 'in future' ---
 # detached head above branch label (in future)

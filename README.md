@@ -111,13 +111,13 @@ and --git-hook parameters require a value that can be specified either
 as an additional argument separated by a space:
 
 ```
-	version-stamper --directory "/other/working/directory"
+    version-stamper --directory "/other/working/directory"
 ```
 
 or using an assignment:
 
 ```
-	version-stamper --directory="/other/working/directory"
+    version-stamper --directory="/other/working/directory"
 ```
 
 Available options:
@@ -431,8 +431,6 @@ Valid parameters:
    and current information is updated - commit hashes, date and time,
    build number, etc.
 
-## A little about git hooks
-
 If measures are taken to ensure that `version-stamper --generate` is
 executed every time during the build process, then keeping the stamps
 more or less up to date is not required, but may still be recommended.
@@ -532,82 +530,6 @@ Some properties of hooks:
    they are tracked by the repository, then the working tree becomes
    changed (which looks strange when there are still changes after the
    commit and you can’t get rid of it).
-
-Below are some typical execution sequences for git hooks. These sequences
-should not be considered as a strict guide - they were obtained experimentally
-and in reality can be modified depending on the actual situation (an empty
-repository with no commits at all, a repository with history and a clean
-working tree, a repository with local or prepared changes, etc.).
-
-*Notes:* the word `old` denotes the "topmost" commit in history,
-`new` - the new commit created by this operation. Sometimes
-`new temp` is used - which denotes a new intermediate commit created to
-apply changes sequentially. The term `distance` should be understood as
-some kind of "commit number" or build number returned by the `git describe`
-command. Can be thought of as a conditional "distance" from the current
-commit to some commit in the past, perhaps to the initial commit.
-
-**Regular** commit:
-
-```
-pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit
-<---------------- o l d   c o m m i t ----------------><-- n e w -->
-                                                       (distance increased)
-```
-                                                           
-**Amend** commit:
-
-```
-pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit  ->  post-rewrite amend
-<---------------- o l d   c o m m i t ----------------><------- n e w   c o m m i t ------->
-                                                        (distance not changed)
-```
-
-**Squash** commit (**squash**):<br/>
-Merging multiple commits is done in a loop where each new commit that is
-merged is applied to an intermediate commit, thus summing up all the changes
-in that intermediate commit. The final state of the intermediate commit
-matches the desired result. However, if a failure occurs during such a
-merge (which could be caused by an eavesdropper), then the entire sequence
-can be rejected.
-
-```
-pre-rebase  ->  post-checkout  ->  (  prepare-commit-msg  ->  post-commit  ->  post-rewrite amend  ) ->  post-rewrite rebase
-<-- o l d --><-- f i r s t -->        <----- p r e v -----><--- n e w   t e m p   c o m m i t ---><--- l a s t   c o m m i t --->
-            (distance reduced here)  -------------------------------------------------------->    (distance remains reduced)
-            (HEAD detached)                               (detached HEAD is promoted to temp commit)     (HEAD attached to branch)
-                                    (ORIG_HEAD:old_sha)
-                                    (AUTO_MERGE:other_sha)
-```
-
-The loop running for each commit in the merge calls the hooks
-( prepare-commit-msg -> post-commit -> post-rewrite amend ). During this
-cycle, ORIG_HEAD does not change. MERGE_MSG contains the text of the
-message of the commit being added, and COMMIT_EDITMSG accumulates all
-messages.
-
-In the last iteration of the loop, the accumulated COMMIT_EDITMSG is
-copied to SQUASH_MSG during prepare-commit-msg, after which the
-COMMIT_EDITMSG is recreated from the SQUASH_MSG and additional text.
-A REBASE_HEAD corresponding to the ORIG_HEAD is also added at the
-beginning of the entire operation.
-
-By post-commit time, the COMMIT_MSG file has been copied into the new
-commit message, and SQUASH_MSG and AUTO_MERGE have been removed.
-
-**Merge** commit; only partially tested, too many strategies and
-methods of merging, incl. merging more than two branches at once
-(octopus).
-
-```
-prepare-commit-msg  ->  commit-msg  ->  post-merge 0
-<------- o l d   c o m m i t --------><--- n e w --->
-                                      (distance increased by count of new commits on all ways)
-(MERGE_HEAD - one or few SHAs to merge, one per line)
-(ORIG_HEAD)
-(MERGE_MODE - this is not strategy name, this is strategy options)
-(MERGE_MSG)
-```
 
 # Plugin internals
 
@@ -754,3 +676,193 @@ However, changes to unit tests can be made without merging branches, if
 you first test them in the working branch (without including them in the
 repository), and at the end simply switch to the `unit-tests` branch and
 add the already corrected unit test files there one operation.
+
+# Appendix
+
+## A little about git hooks
+
+Below are some typical execution sequences for git hooks. These sequences
+should not be considered as a strict guide - they were obtained experimentally
+and in reality can be modified depending on the actual situation (an empty
+repository with no commits at all, a repository with history and a clean
+working tree, a repository with local or prepared changes, etc.).
+
+*Notes:* the word `old` denotes the "topmost" commit in history,
+`new` - the new commit created by this operation. Sometimes
+`new temp` is used - which denotes a new intermediate commit created to
+apply changes sequentially. The term `distance` should be understood as
+some kind of "commit number" or build number returned by the `git describe`
+command. Can be thought of as a conditional "distance" from the current
+commit to some commit in the past, perhaps to the initial commit.
+
+**Regular** commit:
+
+```
+pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit
+<---------------- o l d   c o m m i t ----------------><-- n e w -->
+                                                       (distance increased)
+```
+                                                           
+**Amend** commit:
+
+```
+pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit  ->  post-rewrite amend
+<---------------- o l d   c o m m i t ----------------><------- n e w   c o m m i t ------->
+                                                        (distance not changed)
+```
+
+**Squash** commit (**squash**):<br/>
+Merging multiple commits is done in a loop where each new commit that is
+merged is applied to an intermediate commit, thus summing up all the changes
+in that intermediate commit. The final state of the intermediate commit
+matches the desired result. However, if a failure occurs during such a
+merge (which could be caused by an eavesdropper), then the entire sequence
+can be rejected.
+
+```
+pre-rebase  ->  post-checkout  ->  (  prepare-commit-msg  ->  post-commit  ->  post-rewrite amend  ) ->  post-rewrite rebase
+<-- o l d --><-- f i r s t -->        <----- p r e v -----><--- n e w   t e m p   c o m m i t ---><--- l a s t   c o m m i t --->
+            (distance reduced here)  -------------------------------------------------------->    (distance remains reduced)
+            (HEAD detached)                               (detached HEAD is promoted to temp commit)     (HEAD attached to branch)
+                                    (ORIG_HEAD:old_sha)
+                                    (AUTO_MERGE:other_sha)
+```
+
+The loop running for each commit in the merge calls the hooks
+( prepare-commit-msg -> post-commit -> post-rewrite amend ). During this
+cycle, ORIG_HEAD does not change. MERGE_MSG contains the text of the
+message of the commit being added, and COMMIT_EDITMSG accumulates all
+messages.
+
+In the last iteration of the loop, the accumulated COMMIT_EDITMSG is
+copied to SQUASH_MSG during prepare-commit-msg, after which the
+COMMIT_EDITMSG is recreated from the SQUASH_MSG and additional text.
+A REBASE_HEAD corresponding to the ORIG_HEAD is also added at the
+beginning of the entire operation.
+
+By post-commit time, the COMMIT_MSG file has been copied into the new
+commit message, and SQUASH_MSG and AUTO_MERGE have been removed.
+
+**Merge** commit; only partially tested, too many strategies and
+methods of merging, incl. merging more than two branches at once
+(octopus).
+
+```
+prepare-commit-msg  ->  commit-msg  ->  post-merge 0
+<------- o l d   c o m m i t --------><--- n e w --->
+                                      (distance increased by count of new commits on all ways)
+(MERGE_HEAD - one or few SHAs to merge, one per line)
+(ORIG_HEAD)
+(MERGE_MODE - this is not strategy name, this is strategy options)
+(MERGE_MSG)
+```
+
+## Overview of the git repository directory structure
+
+In the model case, we assume that we have a git repository in the `./MAIN`
+directory, this repository has a `SUBMODULE` submodule (path to the
+`./MAIN/SUBODULE` directory) and in addition the repository has an
+additional working tree `./ WORKTREE`, while the submodule is also present
+in the branch to which the `WORKTREE` working tree is configured.
+
+A **Submodule** is characterized by a local path in the tree (in our
+example, the `SUBMODULE` directory is located right at the root of the
+repository), a source (the remote repository) and an optional branch.
+Branch, if specified, simply specifies the initial state of the submodule;
+Regardless of whether it is specified or not, the submodule will be in
+the *detached head* state, and you can only switch it to the attached
+state manually.
+
+The submodule path is used as an "identifier" - information about the
+submodule will be stored inside the repository folder `.git/modules/`
+with the same relative path as it is located in the working tree.
+
+A **working tree** is characterized by the path where it is located
+(outside the main working tree), the assigned name of that tree, and
+the branch to which the tree corresponds. In this case, a specific
+branch cannot have more than one working tree.
+
+The assigned worktree name is used to identify it within the
+`.git/worktrees/` hierarchy.
+
+```
+folder  ./MAIN                  << a directory with a working tree (superproject) and a .git folder.
+folder  .   ./SUBMODULE         << a project submodule, instead of a subfolder .git, contains a file
+        .   .                      with a link to the desired subdirectory in the .git superproject.
+ file   .   .   .git            << contains the relative path to the repository folder (here
+        .   .   .                  "gitdir: ../.git/modules/SUBMODULE").
+ file   .   .gitmodules         << superproject file describing the submodules included in it (name,
+        .   .                      source address, local path, branch (if any)) as a configuration
+        .   .                      file - you can use 'git config ...'.
+folder  .   ./.git              << a .git subdirectory containing the superproject's repository data
+        .   .   .                  and its nested submodule data and related work tree information.
+ file   .   .   HEAD            << ref to the branch (in the form of ref: refs/heads/master or
+        .   .   .                  commit hash for detached head).
+ file   .   .   config          << superproject configuration (submodules have their own sections
+        .   .   .                  with the source address and activity flag, but not a word about
+        .   .   .                  subtrees).
+ file   .   .   description     << usually not used, repository description.
+ file   .   .   packed-refs     << list of references to commits in packed sets.
+folder  .   .   ./branches      << usually an empty folder.
+folder  .   .   ./hooks         << a set of repository interceptors (this repository and associated
+        .   .   .                  work trees, but not submodules).
+folder  .   .   ./info          << usually not used.
+folder  .   .   ./logs          << a directory with files containing the history of branch head
+        .   .   .                  movements.
+folder  .   .   ./modules       << folder containing information about submodules (may be missing).
+folder  .   .   .   ./SUBMODULE         << same relative path as the working directory.
+ file   .   .   .   .   HEAD            << ref to the submodule branch.
+ file   .   .   .   .   config          << submodule configuration.
+ file   .   .   .   .   description     << not usually used, repository description.
+ file   .   .   .   .   packed-refs     << list of references to commits in packed sets.
+folder  .   .   .   .   ./branches      << usually an empty folder.
+folder  .   .   .   .   ./hooks         << submodule's git hooks.
+folder  .   .   .   .   ./info          << usually not used.
+folder  .   .   .   .   ./logs          << a directory with files containing the history.
+        .   .   .   .   .   ...
+folder  .   .   .   .   ./objects       << directory with submodule repository objects.
+folder  .   .   .   .   ./refs          << directory with refs (branches, tags) of the submodule.
+folder  .   .   .   .   .   ./heads         << directory with local submodule branches.
+ file   .   .   .   .   .   .   master      << a file with a commit hash of a submodule branch.
+folder  .   .   .   .   .   ./remotes       << directory with remote submodule repositories.
+folder  .   .   .   .   .   .   ./origin    << directory for the submodule's 'origin'.
+ file   .   .   .   .   .   .   .   master  << a file with a commit hash of a remote branch.
+folder  .   .   .   .   .   ./tags          << directory with submodule tags.
+ file   .   .   .   .   .   .   v0.0        << a file with a commit hash of a tag.
+folder  .   .   ./objects       << directory with superproject repository objects.
+folder  .   .   .   ./00        << directory for objects whose hash starts with 00.
+папки   .   .   .   .   ...
+folder  .   .   .   ./FF        << directory for objects whose hash starts with FF.
+folder  .   .   .   ./info
+folder  .   .   .   ./pack      << folder of packed sets of objects.
+folder  .   .   ./refs          << directory with refs (branches, tags) of the superproject.
+folder  .   .   .   ./heads         << directory with local superproject branches.
+ file   .   .   .   .   master      << a file with a commit hash of a superproject branch.
+folder  .   .   .   ./remotes       << directory with remote superproject repositories.
+folder  .   .   .   .   ./origin    << directory for the superproject's 'origin'
+ file   .   .   .   .   .   master  << a file with a commit hash of a remote branch.
+folder  .   .   .   ./tags          << directory with superproject tags.
+ file   .   .   .   .   v0.0        << a file with a commit hash of a tag.
+folder  .   .   ./worktrees     << a folder containing information about linked working trees
+        .   .   .                  (may be missing).
+folder  .   .   .   ./worktree-name << a folder with the name of the associated work tree.
+ file   .   .   .   .   HEAD        << ref to the work tree branch.
+ file   .   .   .   .   commondir   << relative path to MAIN/.git (here "../.." will actually
+        .   .   .   .   .              point to ./MAIN/.git); no prefixes like "gitdir: ".
+ file   .   .   .   .   gitdir      << absolute path to the working tree .git file (here
+        .   .   .   .   .              "*/WORKTREE/.git"), no prefixes like "gitdir: ".
+folder  .   .   .   .   ./logs      << a directory with files containing the history.
+folder  .   .   .   .   ./modules   << folder containing information about submodules of
+        .   .   .   .   .              work tree (may be missing).
+folder  .   .   .   .   .   ./SUBMODULE << a folder describing the given submodule of the
+        .   .   .   .   .   .              linked work tree (i.e. WORKTREE/SUBMODULE). This
+        .   .   .   .   .   .              is a duplicate of the folder from the main tree
+        .   .   .   .   .   .              ./MAIN/.git/modules/SUBMODULE.
+folder  ./WORKTREE              << the linked working tree is treated the same as a repository
+        .                          with a separate .git directory (git clone --separate-git-dir ...).
+ file   .   .git                << contains the absolute path to the repository .git folder
+        .   .                      (here "gitdir: */MAIN/.git/worktrees/worktree-name").
+folder  .   ./SUBMODULE         << submodule's work tree.
+ file   .   .   .git            << contains the absolute path to the repository .git folder
+        .   .   .                  (here "gitdir: */MAIN/.git/worktrees/worktree-name/modules/SUBMODULE")
+```

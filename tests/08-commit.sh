@@ -8,7 +8,8 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./bare0.git" -a -d "./bare1.git" -a \
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
-  -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
+  -d "./clone-a"   -a -d "./clone-e"   -a \
+  -d "./clone-m"   -a -d "./worktree" \
 ] || ../000-init-repos.sh
 
 [ -d "./temp/.git" ] && rm -rf ./temp/
@@ -42,8 +43,8 @@ source ver.sh
 
 [ \
 	   "0x00000000" == "${VERSION}" \
-	-a "v0.0-0.master+" == "${VERSION_TEXT}" \
-	-a "master+" == "${VERSION_BRANCH}" \
+	-a "v0.0-0.MASTER+" == "${VERSION_TEXT}" \
+	-a "MASTER+" == "${VERSION_BRANCH}" \
 	-a "0000000000000000000000000000000000000000" == "${VERSION_SHA}" \
 	-a "000000000" == "${VERSION_SHA_ABBREV}" \
 ] || DIE 1 "[FAIL]  $0     Version information is wrong"
@@ -89,8 +90,8 @@ source ver.sh
 # note: version stamps must be done by pre-commit hook, so parent's SHA must be used (p:0000...)
 [ \
 	   "0x00000001" == "${VERSION}" \
-	-a "v0.0-1.master" == "${VERSION_TEXT}" \
-	-a "master" == "${VERSION_BRANCH}" \
+	-a "v0.0-1.MASTER" == "${VERSION_TEXT}" \
+	-a "MASTER" == "${VERSION_BRANCH}" \
 	-a "p:0000000000000000000000000000000000000000" == "${VERSION_SHA}" \
 	-a "p:000000000" == "${VERSION_SHA_ABBREV}" \
 ] || DIE 1 "[FAIL]  $0     Version information is wrong"
@@ -123,8 +124,8 @@ source ver.sh
 # note: version stamps must be done by pre-commit hook, so non-null parent's SHA must be used
 [ \
 	   "0x00000002" == "${VERSION}" \
-	-a "v0.0-2.master" == "${VERSION_TEXT}" \
-	-a "master" == "${VERSION_BRANCH}" \
+	-a "v0.0-2.MASTER" == "${VERSION_TEXT}" \
+	-a "MASTER" == "${VERSION_BRANCH}" \
 	-a "0000000000000000000000000000000000000000" != "${VERSION_SHA#p:}" \
 	-a "000000000" != "${VERSION_SHA_ABBREV}" \
 	-a "${VERSION_SHA:0:${#VERSION_SHA_ABBREV}}" == "${VERSION_SHA_ABBREV}" \

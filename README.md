@@ -614,15 +614,16 @@ prepare-commit-msg  ->  commit-msg  ->  post-merge 0
 To create your own plugin, just create a file with a name corresponding
 to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
 the plugin and place this file next to `version-stamper`. The plugin must
-contain several functions; The easiest way is to take any existing plugin
-as a basis and make the necessary changes to it.
+contain several functions; function names must also contain the name of
+the plugin instead of `XXX`. The easiest way is to take any existing
+plugin as a basis and make the necessary changes to it.
 
-**`__PLUGIN_CS_NOTICE__`**<br/>
+**`__PLUGIN_XXX_NOTICE__`**<br/>
 This function prints a short description of this plugin to stdout. This
 description is used by the `version-stamper --help` command when generating
 a list of supported plugins.
 
-**`__PLUGIN_CS_SAMPLE__`**<br/>
+**`__PLUGIN_XXX_SAMPLE__`**<br/>
 This function prints a one-line example of using the plugin to stdout.
 This example is included in the `.version-stamper` configuration file
 created by the `version-stamper --config` command. Normally, the output
@@ -631,15 +632,15 @@ configuration file initially does not contain configured plugins - this
 must be done by the project author. However, in special cases it may be
 different.
 
-**`__PLUGIN_CS_ATTRIB__`**<br/>
+**`__PLUGIN_XXX_ATTRIB__`**<br/>
 This function prints to stdout a set of parameters applied to the
 generated version stamp in `.gitattributes`.
 
 *Note:* Updates to the `.gitattributes` and `.gitignore` files only occur
 when a new version stamp file is created.
 
-**`__PLUGIN_CS_GETVER__`**<br/>
-This function receives the text of the existing stamp on stdin and must
+**`__PLUGIN_XXX_GETVER__`**<br/>
+This function receives the text of the existing stamp from stdin and must
 output to stdout the text with the version designation corresponding to
 the contents of `VERSION_TEXT` (i.e. a string like "v1.2-333.branchname").
 This text is used to compare the existing version of the stamp with the
@@ -654,7 +655,7 @@ executed and line termination characters are converted to single
 LF (Unix-style), this allows tools like grep, awk, sed, etc. to be used
 without worrying about line breaks.
 
-**`__PLUGIN_CS_CREATE__`**<br/>
+**`__PLUGIN_XXX_CREATE__`**<br/>
 This function is designed to create a new stamp file and is called when
 the target file does not exist. The function receives an argument, which
 is the name of the file to be created with a version stamp, into which
@@ -682,7 +683,7 @@ END_OF_TEXT
 }
 ```
 
-**`__PLUGIN_CS_MODIFY__`**<br/>
+**`__PLUGIN_XXX_MODIFY__`**<br/>
 This function is used in cases where a stamp file already exists and
 changes need to be made to it. The existing stamp is fed to stdin (with
 LF line termination characters), and the function's only argument is the

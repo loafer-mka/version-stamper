@@ -2,7 +2,7 @@
 #   o p t i o n s
 #
 # verbose mode
-verbose:         false
+#verbose:         false
 #
 # abbreviation length
 # if not set, assumes 8 characters

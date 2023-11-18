@@ -250,12 +250,29 @@ __VERBOSE__ "Detect main folders and git submodule support"
 VERSION_ROOT_DIR="$(__git_filter_path__ rev-parse --show-toplevel 2>/dev/null)"
 VERSION_ROOT_DIR="$(readlink -f -- "${VERSION_ROOT_DIR%/}")"
 VERSION_GIT_DIR="$(__git_filter_path__ rev-parse --absolute-git-dir 2>/dev/null)"
-__VERBOSE__ "git --no-pager rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
-__VERBOSE__ "git --no-pager rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
+__VERBOSE__ "git rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
+__VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 [ -n "${VERSION_ROOT_DIR}" -a -n "${VERSION_GIT_DIR}" ] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
 
 VERSION_CURRENT_DIR="$(readlink -m -- "$(pwd 2>/dev/null)" 2>/dev/null)"
 __VERBOSE__ "readlink -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\""
+
+VERSION_HOOKS_DIR=""
+function __detect_hooks_dir__
+{
+	# VERSION_GIT_DIR may now points to actual .git directory with full content
+	# or to reduced .git directory of worktree with only HEAD, config, logs/ ...
+	# so hooks/ subfolder ust be detected inmain .git directory
+	if [ -d "${VERSION_GIT_DIR}/hooks" ]; then
+		VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
+		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
+	else
+		VERSION_HOOKS_DIR="$(__git_filter_path__ rev-parse --git-common-dir 2>/dev/null)/hooks"
+		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
+	fi
+	[ -d "${VERSION_HOOKS_DIR}" ] || VERSION_HOOKS_DIR=""
+}
+__detect_hooks_dir__ ""
 
 VERSION_SUBMOD_NAME=""
 VERSION_SUBMOD_PATH=""
@@ -281,7 +298,7 @@ else
 fi
 if [ -n "${VERSION_SUPER_DIR}" ]; then
 	# determine submodule name and path
-	__VERBOSE__ ".   Scan submodules\n.   git --no-pager config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --null --get-regexp 'submodule\..*\.path'"
+	__VERBOSE__ ".   Scan submodules\n.   git config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --null --get-regexp 'submodule\..*\.path'"
 	git --no-pager config --file="${VERSION_SUPER_DIR}/.gitmodules" --null --get-regexp 'submodule\..*\.path' 2>/dev/null |while IFS=$'\n' read -d $'\0' modname moddir ; do
 		modname="${modname#submodule.}"
 		modname="${modname%.path}"
@@ -299,9 +316,10 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 				git submodule update --init --force --recursive -- "${modpath}" 1>&2
 				[ 0 -ne "$?" ] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
 				VERSION_GIT_DIR="$(__git_filter_path__ rev-parse --absolute-git-dir 2>/dev/null)"
-				__VERBOSE__ ".   .   git --no-pager rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
+				__VERBOSE__ ".   .   git rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 				VERSION_ROOT_DIR="${modpath}"
 				__VERBOSE__ ".   .   change worktree directory\n.   .   .   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
+				__detect_hooks_dir__ ".   .   "
 				popd >/dev/null 2>&1
 			fi
 			break
@@ -352,7 +370,7 @@ function __READ_LF__
 	#         git status ... -- :/:controlled-filename             will return "" for unchanged 'controlled-filename'
 	#         git status ... -- controlled-filename                will return "" for unchanged 'controlled-filename'
 	merge_status="$(git --no-pager status --porcelain  --untracked-files=normal --ignored -- ":/:${file}")"
-	__VERBOSE__ "git --no-pager status --porcelain --untracked-files=normal --ignored -- \":/:${file}\"\n.   status=\"$merge_status\""
+	__VERBOSE__ "git status --porcelain --untracked-files=normal --ignored -- \":/:${file}\"\n.   status=\"$merge_status\""
 	# really <<<<<<, ======, >>>>>> are bigger than in script below
 	awk_script='
 		BEGIN{ mode = 1; }
@@ -389,18 +407,18 @@ function __READ_LF__
 		else
 			__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
 			# unmerged, deleted by them
-			__VERBOSE__ "git --no-pager show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
+			__VERBOSE__ "git show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
 			__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 "$awk_script"
 		fi
 		;;
 	"UD "*)
 		# unmerged, deleted by them
-		__VERBOSE__ "git --no-pager show -- \":2:${file}\"\n.   ..."
+		__VERBOSE__ "git show -- \":2:${file}\"\n.   ..."
 		__git_filter_eols__ show -- ":2:${file}"
 		;;
 	"DU "*)
 		# unmerged, deleted by us
-		__VERBOSE__ "git --no-pager show -- \":3:${file}\"\n.   ..."
+		__VERBOSE__ "git show -- \":3:${file}\"\n.   ..."
 		__git_filter_eols__ show -- ":3:${file}"
 		;;
 	"DD "*)
@@ -1019,9 +1037,8 @@ fi
 #
 # Print now (after getting actual verbose mode) detected parameters at current point:
 #
-__VERBOSE__ "readlink -f -- \"\$(git --no-pager rev-parse --show-toplevel)\"
-.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"
-
+__VERBOSE__ "
+VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"
 Config file$( [ -f "${STAMPER_CONFIG_PATH}" ] || echo " not found" ): \"${STAMPER_CONFIG_PATH}\"
 .   verbose= \"${STAMPER_VERBOSE}\"
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
@@ -1052,11 +1069,11 @@ done
 # get version designator from 'git describe'
 VERSION_TEXT="$(git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD 2>/dev/null \
 				| sed -r -e 's/^([A-Za-z]+[0-9]*\.[0-9]*-[0-9]*)(-g.*)/\1/')"
-__VERBOSE__ "\nDetect version data\ngit --no-pager describe --long --tags --match=\"[A-Za-z][0-9]*.[0-9]*\" HEAD\n.   VERSION_TEXT='${VERSION_TEXT}'"
+__VERBOSE__ "\nDetect version data\ngit describe --long --tags --match=\"[A-Za-z][0-9]*.[0-9]*\" HEAD\n.   VERSION_TEXT='${VERSION_TEXT}'"
 if [ $? -ne 0 -o -z "${VERSION_TEXT}" ]; then
 	# simulate if no version tags found
 	temp="$(git --no-pager rev-list --count HEAD 2>/dev/null)"
-	__VERBOSE__ ".   git --no-pager rev-list --count HEAD\n.       count=\"$temp\""
+	__VERBOSE__ ".   git rev-list --count HEAD\n.       count=\"$temp\""
 	if [ $? -ne 0 -o -z "$temp" -o "-1" == "$temp" ]; then
 		VERSION_TEXT="v0.0-0"
 	else
@@ -1074,7 +1091,7 @@ __VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERS
 
 # get SHA1
 VERSION_SHA="$(git --no-pager rev-parse HEAD 2>/dev/null)"
-__VERBOSE__ "git --no-pager rev-parse HEAD\n.   VERSION_SHA=${VERSION_SHA}"
+__VERBOSE__ "git rev-parse HEAD\n.   VERSION_SHA=${VERSION_SHA}"
 if [ "HEAD" == "${VERSION_SHA}" ]; then
 	VERSION_SHA="0000000000000000000000000000000000000000"
 	__VERBOSE__ ".   assume VERSION_SHA=0000000000000000000000000000000000000000"
@@ -1082,7 +1099,7 @@ fi
 
 # get branch name
 VERSION_BRANCH="$(git --no-pager rev-parse --abbrev-ref HEAD 2>/dev/null)"
-__VERBOSE__ "\nGet branch name\ngit --no-pager rev-parse --abbrev-ref HEAD\n.   VERSION_BRANCH=${VERSION_BRANCH}"
+__VERBOSE__ "\nGet branch name\ngit rev-parse --abbrev-ref HEAD\n.   VERSION_BRANCH=${VERSION_BRANCH}"
 if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 	# detached head:
 	#
@@ -1095,19 +1112,19 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 	if [ -z "${VERSION_BRANCH}" ]; then
 		if [ -n "${VERSION_SUBMOD_NAME}" ]; then
 			temp_branch="$(git --no-pager config --file="${VERSION_SUPER_DIR}/.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
-			__VERBOSE__ "Check submodule-assigned branch name\ngit --no-pager config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
+			__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
 			if [ -n "${temp_branch}" ]; then
 				# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
 				temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --contains=HEAD 2>/dev/null)"
 				# if temp non-empty then HEAD is somewhere on assigned branch
-				__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git --no-pager for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
+				__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
 				if [ -z "${temp}" ]; then
 					# may be branch heads are in past -- some commits were made on detached HEAD in we are in future?
 					# use git rev-list to read history of commits from HEAD down to initial commit
 					# and check if local or remote branch with '${temp_branch}' name if on way ...
 					# git for-each-ref prints all SHAs of matched branches, grep filters history
 					temp="$(git --no-pager rev-list HEAD | grep $(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null))"
-					__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git --no-pager rev-list HEAD | grep \$(git --no-pager for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
+					__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git rev-list HEAD | grep \$(git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
 					# some like may be made by 'git log --ancestry-path OLD..NEW' ... but assigned branch may be as local as remote and we may have few SHAs matched same name
 					# so ... did few attempts for few kinds of branches or use grep to check few variants at once
 				fi
@@ -1122,14 +1139,14 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 		if [ -z "${VERSION_BRANCH}" ]; then
 			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" ${VERSION_SHA} 2>/dev/null)"
 			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
-			__VERBOSE__ "Is there local or remote head matching our head?\ngit --no-pager name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
+			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
 			if [ "undefined" == "${VERSION_BRANCH}" ]; then
 				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
 				# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
 				# this is potential trouble - if real branch has name 'undefined' then it may be miss with really undefined reference.
 				# (exit codes of 'git name-rev' in all observed cases were 0)
 				__VERBOSE__ ".   Try to look for heads in past instead of \"undefined\" branch"
-				__VERBOSE__ ".   a) scan local and remote heads:\n.   git --no-pager for-each-ref \"refs/remotes\" \"refs/heads\" --format=\"%(objectname) %(refname:lstrip=1)\""
+				__VERBOSE__ ".   a) scan local and remote heads:\n.   git for-each-ref \"refs/remotes\" \"refs/heads\" --format=\"%(objectname) %(refname:lstrip=1)\""
 				declare -A temp_heads
 				git --no-pager for-each-ref "refs/remotes" "refs/heads" --format="%(objectname) %(refname:lstrip=1)" | while read temp_sha temp_ref; do
 					case "${temp_ref%%/*}" in
@@ -1145,7 +1162,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 					esac
 					__VERBOSE__ ".   .   ${temp_sha} := ${temp_heads[${temp_sha}]} (${temp_ref})"
 				done
-				__VERBOSE__ ".   b) look at history:\n.   git --no-pager rev-list HEAD"
+				__VERBOSE__ ".   b) look at history:\n.   git rev-list HEAD"
 				git --no-pager rev-list HEAD |while read temp_sha; do
 					__VERBOSE__ ".   .   ${temp_sha} is '${temp_heads[${temp_sha}]}'"
 					if [ -n "${temp_heads[${temp_sha}]}" ]; then
@@ -1215,7 +1232,7 @@ pre-commit)
 		# use --sq, so 'git rev-parse' will print all sha on same line; without --q it will print one sha per line
 		temp="$(git --no-pager rev-parse --sq ${VERSION_SHA}^@ 2>/dev/null)"
 		temp="${temp//\'/}"
-		__VERBOSE__ "git --no-pager rev-parse --sq ${VERSION_SHA}^\n.   temp=$temp"
+		__VERBOSE__ "git rev-parse --sq ${VERSION_SHA}^\n.   temp=$temp"
 		if [ -z "$temp" -o "$temp" == "${VERSION_SHA}" ]; then
 			temp="0000000000000000000000000000000000000000"
 			__VERBOSE__ ".   assume temp=0000000000000000000000000000000000000000"
@@ -1230,7 +1247,7 @@ pre-commit)
 	unset amend
 	# check changes of files; skip all non-indexed and ignored files; assume commited for indexed files;
 	# and detect changed in worktree non-target files - if ones exist then mark repo as dirty
-	__VERBOSE__ "git --no-pager status --porcelain --untracked-files=normal"
+	__VERBOSE__ "git status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
 	awk 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
@@ -1263,7 +1280,7 @@ pre-commit)
 	;;
 *)
 	# all other hooks except pre-commit
-	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit --no-pager status --porcelain --untracked-files=normal"
+	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
 	awk 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
@@ -1389,7 +1406,7 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 
 			#   t h e   e n d
 		END_OF_TEXT
-		__VERBOSE__ ".   git --no-pager add --force -- \"${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}\""
+		__VERBOSE__ ".   git add --force -- \"${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}\""
 		git --no-pager add --force -- "${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}"
 		# add config into .gitattributes
 		STAMPER_FILL_ATTRIB["${STAMPER_CONFIG_NAME}"]="text"
@@ -1508,9 +1525,9 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					echo "         before or rename old identifiers manually." 1>&2
 				else
 					# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
-					__VERBOSE__ "git --no-pager check-ignore -- \":/:${target}\""
+					__VERBOSE__ "git check-ignore -- \":/:${target}\""
 					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-						__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${VERSION_ROOT_DIR}/${target}\""
+						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
 						git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
 					else
 						__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
@@ -1528,9 +1545,9 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				STAMPER_FILL_IGNORE[${#STAMPER_FILL_IGNORE[@]}]="${target}"
 			else
 				# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
-				__VERBOSE__ "git --no-pager check-ignore -- \":/:${target}\""
+				__VERBOSE__ "git check-ignore -- \":/:${target}\""
 				if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-					__VERBOSE__ ".    NON-GITIGNORED file\ngit --no-pager add \"${VERSION_ROOT_DIR}/${target}\""
+					__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
 					git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
 				else
 					__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
@@ -1550,6 +1567,7 @@ if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 	echo "Folders:"
 	echo "   VERSION_CURRENT_DIR= ${VERSION_CURRENT_DIR}"
 	echo "   VERSION_GIT_DIR=     ${VERSION_GIT_DIR}"
+	echo "   VERSION_HOOKS_DIR=   ${VERSION_HOOKS_DIR:-(not found)}"
 	echo "   VERSION_ROOT_DIR=    ${VERSION_ROOT_DIR}"
 	echo "   VERSION_SUPER_DIR=   ${VERSION_SUPER_DIR}"
 	echo ""
@@ -1672,7 +1690,7 @@ done)
 .gitmodules     text eol=lf"
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitattributes\n.   git --no-pager add --force ${VERSION_ROOT_DIR}/.gitattributes"
+		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_ROOT_DIR}/.gitattributes"
 		__STORE_LF__ ".gitattributes" <<<"${text_b}"
 		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitattributes"
 	else
@@ -1898,7 +1916,7 @@ $[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 	fi
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitignore\n.   git --no-pager add --force ${VERSION_ROOT_DIR}/.gitignore"
+		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_ROOT_DIR}/.gitignore"
 		__STORE_LF__ ".gitignore" <<<"${text_b}"
 		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitignore"
 	else
@@ -2170,12 +2188,12 @@ function __update_all_hooks__
 	local		hook_path
 	local		hook
 
-	all_hooks["pre-commit"]="${VERSION_GIT_DIR}/hooks/pre-commit"
-	all_hooks["post-commit"]="${VERSION_GIT_DIR}/hooks/post-commit"
-	all_hooks["post-rewrite"]="${VERSION_GIT_DIR}/hooks/post-rewrite"
-	all_hooks["post-merge"]="${VERSION_GIT_DIR}/hooks/post-merge"
-	all_hooks["post-checkout"]="${VERSION_GIT_DIR}/hooks/post-checkout"
-	for hook_path in "${VERSION_GIT_DIR}/hooks"/*; do
+	all_hooks["pre-commit"]="${VERSION_HOOKS_DIR}/pre-commit"
+	all_hooks["post-commit"]="${VERSION_HOOKS_DIR}/post-commit"
+	all_hooks["post-rewrite"]="${VERSION_HOOKS_DIR}/post-rewrite"
+	all_hooks["post-merge"]="${VERSION_HOOKS_DIR}/post-merge"
+	all_hooks["post-checkout"]="${VERSION_HOOKS_DIR}/post-checkout"
+	for hook_path in "${VERSION_HOOKS_DIR}"/*; do
 		hook="${hook_path##*/}"
 		case "${hook}" in
 		#
@@ -2288,27 +2306,31 @@ function __update_all_hooks__
 # check/update/setup git hooks
 #
 if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
-	__VERBOSE__ "Update hooks now"
-	
-	if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
-		# for version stamper project itself executed plugin may change
-		# current version data, so reload version file before updating hooks.
-		__VERBOSE__ "Reload version information before check/create hooks"
-		. "${STAMPER_SCRIPT_PATH}-this"
-		unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
-	fi
-
-	STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
-	__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on_path=\"$STAMPER_SCRIPT_CMD\""
-	if [ "$STAMPER_SCRIPT_CMD" == "${STAMPER_SCRIPT_PATH}" ]; then
-		# version-stamper is installed and is used from install location
-		STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
+	if [ -z "${VERSION_HOOKS_DIR}" ]; then
+		echo "Warning: cannot find '.git/hooks' folder to update git hooks" 1>&2
 	else
-		STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" "${STAMPER_SCRIPT_PATH}")"
-	fi
-	__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
+		__VERBOSE__ "Update hooks now"
+		
+		if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
+			# for version stamper project itself executed plugin may change
+			# current version data, so reload version file before updating hooks.
+			__VERBOSE__ "Reload version information before check/create hooks"
+			. "${STAMPER_SCRIPT_PATH}-this"
+			unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
+		fi
 
-	__update_all_hooks__
+		STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
+		__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on_path=\"$STAMPER_SCRIPT_CMD\""
+		if [ "$STAMPER_SCRIPT_CMD" == "${STAMPER_SCRIPT_PATH}" ]; then
+			# version-stamper is installed and is used from install location
+			STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
+		else
+			STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" "${STAMPER_SCRIPT_PATH}")"
+		fi
+		__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
+
+		__update_all_hooks__
+	fi
 fi
 EXIT 0
 

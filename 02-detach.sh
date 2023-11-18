@@ -8,7 +8,8 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./bare0.git" -a -d "./bare1.git" -a \
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
-  -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
+  -d "./clone-a"   -a -d "./clone-e"   -a \
+  -d "./clone-m"   -a -d "./worktree" \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS detach-p/.git
@@ -21,12 +22,12 @@ popd >/dev/null 2>&1
 # check for detached head ands --directory option
 ../../version-stamper --directory detach-f -p | LOAD_B
 
-#PRINT_A_B
+# PRINT_A_B
 
 [ \
-	   "x1.2-4.F" == "${A[VERSION_TEXT]}" \
-	-a "x1.2-13.F" == "${B[VERSION_TEXT]}" \
-	-a "x" == "${A[VERSION_PREFIX]}"      -a "x" == "${B[VERSION_PREFIX]}" \
+	   "X1.2-4.F" == "${A[VERSION_TEXT]}" \
+	-a "X1.2-13.F" == "${B[VERSION_TEXT]}" \
+	-a "X" == "${A[VERSION_PREFIX]}"      -a "X" == "${B[VERSION_PREFIX]}" \
 	-a "1" == "${A[VERSION_MAJOR]}"       -a "1" == "${B[VERSION_MAJOR]}" \
 	-a "2" == "${A[VERSION_MINOR]}"       -a "2" == "${B[VERSION_MINOR]}" \
 	-a "4" == "${A[VERSION_BUILD]}"       -a "13" == "${B[VERSION_BUILD]}" \

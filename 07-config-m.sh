@@ -8,7 +8,8 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./bare0.git" -a -d "./bare1.git" -a \
   -d "./fresh"     -a -d "./contrib"   -a \
   -d "./detach-f"  -a -d "./detach-p"   -a \
-  -d "./clone-a"   -a -d "./clone-e"   -a -d "./clone-m" \
+  -d "./clone-a"   -a -d "./clone-e"   -a \
+  -d "./clone-m"   -a -d "./worktree" \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS contrib/.git
@@ -61,11 +62,13 @@ for f in .* * ; do [ -f "$f" ] && C["2:$f"]="found" ; done
 source ver.sh
 ../../../version-stamper -p | LOAD_A
 
+HOOKS_FLAG="$(HOOKS_EXIST .git)"
+CLEAN_HOOKS .git
 CLEAN_WORKTREE .
 
-#for i in "${!C[@]}" ; do echo "$i"; done | sort | while read i ; do echo "C[$i] = ${C[$i]}" ; done
-#for v in "${!VERSION@}" ; do echo "$v"; done | sort | while read v ; do declare -n z=$v; echo "$v = $z" ; done
-#for i in "${!A[@]}" ; do echo "$i"; done | sort | while read i ; do echo "A[$i] = ${A[$i]}" ; done
+# for i in "${!C[@]}" ; do echo "$i"; done | sort | while read i ; do echo "C[$i] = ${C[$i]}" ; done
+# for v in "${!VERSION@}" ; do echo "$v"; done | sort | while read v ; do declare -n z=$v; echo "$v = $z" ; done
+# for i in "${!A[@]}" ; do echo "$i"; done | sort | while read i ; do echo "A[$i] = ${A[$i]}" ; done
 
 [ \
        "found" == "${C[0:.gitmodules]}"       -a "found" == "${C[0:README.txt]}" \
@@ -81,11 +84,11 @@ CLEAN_WORKTREE .
     -a "text eol=lf" == "${C[A:.gitignore]}"  -a "text eol=lf" == "${C[A:.gitattributes]}" \
     -a "text eol=lf" == "${C[A:.gitmodules]}" -a "text" == "${C[A:.version-stamper]}" \
 \
-	-a "v0.0-17.SUBMOD+" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-17.SUBMOD+" == "${VERSION_TEXT}" \
+	-a "v0.0-18.SUBMOD+" == "${A[VERSION_TEXT]}" \
+	-a "v0.0-18.SUBMOD+" == "${VERSION_TEXT}" \
 	-a "+" == "${A[VERSION_DIRTY]}" \
 	-a "SUBMOD" == "${A[VERSION_BRANCH]}"     -a "SUBMOD+" == "${VERSION_BRANCH}" \
-	-a "00000011" == "${A[VERSION_HEX]}"      -a "0x00000011" == "${VERSION}" \
+	-a "00000012" == "${A[VERSION_HEX]}"      -a "0x00000012" == "${VERSION}" \
 	-a "${A[VERSION_SHA]}" == "${VERSION_SHA}" \
 	-a "${A[VERSION_SHA_ABBREV]}" == "${VERSION_SHA_ABBREV}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  \
@@ -102,7 +105,7 @@ CLEAN_WORKTREE .
     -a "found" != "${C[1:ver.mk]}" \
 ] || DIE 1 "[FAIL]  $0     Wrong parameters presented"
 
-[ "true" != "$(HOOKS_EXIST .git)" ] && DIE 1 "[FAIL]  $0   WANTED HOOKS ARE FOUND FOR fresh"
+[ "true" != "${HOOKS_FLAG}" ] && DIE 1 "[FAIL]  $0   WANTED HOOKS ARE NOT FOUND FOR contrib"
 
 echo "[ OK ]  $0   Add default configuration into complex project"
 

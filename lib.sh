@@ -88,6 +88,9 @@ function HOOKS_EXIST
 function CLEAN_WORKTREE
 {
 	pushd "$1" >/dev/null 2>&1
+	BRANCH="$(git --no-pager rev-parse --abbrev-ref HEAD 2>/dev/null)"
+	[ "HEAD" == "${BRANCH}" ] && BRANCH=""
+
 	# echo "======== DO CLEAN WORKTREE"
 	git --no-pager status --porcelain --ignored | while read S N rest ; do
 		# echo ">> $S $N"
@@ -101,8 +104,8 @@ function CLEAN_WORKTREE
 			git rm --force "$N" >/dev/null 2>&1
 			;;
 		*)
-			# echo "> git checkout -- $N"
-			git checkout -- "$N"
+			# echo "> git checkout --force ${BRANCH} -- $N"
+			git checkout --force ${BRANCH} -- "$N"
 		esac
 	done
 	# echo "======== AFTER CLEAN WORKTREE"
@@ -130,10 +133,11 @@ function GIT_INIT
 	# so ... use '-c init.defaultBranch=master' only, so you avoid warnings about
 	# branch renaming and have same branch 'master' as for old git.
 	#
-	git --no-pager -c init.defaultBranch=master init "$@"
+	git --no-pager -c init.defaultBranch=MASTER init "$@"
 	pushd "$1" >/dev/null 2>&1
+	sed -i -e 's/master/MASTER/' .git/HEAD
 	git --no-pager config --local user.name "Stamper Tests"
-	git --no-pager config --local user.name "stamper@test.org"
+	git --no-pager config --local user.email "stamper@test.org"
 	popd >/dev/null 2>&1
 }
 

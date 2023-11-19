@@ -1,0 +1,32 @@
+#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked by commands that rewrite commits (git-commit when called
+# with --amend and git-rebase; however, full-history (re)writing tools like
+# git-fast-import or git-filter-repo typically do not call it!).
+# Its first argument denotes the command it was invoked by: currently one of
+# amend or rebase.
+#
+
+export STAMPER_SUITE="Version suite v0.9-23.unit-tests"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+echo ">>>>>> POST-REWRITE '$@': arg1=${1,,}  .git/COMMIT_EDITMSG: $([ -f ".git/COMMIT_EDITMSG" ] && echo found || echo "not found")" 1>&2
+
+if [ "${1,,}" == "rebase" ]; then
+	VERSION_TEXT="$("./../../../version-stamper" --git-hook=post-rewrite --generate)"
+	RETVAL=$?
+echo ">>>>>> git diff --cached --quiet >/dev/null 2>&1" 1>&2
+	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1; then
+		# there are some indexed changes, create new commit now
+echo ">>>>>> git commit --amend --message \"${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\s*#/d')\"" 1>&2
+		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message "${VERSION_TEXT} $(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\s*#/d')"
+	fi
+	exit $RETVAL
+fi
+

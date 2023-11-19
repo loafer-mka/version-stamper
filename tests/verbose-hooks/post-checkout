@@ -1,0 +1,24 @@
+#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked when a 'git checkout' or 'git switch' is run after having updated the worktree.
+# It is also run after 'git clone' and 'git worktree add', unless the --no-checkout (-n) option is used.
+# The hook is given three parameters: the ref of the previous HEAD, the ref of the new HEAD (which
+# may or may not have changed), and a flag indicating whether the checkout was a branch checkout
+# (changing branches, flag=1) or a file checkout (retrieving a file from the index, flag=0)
+
+export STAMPER_SUITE="Version suite v0.9-23.unit-tests"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+echo ">>>>>> POST-CHECKOUT '$@': GIT_REFLOAG_ACTION='$GIT_REFLOG_ACTION'" 1>&2
+
+if [ "$3" == "1" -a -z "$GIT_REFLOG_ACTION" ]; then
+	"./../../../version-stamper" --git-hook=post-checkout --generate
+	exit $?
+fi
+

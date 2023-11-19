@@ -1,0 +1,34 @@
+#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook is invoked by git-commit. It takes no parameters, and is invoked
+# after a commit is made.
+# This hook is meant primarily for notification, and cannot affect the outcome of 'git commit'.
+#
+# GIT_REFLOG_ACTION is not set for simple an amend commits; it is set when post-commit
+# is executed during merge, squash etc.
+
+export STAMPER_SUITE="Version suite v0.9-23.unit-tests"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+echo ">>>>>> POST-COMMIT '$@': GIT_REFLOAG_ACTION='$GIT_REFLOG_ACTION'  .git/COMMIT_EDITMSG: $([ -f ".git/COMMIT_EDITMSG" ] && echo found || echo "not found")" 1>&2
+
+if [ -z "$GIT_REFLOG_ACTION" ]; then
+	true
+	VERSION_TEXT="$("./../../../version-stamper" --git-hook=post-commit --generate)"
+	RETVAL=$?
+	
+echo ">>>>>> git diff --cached --quiet" 1>&2
+	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1; then
+		# there are some indexed changes, create new commit now
+echo ">>>>>> git commit --amend --message \"${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\s*#/d')\"" 1>&2
+		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message "${VERSION_TEXT} $(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\s*#/d')"
+	fi
+	exit $RETVAL
+fi
+

@@ -1,0 +1,20 @@
+#!/bin/sh
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#
+# This hook script is called by 'git commit' with no arguments.
+# The hook should exit with non-zero status after issuing an
+# appropriate message if it wants to stop the commit.
+
+export STAMPER_SUITE="Version suite v0.9-23.unit-tests"
+# note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
+#
+
+echo ">>>>>> PRE-COMMIT '$@'" 1>&2
+
+"./../../../version-stamper" --git-hook=pre-commit --generate
+exit $?
+

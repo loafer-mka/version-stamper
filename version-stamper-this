@@ -4,14 +4,14 @@
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
 
-STAMPER_VERSION=0x00090017
-STAMPER_VERSION_TEXT="v0.9-23.unit-tests"
-STAMPER_VERSION_DATE="2023-11-19 01:31:02"
-STAMPER_VERSION_SHORTDATE="231119013102"
+STAMPER_VERSION=0x00090018
+STAMPER_VERSION_TEXT="v0.9-24.unit-tests"
+STAMPER_VERSION_DATE="2023-11-19 18:22:52"
+STAMPER_VERSION_SHORTDATE="231119182252"
 STAMPER_VERSION_BRANCH="unit-tests"
 STAMPER_VERSION_HOSTINFO="andrey@makarov.local openSUSE Leap 15.5"
 STAMPER_VERSION_AUTHORSHIP="Andrey Makarov"
 STAMPER_VERSION_DECLARATION="Copyright (c) Andrey Makarov 2022"
 # if information below is based on parent commit's hash then prefix 'p:' will be used
-STAMPER_VERSION_SHA_ABBREV="p:ca7b61e0"
-STAMPER_VERSION_SHA="p:ca7b61e014d0bc7f5d5501bce38a35930266cbb4"
+STAMPER_VERSION_SHA_ABBREV="p:bac94238"
+STAMPER_VERSION_SHA="p:bac94238db11d50bb42adc991413201732fca761"

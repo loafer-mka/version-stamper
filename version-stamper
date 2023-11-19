@@ -1188,8 +1188,11 @@ fi
 # note: VERSION_SHA may be changed depnded on situation (executing hook).
 #
 VERSION_DIRTY=""
-case "${STAMPER_EXECUTING_HOOK}" in
-pre-commit)
+# 1) pre-commit needs in special logic to detect DIRTY state and parent commit (amend!)
+# 2) post-merge needs in configuration file check -- we must leve it in correct
+#    state (avoid syntax errors on next reading); the DIRTY deteted is same as (3)
+# 3) all other cases
+if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 	__VERBOSE__ "\nDetect DIRTY status for pre-commit hook"
 	# now ... commit may be used in many scenarios:
 	# - regular commit: VERSION_SHA is a SHA of current commit, so when actual commit will be created VERSION_SHA becomes 'SHA of parent commit'
@@ -1277,8 +1280,19 @@ pre-commit)
 			;;
 		esac
 	done
-	;;
-*)
+fi
+if [ "post-merge" == "${STAMPER_EXECUTING_HOOK}" ]; then
+	git --no-pager status --porcelain --untracked-files=normal -- ":/:${STAMPER_CONFIG_NAME}"  2>/dev/null | while read status file; do
+		case "$status" in
+		AA | AU | UA | UU | DU | UD | DD)
+			__STORE_NATIVE_EOL__ "${STAMPER_CONFIG_NAME}" <<<"$(__READ_LF__ "${STAMPER_CONFIG_NAME}")"
+			;;
+		*)
+			;;
+		esac
+	done
+fi
+if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 	# all other hooks except pre-commit
 	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
@@ -1307,8 +1321,7 @@ pre-commit)
 			;;
 		esac
 	done
-	;;
-esac
+fi
 
 #
 # build final SHA abbreviation (VERSION_SHA_ABBREV), version text (VERSION_TEXT) and numeric identification (VERSION_HEX)
@@ -1378,7 +1391,7 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 			#
 			# the copyright/copyleft declaration
 			# if not set, then 'DEFAULT_DECL AUTHORSHIP YEAR' is used:
-			#    DEFAULT_DECL is set by the 'STAMPER_DEFAULT_DECL' parameter of the file ${STAMPER_SCRIPT_PATH}-config;
+			#    DEFAULT_DECL is set by the 'STAMPER_DEFAULT_DECL' parameter of the file ${STAMPER_SCRIPT_NAME}-config;
 			#    AUTHORSHIP is specified by the 'authorship:' parameter above;
 			#    YEAR is the current year or year of initial commit.
 			declaration:      ${VERSION_DECLARATION:-${STAMPER_DEFAULT_DECL} your name initial_year}
@@ -1407,7 +1420,7 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 			#   t h e   e n d
 		END_OF_TEXT
 		__VERBOSE__ ".   git add --force -- \"${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}\""
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}"
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}" >/dev/null
 		# add config into .gitattributes
 		STAMPER_FILL_ATTRIB["${STAMPER_CONFIG_NAME}"]="text"
 	fi
@@ -1528,7 +1541,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					__VERBOSE__ "git check-ignore -- \":/:${target}\""
 					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
 						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
-						git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
+						git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
 					else
 						__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 					fi
@@ -1548,7 +1561,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				__VERBOSE__ "git check-ignore -- \":/:${target}\""
 				if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
 					__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
-					git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}"
+					git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
 				else
 					__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 				fi
@@ -1692,7 +1705,7 @@ done)
 	if [ "${text_a}" != "${text_b}" ]; then
 		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_ROOT_DIR}/.gitattributes"
 		__STORE_LF__ ".gitattributes" <<<"${text_b}"
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitattributes"
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitattributes" >/dev/null
 	else
 		__VERBOSE__ ".   OK .gitattributes, use it as-is"
 	fi
@@ -1918,7 +1931,7 @@ $[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 	if [ "${text_a}" != "${text_b}" ]; then
 		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_ROOT_DIR}/.gitignore"
 		__STORE_LF__ ".gitignore" <<<"${text_b}"
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitignore"
+		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitignore" >/dev/null
 	else
 		__VERBOSE__ ".   OK .gitignore, use it as-is"
 	fi
@@ -2013,10 +2026,9 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
 	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-commit --generate)\"
 	RETVAL=\$?
-	git --no-pager diff --cached --quiet >/dev/null 2>&1
-	if [ \$? -ne 0 ]; then
+	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
 		# there are some indexed changes, create new commit now
-		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
+		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
 	fi
 	exit \$RETVAL
 fi
@@ -2045,10 +2057,9 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 if [ \"\${1,,}\" == \"rebase\" ]; then
 	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-rewrite --generate)\"
 	RETVAL=\$?
-	git --no-pager diff --cached --quiet >/dev/null 2>&1
-	if [ \$? -ne 0 ]; then
+	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
 		# there are some indexed changes, create new commit now
-		git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG |sed -e '/^\\s*#/d')\"
+		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
 	fi
 	exit \$RETVAL
 fi
@@ -2076,10 +2087,14 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 
 VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate)\"
 RETVAL=\$?
-git --no-pager diff --cached --quiet >/dev/null 2>&1
-if [ \$? -ne 0 ]; then
-	# there are some indexed changes, create new commit now
-	git --no-pager commit --no-verify --message \"\${VERSION_TEXT} \$(cat .git/MERGE_MSG |sed -e '/^\\s*#/d')\"
+if [ \"1\" != \"\$1\" ]; then
+	# '$1' == '1' means squash merge;
+	# do not make commit for squash - it will be made manually later
+	# (squash merge does not execute commit yet)
+	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
+		# there are some indexed changes, create new commit now
+		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/MERGE_MSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+	fi
 fi
 exit \$RETVAL
 " >"${hook_path}"

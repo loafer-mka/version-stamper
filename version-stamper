@@ -1005,21 +1005,31 @@ done
 unset temp_target
 unset index
 
+VERSION_GIT_USER="$(git --no-pager config user.name 2>/dev/null)"
+VERSION_GIT_EMAIL="$(git --no-pager config user.email 2>/dev/null)"
+__VERBOSE__ "git config user.name and user.email\n.   VERSION_GIT_USER=${VERSION_GIT_USER}\n.   VERSION_GIT_EMAIL=${VERSION_GIT_EMAIL}"
+
 __VERBOSE__ "Check and update missing information (authorship and copyright/copyleft)"
 # authorship name must be determined once and then saved into config file
 if [ -z "${VERSION_AUTHORSHIP}" ]; then
 	__VERBOSE__ "Authorship is not set, try to detect it"
-	if [ "Windows_NT" == "$OS" ]; then
-		util="$(which reg.exe 2>/dev/null)"
-		if [ -n "$util" ]; then
-			VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
-					| awk '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
-			__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
-		fi
+	VERSION_AUTHORSHIP="${VERSION_GIT_USER}"
+	if [ -n "${VERSION_AUTHORSHIP}" ]; then
+		[ -n "${VERSION_GIT_EMAIL}" ] && VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP} <${VERSION_GIT_EMAIL}>"
+		__VERBOSE__ "authorship is based on git config\n.   VERSION_AUTHORSHIP=${VERSION_AUTHORSHIP}"
 	else
-		VERSION_AUTHORSHIP="${USER:-$USERNAME}"
-		VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP:-$(whoami)}"
-		__VERBOSE__ ".   this is *nix; try username instead of authorship\n.      \"${VERSION_AUTHORSHIP}\""
+		if [ "Windows_NT" == "$OS" ]; then
+			util="$(which reg.exe 2>/dev/null)"
+			if [ -n "$util" ]; then
+				VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
+						| awk '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
+			fi
+		else
+			VERSION_AUTHORSHIP="${USER:-$USERNAME}"
+			VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP:-$(whoami)}"
+			__VERBOSE__ ".   this is *nix; try username instead of authorship\n.      \"${VERSION_AUTHORSHIP}\""
+		fi
 	fi
 fi
 VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP:-Unknown Author}"
@@ -1090,11 +1100,11 @@ eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M
 __VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
 
 # get SHA1
-VERSION_SHA="$(git --no-pager rev-parse HEAD 2>/dev/null)"
-__VERBOSE__ "git rev-parse HEAD\n.   VERSION_SHA=${VERSION_SHA}"
-if [ "HEAD" == "${VERSION_SHA}" ]; then
-	VERSION_SHA="0000000000000000000000000000000000000000"
-	__VERBOSE__ ".   assume VERSION_SHA=0000000000000000000000000000000000000000"
+VERSION_SHA_LONG="$(git --no-pager rev-parse HEAD 2>/dev/null)"
+__VERBOSE__ "git rev-parse HEAD\n.   VERSION_SHA_LONG=${VERSION_SHA_LONG}"
+if [ "HEAD" == "${VERSION_SHA_LONG}" ]; then
+	VERSION_SHA_LONG="0000000000000000000000000000000000000000"
+	__VERBOSE__ ".   assume VERSION_SHA_LONG=0000000000000000000000000000000000000000"
 fi
 
 # get branch name
@@ -1137,9 +1147,9 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 			unset temp_branch
 		fi
 		if [ -z "${VERSION_BRANCH}" ]; then
-			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" ${VERSION_SHA} 2>/dev/null)"
+			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" ${VERSION_SHA_LONG} 2>/dev/null)"
 			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
-			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
+			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA_LONG}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
 			if [ "undefined" == "${VERSION_BRANCH}" ]; then
 				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
 				# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
@@ -1185,7 +1195,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 fi
 
 #
-# note: VERSION_SHA may be changed depnded on situation (executing hook).
+# note: VERSION_SHA_LONG may be changed depnded on situation (executing hook).
 #
 VERSION_DIRTY=""
 # 1) pre-commit needs in special logic to detect DIRTY state and parent commit (amend!)
@@ -1195,8 +1205,8 @@ VERSION_DIRTY=""
 if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 	__VERBOSE__ "\nDetect DIRTY status for pre-commit hook"
 	# now ... commit may be used in many scenarios:
-	# - regular commit: VERSION_SHA is a SHA of current commit, so when actual commit will be created VERSION_SHA becomes 'SHA of parent commit'
-	# - amend commit: VERSION_SHA referencies to sha of amended commit, so it becomes wrong ;(
+	# - regular commit: VERSION_SHA_LONG is a SHA of current commit, so when actual commit will be created VERSION_SHA_LONG becomes 'SHA of parent commit'
+	# - amend commit: VERSION_SHA_LONG referencies to sha of amended commit, so it becomes wrong ;(
 	#   theoretically we may use 'grand parent' sha here as parent sha
 	# - squash commit: same as amend ...
 	#   but few commits will be removed, so we needs in actual parent
@@ -1229,23 +1239,23 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		((VERSION_BUILD++))
 		__VERBOSE__ "This is regular commit; increase VERSION_BUILD, now VERSION_BUILD=${VERSION_BUILD}"
 	else
-		# distance does not changed; while VERSION_SHA is wrong, try to get grandparent SHA
+		# distance does not changed; while VERSION_SHA_LONG is wrong, try to get grandparent SHA
 		__VERBOSE__ "This is amend commit; remain VERSION_BUILD unchanged"
-		# there may be few parents of given commit, so get them all as VERSION_SHA
+		# there may be few parents of given commit, so get them all as VERSION_SHA_LONG
 		# use --sq, so 'git rev-parse' will print all sha on same line; without --q it will print one sha per line
-		temp="$(git --no-pager rev-parse --sq ${VERSION_SHA}^@ 2>/dev/null)"
+		temp="$(git --no-pager rev-parse --sq ${VERSION_SHA_LONG}^@ 2>/dev/null)"
 		temp="${temp//\'/}"
-		__VERBOSE__ "git rev-parse --sq ${VERSION_SHA}^\n.   temp=$temp"
-		if [ -z "$temp" -o "$temp" == "${VERSION_SHA}" ]; then
+		__VERBOSE__ "git rev-parse --sq ${VERSION_SHA_LONG}^\n.   temp=$temp"
+		if [ -z "$temp" -o "$temp" == "${VERSION_SHA_LONG}" ]; then
 			temp="0000000000000000000000000000000000000000"
 			__VERBOSE__ ".   assume temp=0000000000000000000000000000000000000000"
 		fi
-		VERSION_SHA="$temp"
+		VERSION_SHA_LONG="$temp"
 	fi
-	# VERSION_SHA may be list of sha... add 'p:' prefix to all
+	# VERSION_SHA_LONG may be list of sha... add 'p:' prefix to all
 	declare -a sha_temp
-	for sha in ${VERSION_SHA}; do sha_temp[${#sha_temp[@]}]="p:${sha}"; done
-	VERSION_SHA="${sha_temp[@]}"
+	for sha in ${VERSION_SHA_LONG}; do sha_temp[${#sha_temp[@]}]="p:${sha}"; done
+	VERSION_SHA_LONG="${sha_temp[@]}"
 	unset sha_temp
 	unset amend
 	# check changes of files; skip all non-indexed and ignored files; assume commited for indexed files;
@@ -1324,18 +1334,18 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 fi
 
 #
-# build final SHA abbreviation (VERSION_SHA_ABBREV), version text (VERSION_TEXT) and numeric identification (VERSION_HEX)
+# build final SHA abbreviation (VERSION_SHA_SHORT), version text (VERSION_TEXT) and numeric identification (VERSION_ID)
 #
 declare -a sha_temp
-for sha in ${VERSION_SHA}; do
+for sha in ${VERSION_SHA_LONG}; do
 	temp="${sha#[pP]:}"
 	sha_temp[${#sha_temp[@]}]="${sha%%[0-9a-fA-F]*}${temp:0:STAMPER_ABBREV_LEN}"
 done
-VERSION_SHA_ABBREV="${sha_temp[@]}"
+VERSION_SHA_SHORT="${sha_temp[@]}"
 unset sha_temp
 unset temp
 VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD}.${VERSION_BRANCH}${VERSION_DIRTY}"
-printf -v VERSION_HEX "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
+printf -v VERSION_ID "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)
@@ -1483,32 +1493,67 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	fi
 	unset temp
 	unset util
+	
+	if [ "0000000000000000000000000000000000000000" == "$VERSION_SHA_LONG" ]; then
+		VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
+		VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+	else
+		eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
+		__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
+		if [ -z "${VERSION_COMMIT_AUTHOR}" ]; then
+			VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
+			VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+		fi
+	fi
 fi
 
 if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "${VERSION_TEXT}  ${VERSION_DATE}  ${VERSION_HOSTINFO}"
-	echo "   VERSION_HEX=         ${VERSION_HEX}"
-	echo "   VERSION_TEXT=        ${VERSION_TEXT}"
-	echo "   VERSION_PREFIX=      ${VERSION_PREFIX}"
-	echo "   VERSION_MAJOR=       ${VERSION_MAJOR}"
-	echo "   VERSION_MINOR=       ${VERSION_MINOR}"
-	echo "   VERSION_BUILD=       ${VERSION_BUILD}"
-	echo "   VERSION_BRANCH=      ${VERSION_BRANCH}"
-	echo "   VERSION_DIRTY=       ${VERSION_DIRTY}"
-	echo "   VERSION_DATE=        ${VERSION_DATE}"
-	echo "   VERSION_SHORTDATE=   ${VERSION_SHORTDATE}"
-	echo "   VERSION_UNIXTIME=    ${VERSION_UNIXTIME}"
-	echo "   VERSION_SHA=         ${VERSION_SHA}"
-	echo "   VERSION_SHA_ABBREV=  ${VERSION_SHA_ABBREV}"
-	echo "   VERSION_HOSTINFO=    ${VERSION_HOSTINFO}"
-	echo "   VERSION_AUTHORSHIP=  ${VERSION_AUTHORSHIP}"
-	echo "   VERSION_DECLARATION= ${VERSION_DECLARATION}"
-	echo "   VERSION_LEADER=      ${VERSION_LEADER}"
-	echo "   VERSION_TRAILER=     ${VERSION_TRAILER}"
-	echo "   VERSION_SUBMOD_NAME= ${VERSION_SUBMOD_NAME}"
-	echo "   VERSION_SUBMOD_PATH= ${VERSION_SUBMOD_PATH}"
+	echo "   VERSION_ID=            ${VERSION_ID}"
+	echo "   VERSION_TEXT=          ${VERSION_TEXT}"
+	echo "   VERSION_PREFIX=        ${VERSION_PREFIX}"
+	echo "   VERSION_MAJOR=         ${VERSION_MAJOR}"
+	echo "   VERSION_MINOR=         ${VERSION_MINOR}"
+	echo "   VERSION_BUILD=         ${VERSION_BUILD}"
+	echo "   VERSION_BRANCH=        ${VERSION_BRANCH}"
+	echo "   VERSION_DIRTY=         ${VERSION_DIRTY}"
+	echo "   VERSION_DATE=          ${VERSION_DATE}"
+	echo "   VERSION_SHORTDATE=     ${VERSION_SHORTDATE}"
+	echo "   VERSION_UNIXTIME=      ${VERSION_UNIXTIME}"
+	echo "   VERSION_SHA_LONG=      ${VERSION_SHA_LONG}"
+	echo "   VERSION_SHA_SHORT=     ${VERSION_SHA_SHORT}"
+	echo "   VERSION_HOSTINFO=      ${VERSION_HOSTINFO}"
+	echo "   VERSION_AUTHORSHIP=    ${VERSION_AUTHORSHIP}"
+	echo "   VERSION_DECLARATION=   ${VERSION_DECLARATION}"
+	echo "   VERSION_SUBMOD_NAME=   ${VERSION_SUBMOD_NAME}"
+	echo "   VERSION_SUBMOD_PATH=   ${VERSION_SUBMOD_PATH}"
+	echo "   VERSION_COMMIT_AUTHOR= ${VERSION_COMMIT_AUTHOR}"
+	echo "   VERSION_COMMIT_EMAIL=  ${VERSION_COMMIT_EMAIL}"
+	echo "   VERSION_LEADER=        ${VERSION_LEADER}"
+	echo "   VERSION_TRAILER=       ${VERSION_TRAILER}"
 	echo "   Note. The identifier names listed here are exposed in the plugin, not in the target file."
 fi
+
+NAME_VERSION_ID="${VERSION_LEADER}VERSION_ID${VERSION_TRAILER}"
+NAME_VERSION_TEXT="${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}"
+NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
+NAME_VERSION_MAJOR="${VERSION_LEADER}VERSION_MAJOR${VERSION_TRAILER}"
+NAME_VERSION_MINOR="${VERSION_LEADER}VERSION_MINOR${VERSION_TRAILER}"
+NAME_VERSION_BUILD="${VERSION_LEADER}VERSION_BUILD${VERSION_TRAILER}"
+NAME_VERSION_BRANCH="${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}"
+NAME_VERSION_DIRTY="${VERSION_LEADER}VERSION_DIRTY${VERSION_TRAILER}"
+NAME_VERSION_DATE="${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}"
+NAME_VERSION_SHORTDATE="${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}"
+NAME_VERSION_UNIXTIME="${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}"
+NAME_VERSION_SHA_LONG="${VERSION_LEADER}VERSION_SHA_LONG${VERSION_TRAILER}"
+NAME_VERSION_SHA_SHORT="${VERSION_LEADER}VERSION_SHA_SHORT${VERSION_TRAILER}"
+NAME_VERSION_HOSTINFO="${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}"
+NAME_VERSION_AUTHORSHIP="${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}"
+NAME_VERSION_DECLARATION="${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}"
+NAME_VERSION_SUBMOD_NAME="${VERSION_LEADER}VERSION_SUBMOD_NAME${VERSION_TRAILER}"
+NAME_VERSION_SUBMOD_PATH="${VERSION_LEADER}VERSION_SUBMOD_PATH${VERSION_TRAILER}"
+NAME_VERSION_COMMIT_AUTHOR="${VERSION_LEADER}VERSION_COMMIT_AUTHOR${VERSION_TRAILER}"
+NAME_VERSION_COMMIT_EMAIL="${VERSION_LEADER}VERSION_COMMIT_EMAIL${VERSION_TRAILER}"
 
 if [ "true" == "${STAMPER_GENERATE}" ]; then
 	__VERBOSE__ "\nRun all configured plugins"

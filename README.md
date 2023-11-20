@@ -21,7 +21,7 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 ```
 #ifndef __VERSION_H__
 #       define  __VERSION_H__
-#       define  VERSION             0x0102014DL
+#       define  VERSION_ID          0x0102014DL
 #       define  VERSION_TEXT        "v1.2-333.branchname"
 #       define  VERSION_DATE        "2023-11-06 20:16:40"
 #       define  VERSION_SHORTDATE   "231106201640"
@@ -31,8 +31,8 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 #       define  VERSION_AUTHORSHIP  "Your Name"
 #       define  VERSION_DECLARATION "Copyright (c) Your Name 2023"
 // information below based on parent commit's hash
-#       define  VERSION_SHA_ABBREV  "p:e2477886"
-#       define  VERSION_SHA         "p:e2477886f1fff6ddac0e533f22d7be244674e064"
+#       define  VERSION_SHA_SHORT   "p:e2477886"
+#       define  VERSION_SHA_LONG    "p:e2477886f1fff6ddac0e533f22d7be244674e064"
 #endif
 ```
 
@@ -183,41 +183,43 @@ Available options:
 
 ```
   your_project> ./tools/stamper/version-stamper -p
-  A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
-     VERSION_HEX=         0102014D
-     VERSION_TEXT=        v1.2-333.branchname
-     VERSION_PREFIX=      v
-     VERSION_MAJOR=       1
-     VERSION_MINOR=       2
-     VERSION_BUILD=       333
-     VERSION_BRANCH=      branchname
+  v1.2-333.branchname  2023-11-06 22:17:09  your@email.org openSUSE Leap 15.5
+     VERSION_ID=            0102014D
+     VERSION_TEXT=          v1.2-333.branchname
+     VERSION_PREFIX=        v
+     VERSION_MAJOR=         1
+     VERSION_MINOR=         2
+     VERSION_BUILD=         333
+     VERSION_BRANCH=        branchname
      VERSION_DIRTY=       
-     VERSION_DATE=        2023-11-06 22:17:09
-     VERSION_SHORTDATE=   231106221709
-     VERSION_UNIXTIME     1699298229
-     VERSION_SHA=         47920119e1110edeeda572e5612ab211096fdc6a
-     VERSION_SHA_ABBREV=  47920119
-     VERSION_HOSTINFO=    your@email.org openSUSE Leap 15.5
-     VERSION_AUTHORSHIP=  Your Name
-     VERSION_DECLARATION= Copyright (c) Your Name 2023
-     VERSION_LEADER=      
-     VERSION_TRAILER=     
+     VERSION_DATE=          2023-11-06 22:17:09
+     VERSION_SHORTDATE=     231106221709
+     VERSION_UNIXTIME       1699298229
+     VERSION_SHA_LONG=      47920119e1110edeeda572e5612ab211096fdc6a
+     VERSION_SHA_SHORT=     47920119
+     VERSION_HOSTINFO=      your@email.org openSUSE Leap 15.5
+     VERSION_AUTHORSHIP=    Your Name
+     VERSION_DECLARATION=   Copyright (c) Your Name 2023
+     VERSION_COMMIT_AUTHOR= Your Name
+     VERSION_COMMIT_EMAIL=  your@email.org
      VERSION_SUBMOD_NAME= 
      VERSION_SUBMOD_PATH= 
+     VERSION_LEADER=      
+     VERSION_TRAILER=     
      Note. The identifier names listed here are exposed in the plugin, not in the target file.
 ```
 
   Here version `v1.2` is the nearest tag containing the major and minor
   version numbers, 333 is the build number (the distance from the current
   commit to the tag), this information is returned by `git describe`.
-  Version code 0102014D is a 32-bit number containing the major version
-  number in the high byte, the minor number in the next byte, and 
-  build number in the low 16-bit word. The name of the current branch
-  `branchname` is either the name of the attached branch, or calculated
-  if HEAD is detached (which is often the case for submodules).
-  Computation cannot guarantee the correctness of the calculation or
-  selection if there may be more than one matching branch for a given
-  commit.
+  Version code `VERSION_ID`, equal to 0102014D, is a 32-bit number
+  containing the major version number in the high byte, the minor number
+  in the next byte, and build number in the low 16-bit word. The name of
+  the current branch `branchname` is either the name of the attached
+  branch, or calculated if HEAD is detached (which is often the case
+  for submodules). Computation cannot guarantee the correctness of the
+  calculation or selection if there may be more than one matching branch
+  for a given commit.
 
   `VERSION_DIRTY` - flag of the changed working tree (not taking into
   account changes in version stamps). Indicated by the `+` symbol if there
@@ -228,16 +230,20 @@ Available options:
   the current date (may differ from the commit date; especially for a
   modified working tree).
 
-  `VERSION_SHA` and `VERSION_SHA_ABBREV` - contain information about the
-  current commit and its ancestors (in this case, the prefix `p:` is
+  `VERSION_SHA_LONG` and `VERSION_SHA_SHORT` - contain information about
+  the current commit and its ancestors (in this case, the prefix `p:` is
   added before the hash). The ancestor hash is used in the `pre-commit`
   hook because the hash of the new commit is not yet known at this time.
 
   `VERSION_AUTHORSHIP` and `VERSION_DECLARATION` - taken from the
   `.version-stamper` configuration file, when it is created, they are
-  initially assigned based on the username and the standard configuration
-  in the `version-stamper-config` parameter file.
-
+  initially assigned based on the username, git configuration and standard
+  parameters in the `version-stamper-config` file.
+  
+  `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL` - retrieved from
+  current commit description. If the repository is completely empty, then
+  based on the username and e-mail in the git configuration.
+   
   `VERSION_LEADER` and `VERSION_TRAILER` - are taken from the
   `.version-stamper` configuration file, when it is created, they
   initially remain either empty lines, and in the case of a submodule,
@@ -537,8 +543,50 @@ To create your own plugin, just create a file with a name corresponding
 to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
 the plugin and place this file next to `version-stamper`. The plugin must
 contain several functions; function names must also contain the name of
-the plugin instead of `XXX`. The easiest way is to take any existing
-plugin as a basis and make the necessary changes to it.
+the plugin instead of `XXX`. For example, a function described here as
+`__PLUGIN_XXX_NOTICE__` should be called `__PLUGIN_SH_NOTICE__` in the
+case of a plugin for the `sh` scripting language.
+
+During operation, `version-stamper` calculates many variables (see example
+of the `version-stamper --print` command above), the names of such variables
+begin with `VERSION_` and these names must be used to refer to the desired
+values. But in the text of the created target stamp file, the names of
+assigned variables can be anything and do not have to correspond to the
+names of internal variables. In existing plugins, in most cases this is
+the case, but not always - for example, you can look at the plugin for C#
+(`version-stamper-plugin-CS`), which has almost nothing in common at all,
+or at the plugin for Matlab (`version-stamper-plugin-M`), which has a
+similar variable `VERSION_ID`, but in base 10, not 16, and a hexadecimal
+`VERSION_HEX`, but as a string. Likewise, when calculating variables,
+there are two different `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL`,
+and in stamp files `VERSION_COMMIT_AUTHOR` is the concatenation of name
+and mailing address.
+
+Another feature is that in a large project there may be several parts,
+each of which creates its own version stamp, but later when assembled
+they are all used together. To avoid name confusion, it is possible to
+add a prefix and/or suffix to variable names (in the `.version-stamper`
+configuration they are called `leader` and `trailer`, respectively).
+Accordingly, in plugins to correctly form variable names, you need to
+use constructions of the form (for example, let there be a variable
+`VERSION_TEXT`):
+
+```
+${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER} = "${VERSION_TEXT}"
+```
+
+In order not to avoid the use of poorly readable constructions, for all
+typical variables their compound names are pre-constructed and assigned
+to `NAME_...` variables, for example, for the mentioned variable
+`VERSION_TEXT`, its name is already defined as `NAME_VERSION_TEXT` and
+can be used in the plugin text clearer way:
+
+```
+${NAME_VERSION_TEXT} = "${VERSION_TEXT}"
+```
+
+The easiest way is to take any existing plugin as a basis and make the
+necessary changes to it.
 
 **`__PLUGIN_XXX_NOTICE__`**<br/>
 This function prints a short description of this plugin to stdout. This

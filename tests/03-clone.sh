@@ -29,14 +29,14 @@ CLEAN_HOOKS clone-m/.git
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
 	-a "18" == "${A[VERSION_BUILD]}"      -a "18" == "${B[VERSION_BUILD]}" \
 	-a "SUBMOD" == "${A[VERSION_BRANCH]}" -a "SUBMOD" == "${B[VERSION_BRANCH]}" \
-	-a "00000012" == "${A[VERSION_HEX]}"  -a "00000012" == "${B[VERSION_HEX]}" \
+	-a "00000012" == "${A[VERSION_ID]}"   -a "00000012" == "${B[VERSION_ID]}" \
 	-a "" == "${A[VERSION_DIRTY]}"        -a "" == "${B[VERSION_DIRTY]}" \
 	-a "" == "${A[VERSION_LEADER]}"       -a "" == "${B[VERSION_LEADER]}" \
 	-a "" == "${A[VERSION_TRAILER]}"      -a "" == "${A[VERSION_TRAILER]}"\
-	-a "0000000000000000000000000000000000000000" != "${A[VERSION_SHA]}" \
-	-a "0000000000000000000000000000000000000000" != "${B[VERSION_SHA]}" \
-	-a "${A[VERSION_SHA]}" == "${B[VERSION_SHA]}" \
-	-a "${A[VERSION_SHA_ABBREV]}" == "${B[VERSION_SHA_ABBREV]}" \
+	-a "0000000000000000000000000000000000000000" != "${A[VERSION_SHA_LONG]}" \
+	-a "0000000000000000000000000000000000000000" != "${B[VERSION_SHA_LONG]}" \
+	-a "${A[VERSION_SHA_LONG]}" == "${B[VERSION_SHA_LONG]}" \
+	-a "${A[VERSION_SHA_SHORT]}" == "${B[VERSION_SHA_SHORT]}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  -a "" == "${B[VERSION_SUBMOD_NAME]}" \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA for contributor and its clone"

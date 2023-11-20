@@ -16,6 +16,7 @@ function __PLUGIN_CS_SAMPLE__
 
 function __PLUGIN_CS_GETVER__
 {
+	# strong name compare here - so changing version or changing leader/trailer will lead to rewrite target file
 	sed --binary --regexp-extended --silent \
 		-e  "s/^(\s*\[\s*assembly\s*:\s*AssemblyInformationalVersion\s*\(\s*\")([^ ]+)(.*\".*)$/\\2/p"
 }
@@ -70,7 +71,7 @@ function __PLUGIN_CS_CREATE__
 		[assembly: AssemblyVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.*")]
 		[assembly: AssemblyFileVersion("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}.0")]
 		// if used hash below is based on parent commit's then prefix 'p:' will be used
-		[assembly: AssemblyInformationalVersion( "${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\"} ${VERSION_SHA_ABBREV}" )]
+		[assembly: AssemblyInformationalVersion( "${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\"} ${VERSION_SHA_SHORT}" )]
 END_OF_TEXT
 }
 
@@ -81,7 +82,7 @@ function __PLUGIN_CS_MODIFY__
 	# the AssemblyVersion and AssemblyFileVersion members must be 0..65535 (16-bit unsigned)
 	awk \
 		-v VN="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}" \
-		-v VT="${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\\\"} ${VERSION_SHA_ABBREV}" \
+		-v VT="${VERSION_TEXT} ${VERSION_DATE} ${VERSION_HOSTINFO//\"/\\\\\"} ${VERSION_SHA_SHORT}" \
 		-v AU="${VERSION_AUTHORSHIP//\"/\\\\\"}" \
 		-v DC="${VERSION_DECLARATION//\"/\\\\\"}" \
 		'BEGIN{ iv=0; }

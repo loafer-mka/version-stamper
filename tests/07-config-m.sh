@@ -67,7 +67,7 @@ CLEAN_HOOKS .git
 CLEAN_WORKTREE .
 
 # for i in "${!C[@]}" ; do echo "$i"; done | sort | while read i ; do echo "C[$i] = ${C[$i]}" ; done
-# for v in "${!VERSION@}" ; do echo "$v"; done | sort | while read v ; do declare -n z=$v; echo "$v = $z" ; done
+# for v in "${!VERSION_@}" ; do echo "$v"; done | sort | while read v ; do declare -n z=$v; echo "$v = $z" ; done
 # for i in "${!A[@]}" ; do echo "$i"; done | sort | while read i ; do echo "A[$i] = ${A[$i]}" ; done
 
 [ \
@@ -88,9 +88,9 @@ CLEAN_WORKTREE .
 	-a "v0.0-18.SUBMOD+" == "${VERSION_TEXT}" \
 	-a "+" == "${A[VERSION_DIRTY]}" \
 	-a "SUBMOD" == "${A[VERSION_BRANCH]}"     -a "SUBMOD+" == "${VERSION_BRANCH}" \
-	-a "00000012" == "${A[VERSION_HEX]}"      -a "0x00000012" == "${VERSION}" \
-	-a "${A[VERSION_SHA]}" == "${VERSION_SHA}" \
-	-a "${A[VERSION_SHA_ABBREV]}" == "${VERSION_SHA_ABBREV}" \
+	-a "00000012" == "${A[VERSION_ID]}"       -a "0x00000012" == "${VERSION_ID}" \
+	-a "${A[VERSION_SHA_LONG]}" == "${VERSION_SHA_LONG}" \
+	-a "${A[VERSION_SHA_SHORT]}" == "${VERSION_SHA_SHORT}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  \
 ] || DIE 1 "[FAIL]  $0   Mandatory parameters were not set"

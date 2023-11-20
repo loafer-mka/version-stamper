@@ -39,15 +39,15 @@ sed -i -r -e 's/^\s*#\s*plugin-C:.*$/plugin-C: --gitignore ver.h/' \
 
 source ver.sh
 
-#for v in ${!VERSION@}; do declare -n z=$v; echo "$v = \"$z\""; done
+#for v in ${!VERSION_@}; do declare -n z=$v; echo "$v = \"$z\""; done
 #ls -la .git/hooks
 
 [ \
-	   "0x00000000" == "${VERSION}" \
+	   "0x00000000" == "${VERSION_ID}" \
 	-a "v0.0-0.MASTER+" == "${VERSION_TEXT}" \
 	-a "MASTER+" == "${VERSION_BRANCH}" \
-	-a "0000000000000000000000000000000000000000" == "${VERSION_SHA}" \
-	-a "000000000" == "${VERSION_SHA_ABBREV}" \
+	-a "0000000000000000000000000000000000000000" == "${VERSION_SHA_LONG}" \
+	-a "000000000" == "${VERSION_SHA_SHORT}" \
 ] || DIE 1 "[FAIL]  $0     Version information is wrong"
 
 [ \
@@ -64,7 +64,7 @@ source ver.sh
 
 echo "[ OK ]  $0     Version data for fresh repo"
 
-unset ${!VERSION@}
+unset ${!VERSION_@}
 
 echo "test 1${WIN_ECHO_EOL}" >TEST.txt
 git --no-pager add TEST.txt >/dev/null 2>&1
@@ -85,16 +85,16 @@ git commit -am "First commit" >/dev/null 2>&1
 
 source ver.sh
 
-#for v in ${!VERSION@}; do declare -n z=$v; echo "$v = \"$z\""; done
+#for v in ${!VERSION_@}; do declare -n z=$v; echo "$v = \"$z\""; done
 #ls -la .git/hooks
 
 # note: version stamps must be done by pre-commit hook, so parent's SHA must be used (p:0000...)
 [ \
-	   "0x00000001" == "${VERSION}" \
+	   "0x00000001" == "${VERSION_ID}" \
 	-a "v0.0-1.MASTER" == "${VERSION_TEXT}" \
 	-a "MASTER" == "${VERSION_BRANCH}" \
-	-a "p:0000000000000000000000000000000000000000" == "${VERSION_SHA}" \
-	-a "p:000000000" == "${VERSION_SHA_ABBREV}" \
+	-a "p:0000000000000000000000000000000000000000" == "${VERSION_SHA_LONG}" \
+	-a "p:000000000" == "${VERSION_SHA_SHORT}" \
 ] || DIE 1 "[FAIL]  $0     Version information is wrong"
 
 [ \
@@ -110,7 +110,7 @@ source ver.sh
 ] || DIE 1 "[FAIL]     $0   WANTED HOOKS SET"
 
 echo "[ OK ]  $0     Version data for repo with commit"
-unset ${!VERSION@}
+unset ${!VERSION_@}
 
 
 echo "test 2${WIN_ECHO_EOL}" >>TEST.txt
@@ -119,17 +119,17 @@ git commit -am "Second commit" >/dev/null 2>&1
 
 source ver.sh
 
-#for v in ${!VERSION@}; do declare -n z=$v; echo "$v = \"$z\""; done
+#for v in ${!VERSION_@}; do declare -n z=$v; echo "$v = \"$z\""; done
 #ls -la .git/hooks
 
 # note: version stamps must be done by pre-commit hook, so non-null parent's SHA must be used
 [ \
-	   "0x00000002" == "${VERSION}" \
+	   "0x00000002" == "${VERSION_ID}" \
 	-a "v0.0-2.MASTER" == "${VERSION_TEXT}" \
 	-a "MASTER" == "${VERSION_BRANCH}" \
-	-a "0000000000000000000000000000000000000000" != "${VERSION_SHA#p:}" \
-	-a "000000000" != "${VERSION_SHA_ABBREV}" \
-	-a "${VERSION_SHA:0:${#VERSION_SHA_ABBREV}}" == "${VERSION_SHA_ABBREV}" \
+	-a "0000000000000000000000000000000000000000" != "${VERSION_SHA_LONG#p:}" \
+	-a "000000000" != "${VERSION_SHA_SHORT}" \
+	-a "${VERSION_SHA_LONG:0:${#VERSION_SHA_SHORT}}" == "${VERSION_SHA_SHORT}" \
 ] || DIE 1 "[FAIL]  $0     Version information is wrong"
 
 [ \

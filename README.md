@@ -21,7 +21,7 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 ```
 #ifndef __VERSION_H__
 #       define  __VERSION_H__
-#       define  VERSION             0x0102014DL
+#       define  VERSION_ID          0x0102014DL
 #       define  VERSION_TEXT        "v1.2-333.branchname"
 #       define  VERSION_DATE        "2023-11-06 20:16:40"
 #       define  VERSION_SHORTDATE   "231106201640"
@@ -31,8 +31,8 @@ So, for example, in the C/C++ language, the generated stamp file may contain:
 #       define  VERSION_AUTHORSHIP  "Your Name"
 #       define  VERSION_DECLARATION "Copyright (c) Your Name 2023"
 // information below based on parent commit's hash
-#       define  VERSION_SHA_ABBREV  "p:e2477886"
-#       define  VERSION_SHA         "p:e2477886f1fff6ddac0e533f22d7be244674e064"
+#       define  VERSION_SHA_SHORT   "p:e2477886"
+#       define  VERSION_SHA_LONG    "p:e2477886f1fff6ddac0e533f22d7be244674e064"
 #endif
 ```
 
@@ -111,13 +111,13 @@ and --git-hook parameters require a value that can be specified either
 as an additional argument separated by a space:
 
 ```
-	version-stamper --directory "/other/working/directory"
+    version-stamper --directory "/other/working/directory"
 ```
 
 or using an assignment:
 
 ```
-	version-stamper --directory="/other/working/directory"
+    version-stamper --directory="/other/working/directory"
 ```
 
 Available options:
@@ -183,41 +183,43 @@ Available options:
 
 ```
   your_project> ./tools/stamper/version-stamper -p
-  A0.1-3.master  2023-11-06 22:17:09  andrey@makarov.local openSUSE Leap 15.5
-     VERSION_HEX=         0102014D
-     VERSION_TEXT=        v1.2-333.branchname
-     VERSION_PREFIX=      v
-     VERSION_MAJOR=       1
-     VERSION_MINOR=       2
-     VERSION_BUILD=       333
-     VERSION_BRANCH=      branchname
+  v1.2-333.branchname  2023-11-06 22:17:09  your@email.org openSUSE Leap 15.5
+     VERSION_ID=            0102014D
+     VERSION_TEXT=          v1.2-333.branchname
+     VERSION_PREFIX=        v
+     VERSION_MAJOR=         1
+     VERSION_MINOR=         2
+     VERSION_BUILD=         333
+     VERSION_BRANCH=        branchname
      VERSION_DIRTY=       
-     VERSION_DATE=        2023-11-06 22:17:09
-     VERSION_SHORTDATE=   231106221709
-     VERSION_UNIXTIME     1699298229
-     VERSION_SHA=         47920119e1110edeeda572e5612ab211096fdc6a
-     VERSION_SHA_ABBREV=  47920119
-     VERSION_HOSTINFO=    your@email.org openSUSE Leap 15.5
-     VERSION_AUTHORSHIP=  Your Name
-     VERSION_DECLARATION= Copyright (c) Your Name 2023
-     VERSION_LEADER=      
-     VERSION_TRAILER=     
+     VERSION_DATE=          2023-11-06 22:17:09
+     VERSION_SHORTDATE=     231106221709
+     VERSION_UNIXTIME       1699298229
+     VERSION_SHA_LONG=      47920119e1110edeeda572e5612ab211096fdc6a
+     VERSION_SHA_SHORT=     47920119
+     VERSION_HOSTINFO=      your@email.org openSUSE Leap 15.5
+     VERSION_AUTHORSHIP=    Your Name
+     VERSION_DECLARATION=   Copyright (c) Your Name 2023
+     VERSION_COMMIT_AUTHOR= Your Name
+     VERSION_COMMIT_EMAIL=  your@email.org
      VERSION_SUBMOD_NAME= 
      VERSION_SUBMOD_PATH= 
+     VERSION_LEADER=      
+     VERSION_TRAILER=     
      Note. The identifier names listed here are exposed in the plugin, not in the target file.
 ```
 
   Here version `v1.2` is the nearest tag containing the major and minor
   version numbers, 333 is the build number (the distance from the current
   commit to the tag), this information is returned by `git describe`.
-  Version code 0102014D is a 32-bit number containing the major version
-  number in the high byte, the minor number in the next byte, and 
-  build number in the low 16-bit word. The name of the current branch
-  `branchname` is either the name of the attached branch, or calculated
-  if HEAD is detached (which is often the case for submodules).
-  Computation cannot guarantee the correctness of the calculation or
-  selection if there may be more than one matching branch for a given
-  commit.
+  Version code `VERSION_ID`, equal to 0102014D, is a 32-bit number
+  containing the major version number in the high byte, the minor number
+  in the next byte, and build number in the low 16-bit word. The name of
+  the current branch `branchname` is either the name of the attached
+  branch, or calculated if HEAD is detached (which is often the case
+  for submodules). Computation cannot guarantee the correctness of the
+  calculation or selection if there may be more than one matching branch
+  for a given commit.
 
   `VERSION_DIRTY` - flag of the changed working tree (not taking into
   account changes in version stamps). Indicated by the `+` symbol if there
@@ -228,16 +230,20 @@ Available options:
   the current date (may differ from the commit date; especially for a
   modified working tree).
 
-  `VERSION_SHA` and `VERSION_SHA_ABBREV` - contain information about the
-  current commit and its ancestors (in this case, the prefix `p:` is
+  `VERSION_SHA_LONG` and `VERSION_SHA_SHORT` - contain information about
+  the current commit and its ancestors (in this case, the prefix `p:` is
   added before the hash). The ancestor hash is used in the `pre-commit`
   hook because the hash of the new commit is not yet known at this time.
 
   `VERSION_AUTHORSHIP` and `VERSION_DECLARATION` - taken from the
   `.version-stamper` configuration file, when it is created, they are
-  initially assigned based on the username and the standard configuration
-  in the `version-stamper-config` parameter file.
-
+  initially assigned based on the username, git configuration and standard
+  parameters in the `version-stamper-config` file.
+  
+  `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL` - retrieved from
+  current commit description. If the repository is completely empty, then
+  based on the username and e-mail in the git configuration.
+   
   `VERSION_LEADER` and `VERSION_TRAILER` - are taken from the
   `.version-stamper` configuration file, when it is created, they
   initially remain either empty lines, and in the case of a submodule,
@@ -431,8 +437,6 @@ Valid parameters:
    and current information is updated - commit hashes, date and time,
    build number, etc.
 
-## A little about git hooks
-
 If measures are taken to ensure that `version-stamper --generate` is
 executed every time during the build process, then keeping the stamps
 more or less up to date is not required, but may still be recommended.
@@ -533,6 +537,198 @@ Some properties of hooks:
    changed (which looks strange when there are still changes after the
    commit and you can’t get rid of it).
 
+# Plugin internals
+
+To create your own plugin, just create a file with a name corresponding
+to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
+the plugin and place this file next to `version-stamper`. The plugin must
+contain several functions; function names must also contain the name of
+the plugin instead of `XXX`. For example, a function described here as
+`__PLUGIN_XXX_NOTICE__` should be called `__PLUGIN_SH_NOTICE__` in the
+case of a plugin for the `sh` scripting language.
+
+During operation, `version-stamper` calculates many variables (see example
+of the `version-stamper --print` command above), the names of such variables
+begin with `VERSION_` and these names must be used to refer to the desired
+values. But in the text of the created target stamp file, the names of
+assigned variables can be anything and do not have to correspond to the
+names of internal variables. In existing plugins, in most cases this is
+the case, but not always - for example, you can look at the plugin for C#
+(`version-stamper-plugin-CS`), which has almost nothing in common at all,
+or at the plugin for Matlab (`version-stamper-plugin-M`), which has a
+similar variable `VERSION_ID`, but in base 10, not 16, and a hexadecimal
+`VERSION_HEX`, but as a string. Likewise, when calculating variables,
+there are two different `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL`,
+and in stamp files `VERSION_COMMIT_AUTHOR` is the concatenation of name
+and mailing address.
+
+Another feature is that in a large project there may be several parts,
+each of which creates its own version stamp, but later when assembled
+they are all used together. To avoid name confusion, it is possible to
+add a prefix and/or suffix to variable names (in the `.version-stamper`
+configuration they are called `leader` and `trailer`, respectively).
+Accordingly, in plugins to correctly form variable names, you need to
+use constructions of the form (for example, let there be a variable
+`VERSION_TEXT`):
+
+```
+${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER} = "${VERSION_TEXT}"
+```
+
+In order not to avoid the use of poorly readable constructions, for all
+typical variables their compound names are pre-constructed and assigned
+to `NAME_...` variables, for example, for the mentioned variable
+`VERSION_TEXT`, its name is already defined as `NAME_VERSION_TEXT` and
+can be used in the plugin text clearer way:
+
+```
+${NAME_VERSION_TEXT} = "${VERSION_TEXT}"
+```
+
+The easiest way is to take any existing plugin as a basis and make the
+necessary changes to it.
+
+**`__PLUGIN_XXX_NOTICE__`**<br/>
+This function prints a short description of this plugin to stdout. This
+description is used by the `version-stamper --help` command when generating
+a list of supported plugins.
+
+**`__PLUGIN_XXX_SAMPLE__`**<br/>
+This function prints a one-line example of using the plugin to stdout.
+This example is included in the `.version-stamper` configuration file
+created by the `version-stamper --config` command. Normally, the output
+line should begin with a comment character `#`, since the created
+configuration file initially does not contain configured plugins - this
+must be done by the project author. However, in special cases it may be
+different.
+
+**`__PLUGIN_XXX_ATTRIB__`**<br/>
+This function prints to stdout a set of parameters applied to the
+generated version stamp in `.gitattributes`.
+
+*Note:* Updates to the `.gitattributes` and `.gitignore` files only occur
+when a new version stamp file is created.
+
+**`__PLUGIN_XXX_GETVER__`**<br/>
+This function receives the text of the existing stamp from stdin and must
+output to stdout the text with the version designation corresponding to
+the contents of `VERSION_TEXT` (i.e. a string like "v1.2-333.branchname").
+This text is used to compare the existing version of the stamp with the
+one being created. If the version designation text is the same and the
+working directory is “clean”, then the stamp file is not changed.
+
+Typically this function can be implemented using simple sed or awk that
+recognizes the desired pattern and returns the result.
+
+*Note:* The existing template file is read before this function is
+executed and line termination characters are converted to single
+LF (Unix-style), this allows tools like grep, awk, sed, etc. to be used
+without worrying about line breaks.
+
+**`__PLUGIN_XXX_CREATE__`**<br/>
+This function is designed to create a new stamp file and is called when
+the target file does not exist. The function receives an argument, which
+is the name of the file to be created with a version stamp, into which
+the required text should be written. When writing a stamp, you must use
+the correct line ending characters (LF or CR+LF), for which it is
+convenient to use one of the three available functions:
+
+- `__STORE_LF__` - saves a file with single LFs
+
+- `__STORE_CRLF__` - saves a file with CR+LF
+
+- `__STORE_NATIVE_EOL__` - saves the file with LF delimiters on a unix-like
+  system and CR+LF on Windows.
+
+The text of the saved file is supplied to stdin, and the argument of the
+function contains the name of the saved file. A typical implementation
+pattern for such a function:
+
+```
+function __PLUGIN_CS_CREATE__
+{
+     __STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
+        version stamp text here
+END_OF_TEXT
+}
+```
+
+**`__PLUGIN_XXX_MODIFY__`**<br/>
+This function is used in cases where a stamp file already exists and
+changes need to be made to it. The existing stamp is fed to stdin (with
+LF line termination characters), and the function's only argument is the
+name of the stamp file to write to. Like `__PLUGIN_CS_CREATE__` the function
+must write a new stamp with the correct line ending characters.
+
+The recommended practice is to find the required substrings in the original
+stamp and replace them to match the new stamp. So in a typical case this
+might be a call to sed or awk with a set of patterns to replace the old
+version information with new ones.
+
+It is not recommended to recreate the file again - the general idea is
+that the stamp can be shortened compared to the one automatically created
+or, conversely, supplemented with something new. That is why it is
+recommended to simply replace the found values in the existing stamp,
+leaving everything else unchanged.
+
+In a particular case, the project authors may remove some unused part of
+the version information from the stamp file (for example, commit hashes,
+which sometimes correspond to the current commit and sometimes to its
+ancestors). The behavior of the plugin in this case is at the discretion
+of the plugin developer - the missing information can be ignored, or it
+can be supplemented so that it is always present in this stamp.
+
+Among the existing plugins, most ignore the absence of deleted information
+(only what is found is updated), with the exception of a single plugin for
+C# that ensures that the `AssemblyInformationalVersion` parameter is
+present in the stamp.
+
+# Unit-Tests
+
+The test system is being developed and updated in a separate branch
+`unit-tests`. The general idea is to keep everything related to tests in
+the `./tests/` folder, which is excluded from the repository (see
+`.gitignore`) in the main development branches. Thus, by simply cloning
+version-stamper into your project, nothing extra beyond the required main
+version-stamper working code will be cloned.
+
+However, if debugging is required, or you will develop your own plugins,
+then it makes sense to connect unit tests to the current branch. In the
+simplest case, it is enough to simply extract all unit test files from
+their branch to the current one (i.e. they are in an ignored folder,
+this will not affect the state of the working tree in any way):
+
+```
+./tools/stamper> git checkout unit-tests -- ./tests/
+./tools/stamper> git rm -r --cached tests/
+./tools/stamper> ./tests/unit-tests.sh
+```
+
+And in cases where you also need to make changes to the test system, it
+is advisable to merge your working branch (or `master`) with the
+`unit-tests` branch and perform test corrections/additions directly
+in the `unit-tests` branch:
+
+```
+./tools/stamper> git checkout unit-tests
+./tools/stamper> git merge master
+./tools/stamper> ...
+```
+
+In the `unit-tests` branch, the `.gitignore` file has been changed so
+that files from the `./tests/` folder are included in the project, and
+the `./tests/samples/` and `./tests/repos/` folders containing examples
+and test repositories.
+
+However, changes to unit tests can be made without merging branches, if
+you first test them in the working branch (without including them in the
+repository), and at the end simply switch to the `unit-tests` branch and
+add the already corrected unit test files there one operation.
+
+# Appendix
+
+## A little about git hooks
+
 Below are some typical execution sequences for git hooks. These sequences
 should not be considered as a strict guide - they were obtained experimentally
 and in reality can be modified depending on the actual situation (an empty
@@ -609,147 +805,112 @@ prepare-commit-msg  ->  commit-msg  ->  post-merge 0
 (MERGE_MSG)
 ```
 
-# Plugin internals
+## Overview of the git repository directory structure
 
-To create your own plugin, just create a file with a name corresponding
-to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
-the plugin and place this file next to `version-stamper`. The plugin must
-contain several functions; The easiest way is to take any existing plugin
-as a basis and make the necessary changes to it.
+In the model case, we assume that we have a git repository in the `./MAIN`
+directory, this repository has a `SUBMODULE` submodule (path to the
+`./MAIN/SUBODULE` directory) and in addition the repository has an
+additional working tree `./ WORKTREE`, while the submodule is also present
+in the branch to which the `WORKTREE` working tree is configured.
 
-**`__PLUGIN_CS_NOTICE__`**<br/>
-This function prints a short description of this plugin to stdout. This
-description is used by the `version-stamper --help` command when generating
-a list of supported plugins.
+A **Submodule** is characterized by a local path in the tree (in our
+example, the `SUBMODULE` directory is located right at the root of the
+repository), a source (the remote repository) and an optional branch.
+Branch, if specified, simply specifies the initial state of the submodule;
+Regardless of whether it is specified or not, the submodule will be in
+the *detached head* state, and you can only switch it to the attached
+state manually.
 
-**`__PLUGIN_CS_SAMPLE__`**<br/>
-This function prints a one-line example of using the plugin to stdout.
-This example is included in the `.version-stamper` configuration file
-created by the `version-stamper --config` command. Normally, the output
-line should begin with a comment character `#`, since the created
-configuration file initially does not contain configured plugins - this
-must be done by the project author. However, in special cases it may be
-different.
+The submodule path is used as an "identifier" - information about the
+submodule will be stored inside the repository folder `.git/modules/`
+with the same relative path as it is located in the working tree.
 
-**`__PLUGIN_CS_ATTRIB__`**<br/>
-This function prints to stdout a set of parameters applied to the
-generated version stamp in `.gitattributes`.
+A **working tree** is characterized by the path where it is located
+(outside the main working tree), the assigned name of that tree, and
+the branch to which the tree corresponds. In this case, a specific
+branch cannot have more than one working tree.
 
-*Note:* Updates to the `.gitattributes` and `.gitignore` files only occur
-when a new version stamp file is created.
-
-**`__PLUGIN_CS_GETVER__`**<br/>
-This function receives the text of the existing stamp on stdin and must
-output to stdout the text with the version designation corresponding to
-the contents of `VERSION_TEXT` (i.e. a string like "v1.2-333.branchname").
-This text is used to compare the existing version of the stamp with the
-one being created. If the version designation text is the same and the
-working directory is “clean”, then the stamp file is not changed.
-
-Typically this function can be implemented using simple sed or awk that
-recognizes the desired pattern and returns the result.
-
-*Note:* The existing template file is read before this function is
-executed and line termination characters are converted to single
-LF (Unix-style), this allows tools like grep, awk, sed, etc. to be used
-without worrying about line breaks.
-
-**`__PLUGIN_CS_CREATE__`**<br/>
-This function is designed to create a new stamp file and is called when
-the target file does not exist. The function receives an argument, which
-is the name of the file to be created with a version stamp, into which
-the required text should be written. When writing a stamp, you must use
-the correct line ending characters (LF or CR+LF), for which it is
-convenient to use one of the three available functions:
-
-- `__STORE_LF__` - saves a file with single LFs
-
-- `__STORE_CRLF__` - saves a file with CR+LF
-
-- `__STORE_NATIVE_EOL__` - saves the file with LF delimiters on a unix-like
-  system and CR+LF on Windows.
-
-The text of the saved file is supplied to stdin, and the argument of the
-function contains the name of the saved file. A typical implementation
-pattern for such a function:
+The assigned worktree name is used to identify it within the
+`.git/worktrees/` hierarchy.
 
 ```
-function __PLUGIN_CS_CREATE__
-{
-     __STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
-        version stamp text here
-END_OF_TEXT
-}
+folder  ./MAIN                  << a directory with a working tree (superproject) and a .git folder.
+folder  .   ./SUBMODULE         << a project submodule, instead of a subfolder .git, contains a file
+        .   .                      with a link to the desired subdirectory in the .git superproject.
+ file   .   .   .git            << contains the relative path to the repository folder (here
+        .   .   .                  "gitdir: ../.git/modules/SUBMODULE").
+ file   .   .gitmodules         << superproject file describing the submodules included in it (name,
+        .   .                      source address, local path, branch (if any)) as a configuration
+        .   .                      file - you can use 'git config ...'.
+folder  .   ./.git              << a .git subdirectory containing the superproject's repository data
+        .   .   .                  and its nested submodule data and related work tree information.
+ file   .   .   HEAD            << ref to the branch (in the form of ref: refs/heads/master or
+        .   .   .                  commit hash for detached head).
+ file   .   .   config          << superproject configuration (submodules have their own sections
+        .   .   .                  with the source address and activity flag, but not a word about
+        .   .   .                  subtrees).
+ file   .   .   description     << usually not used, repository description.
+ file   .   .   packed-refs     << list of references to commits in packed sets.
+folder  .   .   ./branches      << usually an empty folder.
+folder  .   .   ./hooks         << a set of repository interceptors (this repository and associated
+        .   .   .                  work trees, but not submodules).
+folder  .   .   ./info          << usually not used.
+folder  .   .   ./logs          << a directory with files containing the history of branch head
+        .   .   .                  movements.
+folder  .   .   ./modules       << folder containing information about submodules (may be missing).
+folder  .   .   .   ./SUBMODULE         << same relative path as the working directory.
+ file   .   .   .   .   HEAD            << ref to the submodule branch.
+ file   .   .   .   .   config          << submodule configuration.
+ file   .   .   .   .   description     << not usually used, repository description.
+ file   .   .   .   .   packed-refs     << list of references to commits in packed sets.
+folder  .   .   .   .   ./branches      << usually an empty folder.
+folder  .   .   .   .   ./hooks         << submodule's git hooks.
+folder  .   .   .   .   ./info          << usually not used.
+folder  .   .   .   .   ./logs          << a directory with files containing the history.
+        .   .   .   .   .   ...
+folder  .   .   .   .   ./objects       << directory with submodule repository objects.
+folder  .   .   .   .   ./refs          << directory with refs (branches, tags) of the submodule.
+folder  .   .   .   .   .   ./heads         << directory with local submodule branches.
+ file   .   .   .   .   .   .   master      << a file with a commit hash of a submodule branch.
+folder  .   .   .   .   .   ./remotes       << directory with remote submodule repositories.
+folder  .   .   .   .   .   .   ./origin    << directory for the submodule's 'origin'.
+ file   .   .   .   .   .   .   .   master  << a file with a commit hash of a remote branch.
+folder  .   .   .   .   .   ./tags          << directory with submodule tags.
+ file   .   .   .   .   .   .   v0.0        << a file with a commit hash of a tag.
+folder  .   .   ./objects       << directory with superproject repository objects.
+folder  .   .   .   ./00        << directory for objects whose hash starts with 00.
+папки   .   .   .   .   ...
+folder  .   .   .   ./FF        << directory for objects whose hash starts with FF.
+folder  .   .   .   ./info
+folder  .   .   .   ./pack      << folder of packed sets of objects.
+folder  .   .   ./refs          << directory with refs (branches, tags) of the superproject.
+folder  .   .   .   ./heads         << directory with local superproject branches.
+ file   .   .   .   .   master      << a file with a commit hash of a superproject branch.
+folder  .   .   .   ./remotes       << directory with remote superproject repositories.
+folder  .   .   .   .   ./origin    << directory for the superproject's 'origin'
+ file   .   .   .   .   .   master  << a file with a commit hash of a remote branch.
+folder  .   .   .   ./tags          << directory with superproject tags.
+ file   .   .   .   .   v0.0        << a file with a commit hash of a tag.
+folder  .   .   ./worktrees     << a folder containing information about linked working trees
+        .   .   .                  (may be missing).
+folder  .   .   .   ./worktree-name << a folder with the name of the associated work tree.
+ file   .   .   .   .   HEAD        << ref to the work tree branch.
+ file   .   .   .   .   commondir   << relative path to MAIN/.git (here "../.." will actually
+        .   .   .   .   .              point to ./MAIN/.git); no prefixes like "gitdir: ".
+ file   .   .   .   .   gitdir      << absolute path to the working tree .git file (here
+        .   .   .   .   .              "*/WORKTREE/.git"), no prefixes like "gitdir: ".
+folder  .   .   .   .   ./logs      << a directory with files containing the history.
+folder  .   .   .   .   ./modules   << folder containing information about submodules of
+        .   .   .   .   .              work tree (may be missing).
+folder  .   .   .   .   .   ./SUBMODULE << a folder describing the given submodule of the
+        .   .   .   .   .   .              linked work tree (i.e. WORKTREE/SUBMODULE). This
+        .   .   .   .   .   .              is a duplicate of the folder from the main tree
+        .   .   .   .   .   .              ./MAIN/.git/modules/SUBMODULE.
+folder  ./WORKTREE              << the linked working tree is treated the same as a repository
+        .                          with a separate .git directory (git clone --separate-git-dir ...).
+ file   .   .git                << contains the absolute path to the repository .git folder
+        .   .                      (here "gitdir: */MAIN/.git/worktrees/worktree-name").
+folder  .   ./SUBMODULE         << submodule's work tree.
+ file   .   .   .git            << contains the absolute path to the repository .git folder
+        .   .   .                  (here "gitdir: */MAIN/.git/worktrees/worktree-name/modules/SUBMODULE")
 ```
-
-**`__PLUGIN_CS_MODIFY__`**<br/>
-This function is used in cases where a stamp file already exists and
-changes need to be made to it. The existing stamp is fed to stdin (with
-LF line termination characters), and the function's only argument is the
-name of the stamp file to write to. Like `__PLUGIN_CS_CREATE__` the function
-must write a new stamp with the correct line ending characters.
-
-The recommended practice is to find the required substrings in the original
-stamp and replace them to match the new stamp. So in a typical case this
-might be a call to sed or awk with a set of patterns to replace the old
-version information with new ones.
-
-It is not recommended to recreate the file again - the general idea is
-that the stamp can be shortened compared to the one automatically created
-or, conversely, supplemented with something new. That is why it is
-recommended to simply replace the found values in the existing stamp,
-leaving everything else unchanged.
-
-In a particular case, the project authors may remove some unused part of
-the version information from the stamp file (for example, commit hashes,
-which sometimes correspond to the current commit and sometimes to its
-ancestors). The behavior of the plugin in this case is at the discretion
-of the plugin developer - the missing information can be ignored, or it
-can be supplemented so that it is always present in this stamp.
-
-Among the existing plugins, most ignore the absence of deleted information
-(only what is found is updated), with the exception of a single plugin for
-C# that ensures that the `AssemblyInformationalVersion` parameter is
-present in the stamp.
-
-# Unit-Tests
-
-The test system is being developed and updated in a separate branch
-`unit-tests`. The general idea is to keep everything related to tests in
-the `./tests/` folder, which is excluded from the repository (see
-`.gitignore`) in the main development branches. Thus, by simply cloning
-version-stamper into your project, nothing extra beyond the required main
-version-stamper working code will be cloned.
-
-However, if debugging is required, or you will develop your own plugins,
-then it makes sense to connect unit tests to the current branch. In the
-simplest case, it is enough to simply extract all unit test files from
-their branch to the current one (i.e. they are in an ignored folder,
-this will not affect the state of the working tree in any way):
-
-```
-./tools/stamper> git checkout unit-tests -- ./tests/
-./tools/stamper> git rm -r --cached tests/
-./tools/stamper> ./tests/unit-tests.sh
-```
-
-And in cases where you also need to make changes to the test system, it
-is advisable to merge your working branch (or `master`) with the
-`unit-tests` branch and perform test corrections/additions directly
-in the `unit-tests` branch:
-
-```
-./tools/stamper> git checkout unit-tests
-./tools/stamper> git merge master
-./tools/stamper> ...
-```
-
-In the `unit-tests` branch, the `.gitignore` file has been changed so
-that files from the `./tests/` folder are included in the project, and
-the `./tests/samples/` and `./tests/repos/` folders containing examples
-and test repositories.
-
-However, changes to unit tests can be made without merging branches, if
-you first test them in the working branch (without including them in the
-repository), and at the end simply switch to the `unit-tests` branch and
-add the already corrected unit test files there one operation.

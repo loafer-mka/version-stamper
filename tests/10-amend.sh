@@ -113,8 +113,6 @@ sed -i -r -e 's/^\s*(#\s*)?leader:.*$/leader: A3_/' \
      ${WIN_SED_EOL} \
     .version-stamper
 
-sed -i -r -e 's/^\s*A2_/A3_/' ver.sh	# prefix A2_ must be chaned to A3_
-
 echo "1st test commit${WIN_ECHO_EOL}" >>README.txt
 git --no-pager commit -am "1st test commit" >/dev/null
 
@@ -132,8 +130,6 @@ source ver.sh
 sed -i -r -e 's/^\s*(#\s*)?leader:.*$/leader: A4_/' \
      ${WIN_SED_EOL} \
     .version-stamper
-
-sed -i -r -e 's/^\s*A3_/A4_/' ver.sh	# prefix A3_ must be chaned to A4_
 
 echo "and amend commit${WIN_ECHO_EOL}" >>README.txt
 git --no-pager commit --amend -am "amend commit" >/dev/null
@@ -182,7 +178,7 @@ source ver.sh
     -a -n "${F3[.git/]}"     						-a -n "${F3[.git/hooks/post-checkout]}" \
     -a -n "${F3[.git/hooks/post-commit]}" 			-a -n "${F3[.git/hooks/post-merge]}" \
     -a -n "${F3[.git/hooks/post-rewrite]}" 			-a -n "${F3[.git/hooks/pre-commit]}" \
-    -a "v0.0-27.MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA}" != "${A3_VERSION_SHA}" \
+    -a "v0.0-27.MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA_LONG}" != "${A3_VERSION_SHA_LONG}" \
 ] || MSG="$MSG; Bad state v0.0-27"
 
 # version text and SHA must not be changed after amend
@@ -193,7 +189,7 @@ source ver.sh
     -a -n "${F4[.git/]}"     						-a -n "${F4[.git/hooks/post-checkout]}" \
     -a -n "${F4[.git/hooks/post-commit]}" 			-a -n "${F4[.git/hooks/post-merge]}" \
     -a -n "${F4[.git/hooks/post-rewrite]}" 			-a -n "${F4[.git/hooks/pre-commit]}" \
-    -a "${A3_VERSION_TEXT}" == "${A4_VERSION_TEXT}"	-a "${A3_VERSION_SHA}" == "${A4_VERSION_SHA}" \
+    -a "${A3_VERSION_TEXT}" == "${A4_VERSION_TEXT}"	-a "${A3_VERSION_SHA_LONG}" == "${A4_VERSION_SHA_LONG}" \
 ] || MSG="$MSG; Bad amend v0.0-27"
 
 

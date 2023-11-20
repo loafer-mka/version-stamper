@@ -34,15 +34,15 @@ sleep 2s
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
 	-a "0" == "${A[VERSION_BUILD]}"       -a "0" == "${B[VERSION_BUILD]}" \
 	-a "MASTER" == "${A[VERSION_BRANCH]}" -a "MASTER" == "${B[VERSION_BRANCH]}" \
-	-a "00000000" == "${A[VERSION_HEX]}"  -a "00000000" == "${B[VERSION_HEX]}" \
+	-a "00000000" == "${A[VERSION_ID]}"   -a "00000000" == "${B[VERSION_ID]}" \
 	-a "" == "${A[VERSION_DIRTY]}"        -a "" == "${B[VERSION_DIRTY]}" \
 	-a "" == "${A[VERSION_LEADER]}"       -a "" == "${B[VERSION_LEADER]}" \
 	-a "" == "${A[VERSION_TRAILER]}"      -a "" == "${A[VERSION_TRAILER]}"\
 	-a "${A[VERSION_UNIXTIME]}" != "${B[VERSION_UNIXTIME]}" \
 	-a "${A[VERSION_SHORTDATE]}" != "${B[VERSION_SHORTDATE]}" \
 	-a "${A[VERSION_DATE]}" != "${B[VERSION_DATE]}" \
-	-a "0000000000000000000000000000000000000000" == "${A[VERSION_SHA]}" \
-	-a "0000000000000000000000000000000000000000" == "${B[VERSION_SHA]}" \
+	-a "0000000000000000000000000000000000000000" == "${A[VERSION_SHA_LONG]}" \
+	-a "0000000000000000000000000000000000000000" == "${B[VERSION_SHA_LONG]}" \
 	-a "" == "${A[VERSION_SUBMOD_NAME]}"  -a "" == "${B[VERSION_SUBMOD_NAME]}" \
 	-a "" == "${A[VERSION_SUBMOD_PATH]}"  -a "" == "${B[VERSION_SUBMOD_PATH]}" \
 	-a $D -le 5 -a 1 -le $D \

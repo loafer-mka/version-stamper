@@ -3,6 +3,10 @@
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2023
 
 function __PLUGIN_SH_NOTICE__
 {
@@ -12,6 +16,11 @@ function __PLUGIN_SH_NOTICE__
 function __PLUGIN_SH_SAMPLE__
 {
 	echo "#plugin-SH:       --gitignore  version.sh"
+}
+
+function __PLUGIN_SH_ATTRIB__
+{
+	echo "text eol=lf"
 }
 
 function __PLUGIN_SH_GETVER__
@@ -59,9 +68,4 @@ function __PLUGIN_SH_MODIFY__
 		-e "s/^(\s*)(\w*VERSION_SHA_SHORT\w*)(\s*=\s*)(\".*\"|[0-9a-fA-F+]+)(.*)$/\\1${NAME_VERSION_SHA_SHORT}\\3\"${VERSION_SHA_SHORT}\"\\5/" \
 		-e "s/^(\s*)(\w*VERSION_SHA_LONG\w*)(\s*=\s*)(\".*\"|[0-9a-fA-F+]+)(.*)$/\\1${NAME_VERSION_SHA_LONG}\\3\"${VERSION_SHA_LONG}\"\\5/" \
 	| __STORE_LF__ "$1"
-}
-
-function __PLUGIN_SH_ATTRIB__
-{
-	echo "text eol=lf"
 }

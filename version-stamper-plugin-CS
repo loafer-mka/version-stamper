@@ -3,6 +3,10 @@
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2023
 
 function __PLUGIN_CS_NOTICE__
 {
@@ -12,6 +16,11 @@ function __PLUGIN_CS_NOTICE__
 function __PLUGIN_CS_SAMPLE__
 {
 	echo "#plugin-CS:       --gitattributes  Properties/AssemblyInfo.cs"
+}
+
+function __PLUGIN_CS_ATTRIB__
+{
+	echo "text eol=crlf"
 }
 
 function __PLUGIN_CS_GETVER__
@@ -95,9 +104,4 @@ function __PLUGIN_CS_MODIFY__
 		END{
 			if ( iv == 0 ) print "[assembly: AssemblyInformationalVersion( \"" VT "\" )]";
 		}' | __STORE_CRLF__ "$1"
-}
-
-function __PLUGIN_CS_ATTRIB__
-{
-	echo "text eol=crlf"
 }

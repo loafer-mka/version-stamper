@@ -5,6 +5,10 @@ rem | This Source Code Form is subject to the terms of the Mozilla       |
 rem | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 rem | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 rem +--------------------------------------------------------------------+
+rem        email: Andrey Makarov <mka-at-mailru@mail.ru>
+rem Project home: https://github.com/loafer-mka/version-stamper.git
+rem
+rem               Copyright (c) Andrey Makarov 2023
 
 if "%1" == "GIT-PATH" goto :GIT-PATH
 if "%1" == "SHELL-PATH" goto :SHELL-PATH

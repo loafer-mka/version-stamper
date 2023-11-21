@@ -1,11 +1,40 @@
 ﻿
-# License
+# License <a name="C1"/>
 
 This Source Code Form is subject to the terms of the Mozilla
 Public License, v. 2.0. If a copy of the MPL was not distributed
 with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# About
+```
+        email: Andrey Makarov <mka-at-mailru@mail.ru>
+ Project home: https://github.com/loafer-mka/version-stamper.git
+
+               Copyright (c) Andrey Makarov 2023
+```
+
+# Content <a name="C2"/>
+
+- [License](#C1)
+- [Content](#C2)
+- [About](#C3)
+- [Installation and use](#C4)
+  - [Options of version-stamper](#C4.1)
+  - [Commands of version-stamper](#C4.2)
+  - [Configuration file .version-stamper](#C4.3)
+- [Improve version-stamper](#C5)
+  - [Plugin internals](#C5.1)
+    - [`__PLUGIN_XXX_NOTICE__`](#C5.1.1)
+    - [`__PLUGIN_XXX_SAMPLE__`](#C5.1.2)
+    - [`__PLUGIN_XXX_ATTRIB__`](#C5.1.3)
+    - [`__PLUGIN_XXX_GETVER__`](#C5.1.4)
+    - [`__PLUGIN_XXX_CREATE__`](#C5.1.5)
+    - [`__PLUGIN_XXX_MODIFY__`](#C5.1.6)
+  - [Unit-Tests](#C5.2)
+- [Appendix](#C6)
+  - [A little about git hooks](#C6.1)
+  - [Overview of the git repository directory structure](#C6.2)
+
+# About <a name="C3"/>
 
 Version-stamper is a simple script for generating text files in different
 programming languages containing information about the current version of
@@ -63,7 +92,7 @@ example, `YOURPROJECT_VERSION_TEXT` or `VERSION_TEXT_YOURPROJECT`.
 This and some other things are achieved by editing the .version-stamp
 configuration file in the root of the project's working tree.
 
-# Installation and use
+# Installation and use <a name="C4"/>
 
 To use version-stamper, it is enough to ensure that the main version-stamper
 script can be executed from the directories of your project. Version-stamper
@@ -102,7 +131,7 @@ export STAMPER_SUITE="Version suite v0.0-0.master"
 where a specific version and branch of version-stamper are indicated
 instead of v0.0-0.master.
 
-## Options of version-stamper
+## Options of version-stamper <a name="C4.1"/>
 
 Options usually have what is called a short form (such as -V or -q) and
 a long form (such as --version or --quiet). Parameters can be used
@@ -111,13 +140,13 @@ and --git-hook parameters require a value that can be specified either
 as an additional argument separated by a space:
 
 ```
-    version-stamper --directory "/other/working/directory"
+your_project> ./tools/stamper/version-stamper --directory "/other/working/directory"
 ```
 
 or using an assignment:
 
 ```
-    version-stamper --directory="/other/working/directory"
+your_project> ./tools/stamper/version-stamper --directory="/other/working/directory"
 ```
 
 Available options:
@@ -287,7 +316,7 @@ Available options:
   Note: do not set it manually (except for test only), it must be used
   by corrresponding git hooks.
 
-## Commands of version-stamper
+## Commands of version-stamper <a name="C4.2"/>
 
 Along with the parameters listed above, the command line may contain
 commands for launching plugins. If a stamp created by a plugin specified
@@ -299,7 +328,7 @@ line.
 The command to execute the plugin looks like:
 
 ```
-    your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
+your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 ```
 
 Several commands can be specified on the command line to create version's
@@ -342,7 +371,7 @@ be saved from update to update.
 Example:
 
 ```
-    your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
+your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
 ```
 
 Stamps created by command line are not automatically updated; if you use
@@ -358,7 +387,7 @@ command plugin executions are not specified, then version-stamper will
 substitute the `default-cmd` configuration parameter instead of commands,
 and if it is not specified or is empty, then `--help` will be used.
 
-# Configuration file .version-stamper
+## Configuration file .version-stamper <a name="C4.3"/>
 
 The .version-stamper configuration file is located at the root of the
 project's working tree and contains:
@@ -537,7 +566,9 @@ Some properties of hooks:
    changed (which looks strange when there are still changes after the
    commit and you can’t get rid of it).
 
-# Plugin internals
+# Improve version-stamper <a name="C5"/>
+
+## Plugin internals <a name="C5.1"/>
 
 To create your own plugin, just create a file with a name corresponding
 to `version-stamper-plugin-XXX`, where `XXX` is replaced by the name of
@@ -588,12 +619,23 @@ ${NAME_VERSION_TEXT} = "${VERSION_TEXT}"
 The easiest way is to take any existing plugin as a basis and make the
 necessary changes to it.
 
-**`__PLUGIN_XXX_NOTICE__`**<br/>
+### `__PLUGIN_XXX_NOTICE__` <a name="C5.1.1"/>
+
 This function prints a short description of this plugin to stdout. This
 description is used by the `version-stamper --help` command when generating
 a list of supported plugins.
 
-**`__PLUGIN_XXX_SAMPLE__`**<br/>
+For example, notice function may be:
+
+```
+function __PLUGIN_BAT_NOTICE__
+{
+	echo "   plugin-BAT        Windows Batch file; eol=CR+LF"
+}
+```
+
+### `__PLUGIN_XXX_SAMPLE__` <a name="C5.1.2"/>
+
 This function prints a one-line example of using the plugin to stdout.
 This example is included in the `.version-stamper` configuration file
 created by the `version-stamper --config` command. Normally, the output
@@ -602,14 +644,39 @@ configuration file initially does not contain configured plugins - this
 must be done by the project author. However, in special cases it may be
 different.
 
-**`__PLUGIN_XXX_ATTRIB__`**<br/>
+Example:
+
+```
+function __PLUGIN_BAT_SAMPLE__
+{
+	echo "#plugin-BAT:      --gitignore  version.bat"
+}
+```
+
+### `__PLUGIN_XXX_ATTRIB__` <a name="C5.1.3"/>
+
 This function prints to stdout a set of parameters applied to the
 generated version stamp in `.gitattributes`.
+
+- `text eol=lf` for Unix/Linux files with `LF` line separator
+- `text eol=crlf` for Windows files with line separator `CR+LF`
+- `text` for files that may have different delimiters on different systems,
+  for example regular `.c` or `.h` files.
+
+Example:
+
+```
+function __PLUGIN_BAT_ATTRIB__
+{
+	echo "text eol=crlf"
+}
+```
 
 *Note:* Updates to the `.gitattributes` and `.gitignore` files only occur
 when a new version stamp file is created.
 
-**`__PLUGIN_XXX_GETVER__`**<br/>
+### `__PLUGIN_XXX_GETVER__` <a name="C5.1.4"/>
+
 This function receives the text of the existing stamp from stdin and must
 output to stdout the text with the version designation corresponding to
 the contents of `VERSION_TEXT` (i.e. a string like "v1.2-333.branchname").
@@ -625,7 +692,30 @@ executed and line termination characters are converted to single
 LF (Unix-style), this allows tools like grep, awk, sed, etc. to be used
 without worrying about line breaks.
 
-**`__PLUGIN_XXX_CREATE__`**<br/>
+In the example with version stamps for `.bat` files, the stamp file contains
+commands for assigning values, including, suppose it contains a command
+like `set VERSION_TEXT=v1.2-333.branchname`, and the function should find
+and return the substring `v1.2-333.branchname`. You can do it like this:
+
+```
+function __PLUGIN_BAT_GETVER__
+{
+	sed --binary --regexp-extended --silent \
+		-e "s/^(\s*set\s+${NAME_VERSION_TEXT}=\s*)(.*)$/\\2/p"
+}
+```
+
+The function searches the text for only the "strict" version designation
+(i.e. the string must contain text with the key sequence VERSION_TEXT
+with a prefix and suffix (i.e. `${NAME_VERSION_TEXT}`). This is done in
+order to return an empty string instead of the version, if the prefix or
+suffix of the environment variable names is changed: if the returned
+string does not match the expected version, then the stamps will be
+rebuilt, an empty string will naturally lead to a mismatch and replacement
+of the stamp files.
+
+### `__PLUGIN_XXX_CREATE__` <a name="C5.1.5"/>
+
 This function is designed to create a new stamp file and is called when
 the target file does not exist. The function receives an argument, which
 is the name of the file to be created with a version stamp, into which
@@ -645,15 +735,20 @@ function contains the name of the saved file. A typical implementation
 pattern for such a function:
 
 ```
-function __PLUGIN_CS_CREATE__
+function __PLUGIN_BAT_CREATE__
 {
-     __STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
-        version stamp text here
+    __STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
+		@echo off
+
+		set ${NAME_VERSION_TEXT}=${VERSION_TEXT}
+		set ${NAME_VERSION_BRANCH}=${VERSION_BRANCH}${VERSION_DIRTY}
+		rem ...
 END_OF_TEXT
 }
 ```
 
-**`__PLUGIN_XXX_MODIFY__`**<br/>
+### `__PLUGIN_XXX_MODIFY__` <a name="C5.1.6"/>
+
 This function is used in cases where a stamp file already exists and
 changes need to be made to it. The existing stamp is fed to stdin (with
 LF line termination characters), and the function's only argument is the
@@ -683,7 +778,33 @@ Among the existing plugins, most ignore the absence of deleted information
 C# that ensures that the `AssemblyInformationalVersion` parameter is
 present in the stamp.
 
-# Unit-Tests
+Example:
+
+```
+function __PLUGIN_BAT_MODIFY__
+{
+	sed --binary --regexp-extended \
+		-e "s/^(\s*set\s+)(\w*VERSION_TEXT\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_BRANCH\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH}${VERSION_DIRTY}/" \
+	| __STORE_CRLF__ "$1"
+}
+```
+
+This example finds strings containing key identifiers (`\w*VERSION_TEXT\w*`,
+which match to the substring VERSION_TEXT with an arbitrary prefix and
+suffix consisting of letters, numbers or an underscore - that is, this
+is a "weak" check, because the VERSION_TEXT key sequence is important,
+while prefix and suffix will not have an effect). Then line is split into
+several fragments: 1) what is before the desired identifier, 2) the
+identifier itself, 3) the assignment operator, 4) the old value and,
+sometimes, 5) the continuation of the line after the value (the `set`
+command everything after ` =` uses as a value and (5) is missing). After
+that, the identifier (2) in the output line is replaced with a new one
+(the prefix and/or suffix can be changed), the value (4) is replaced with
+a new one, awhile the beginning of the line, the middle part with the
+assignment operator and the rest of the line are preserved.
+
+## Unit-Tests <a name="C5.2"/>
 
 The test system is being developed and updated in a separate branch
 `unit-tests`. The general idea is to keep everything related to tests in
@@ -725,9 +846,9 @@ you first test them in the working branch (without including them in the
 repository), and at the end simply switch to the `unit-tests` branch and
 add the already corrected unit test files there one operation.
 
-# Appendix
+# Appendix <a name="C6"/>
 
-## A little about git hooks
+## A little about git hooks <a name="C6.1"/>
 
 Below are some typical execution sequences for git hooks. These sequences
 should not be considered as a strict guide - they were obtained experimentally
@@ -805,7 +926,7 @@ prepare-commit-msg  ->  commit-msg  ->  post-merge 0
 (MERGE_MSG)
 ```
 
-## Overview of the git repository directory structure
+## Overview of the git repository directory structure <a name="C6.2"/>
 
 In the model case, we assume that we have a git repository in the `./MAIN`
 directory, this repository has a `SUBMODULE` submodule (path to the

@@ -3,16 +3,20 @@
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2023
 
-STAMPER_VERSION_ID=0x0009001A
-STAMPER_VERSION_TEXT="v0.9-26.unit-tests"
-STAMPER_VERSION_DATE="2023-11-21 00:56:20"
-STAMPER_VERSION_SHORTDATE="231121005620"
+STAMPER_VERSION_ID=0x0009001B
+STAMPER_VERSION_TEXT="v0.9-27.unit-tests"
+STAMPER_VERSION_DATE="2023-11-21 22:35:00"
+STAMPER_VERSION_SHORTDATE="231121223500"
 STAMPER_VERSION_BRANCH="unit-tests"
 STAMPER_VERSION_HOSTINFO="andrey@makarov.local openSUSE Leap 15.5"
 STAMPER_VERSION_AUTHORSHIP="Andrey Makarov"
 STAMPER_VERSION_DECLARATION="Copyright (c) Andrey Makarov 2022"
 STAMPER_VERSION_COMMIT_AUTHOR="Andrey Makarov <mka-at-mailru@mail.ru>"
 # if information below is based on parent commit's hash then prefix 'p:' will be used
-STAMPER_VERSION_SHA_SHORT="p:09a65ce1"
-STAMPER_VERSION_SHA_LONG="p:09a65ce1304412f0065881beb486afefc8016f95"
+STAMPER_VERSION_SHA_SHORT="p:36e75016"
+STAMPER_VERSION_SHA_LONG="p:36e75016aebc257f12df80ac122354033146eb46"

@@ -3,6 +3,10 @@
 # | Public License, v. 2.0. If a copy of the MPL was not distributed   |
 # | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
 # +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2023
 
 function __PLUGIN_BAT_NOTICE__
 {
@@ -12,6 +16,11 @@ function __PLUGIN_BAT_NOTICE__
 function __PLUGIN_BAT_SAMPLE__
 {
 	echo "#plugin-BAT:      --gitignore  version.bat"
+}
+
+function __PLUGIN_BAT_ATTRIB__
+{
+	echo "text eol=crlf"
 }
 
 function __PLUGIN_BAT_GETVER__
@@ -58,9 +67,4 @@ function __PLUGIN_BAT_MODIFY__
 		-e "s/^(\s*set\s+)(\w*VERSION_SHA_SHORT\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_SHA_SHORT}\\3${VERSION_SHA_SHORT}/" \
 		-e "s/^(\s*set\s+)(\w*VERSION_SHA_LONG\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_SHA_LONG}\\3${VERSION_SHA_LONG}/" \
 	| __STORE_CRLF__ "$1"
-}
-
-function __PLUGIN_BAT_ATTRIB__
-{
-	echo "text eol=crlf"
 }

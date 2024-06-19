@@ -266,7 +266,7 @@ function __detect_hooks_dir__
 {
 	# VERSION_GIT_DIR may now points to actual .git directory with full content
 	# or to reduced .git directory of worktree with only HEAD, config, logs/ ...
-	# so hooks/ subfolder ust be detected inmain .git directory
+	# so hooks/ subfolder must be detected in main .git directory
 	if [ -d "${VERSION_GIT_DIR}/hooks" ]; then
 		VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
 		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
@@ -284,7 +284,7 @@ VERSION_SUPER_DIR="$(__git_filter_path__ rev-parse --show-superproject-working-t
 __VERBOSE__ "__git_filter_path__ rev-parse --show-superproject-working-tree\n.   VERSION_SUPER_DIR=\"${VERSION_SUPER_DIR}\""
 if [ -z "${VERSION_SUPER_DIR}" ]; then
 	# we are out of submodule  OR  we are inside not initialized submodule
-	# in later case VERSION_ROOT_DIR and VERSION_GIT_DIR both are point to superproject items
+	# in second case VERSION_ROOT_DIR and VERSION_GIT_DIR both are pointing to superproject folders
 	if [ -e "${VERSION_ROOT_DIR}/.gitmodules" ]; then
 		# submodules exists  AND  this submodule was not initialized
 		VERSION_SUPER_DIR="${VERSION_ROOT_DIR}"

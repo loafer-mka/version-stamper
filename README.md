@@ -266,8 +266,9 @@ Available options:
 
   `VERSION_AUTHORSHIP` and `VERSION_DECLARATION` - taken from the
   `.version-stamper` configuration file, when it is created, they are
-  initially assigned based on the username, git configuration and standard
-  parameters in the `version-stamper-config` file.
+  initially assigned based on the username, git configuration and default
+  value of parameter `STAMPER_DEFAULT_DECL` in the `version-stamper-config`
+  file.
   
   `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL` - retrieved from
   current commit description. If the repository is completely empty, then
@@ -429,7 +430,7 @@ Valid parameters:
 5. `declaration` - copyright or copyleft line. Can be changed in any way...
    but do not forget that it complies with the license accepted in your
    project. By default, in the created configuration file, it is formed
-   from the `STAMPER_DEFAULT_DECL` parameter (see the `version-stamper-conf`
+   from the `STAMPER_DEFAULT_DECL` parameter (see the `version-stamper-config`
    file from version-stamper), which specifies the beginning of the line
    (i.e. "Copyright (c)" or "Copyleft" and etc.), authorship (as in the
    `authorship` parameter) and the year of the first commit in the project

@@ -1,4 +1,5 @@
 #!/bin/bash
+#!/bin/bash
 
 # +--------------------------------------------------------------------+
 # | This Source Code Form is subject to the terms of the Mozilla       |
@@ -63,8 +64,8 @@ STAMPER_DOS2UNIX="$(which dos2unix 2>/dev/null)"
 STAMPER_UNIX2DOS="$(which unix2dos 2>/dev/null)"
 if [ "Windows_NT" == "$OS" ]; then
 	[ -n "${STAMPER_DOS2UNIX}" ] || DIE 100 "The 'dos2unix' must be installed and available from script"
-	[ -n "$}STAMPER_UNIX2DOS}" ] || DIE 100 "The 'unix2dos' must be installed and available from script"
-	# posix utilities needs in linux-style EOLs (lf), so we will transfer all files via dos2unix.
+	[ -n "${STAMPER_UNIX2DOS}" ] || DIE 100 "The 'unix2dos' must be installed and available from script"
+	# posix utilities need in linux-style EOLs (lf), so we will transfer all files via dos2unix.
 	# under windows this is mandatry; under linux we will do same because some source files may have crlf EOLs
 else
 	[ -n "$(which whoami 2>/dev/null)" ] || DIE 100 "The 'whoami' must be installed and available from script"
@@ -494,6 +495,25 @@ else
 fi
 
 #
+# Translate path to use inside regex
+#
+function __AS_REGEX__
+{
+	arg="$@"
+	arg="${arg// /\\\\\\ }"
+	arg="${arg//\//\\\/}"
+	arg="${arg//./\\.}"
+	echo "${arg}"
+}
+function __AS_REGEX_DQ__
+{
+	arg="$@"
+	arg="${arg//\//\\\/}"
+	arg="${arg//\"/\\\\\"}"
+	echo "${arg}"
+}
+
+#
 # Print now suite title using command-line verbose arg
 #
 __VERBOSE__ "\n${STAMPER_SUITE_TITLE}\n"
@@ -551,12 +571,46 @@ VERSION_TRAILER=""
 VERSION_AUTHORSHIP=""
 VERSION_DECLARATION=""
 
-STAMPER_CONFIG_NAME=".${STAMPER_SCRIPT_NAME}"
-STAMPER_CONFIG_PATH="${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}"
-__VERBOSE__ "\nParsing configuration file \"${STAMPER_CONFIG_PATH}\""
-if [ -f "${STAMPER_CONFIG_PATH}" ]; then
+VERSION_CONFIG_NAME=".${STAMPER_SCRIPT_NAME}"
+if [ -n "${STAMPER_CURRENT_DIR}" ]; then
+	# -cd / --directory option was given
+	#
+	# NOTE: r/w functions (READ_LF, STORE_LF etc) and git commands use
+	# worktree-relative pathes, but -cd option may choose folder inside
+	# worktree. We suppose that folder 'like-as-nested-worktree' (i.e.
+	# it becomes submodule or subrepo in futuire or was one in past). So
+	# this folder contains own .version-stamper, .gitattributes and
+	# .gitignore files; so these files define pathes relative folder
+	# given by -cd option. That path differs from worktree-relative path
+	# by fixed prefix - relative path of VERSION_CURRENT_DIR inside
+	# VERSION_ROOT_DIR.
+	VERSION_CONFIG_DIR="${VERSION_CURRENT_DIR}"
+	VERSION_CONFIG_PREFIX="$(realpath -m --relative-to="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_DIR}")"
+	case "${VERSION_CONFIG_PREFIX}" in
+	"../*")
+		DIE 2 "Wrong target directory \"${STAMPER_CURRENT_DIR}\" outside of repository tree \"${VERSION_ROOT_DIR}\""
+		;;
+	".")
+		# VERSION_CURRENT_DIR == VERSION_ROOT_DIR
+		VERSION_CONFIG_DIR="${VERSION_ROOT_DIR}"
+		VERSION_CONFIG_PREFIX=""
+		;;
+	*)
+		# jump to the root of worktree
+		VERSION_CONFIG_PREFIX="${VERSION_CONFIG_PREFIX}/"
+		cd "${VERSION_ROOT_DIR}"
+		;;
+	esac
+else
+	VERSION_CONFIG_DIR="${VERSION_ROOT_DIR}"
+	VERSION_CONFIG_PREFIX=""
+fi
+VERSION_CONFIG_PATH="${VERSION_CONFIG_DIR}/${VERSION_CONFIG_NAME}"
+
+__VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_PATH}\""
+if [ -f "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
-	__READ_LF__ "${STAMPER_CONFIG_NAME}" | while read -r param value; do
+	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
 		((cn++))
 		case "${param,,}" in
 		"" | "#"*)
@@ -565,21 +619,21 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 			if [ -z "${STAMPER_ABBREV_LEN}" ]; then
 				STAMPER_ABBREV_LEN="$value"
 			else
-				echo "Warning: Ignore duplicate abbreviation length \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate abbreviation length \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		leader:)
 			if [ -z "${VERSION_LEADER}" ]; then
 				VERSION_LEADER="$value"
 			else
-				echo "Warning: Ignore duplicate leader setting \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate leader setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		trailer:)
 			if [ -z "${VERSION_TRAILER}" ]; then
 				VERSION_TRAILER="$value"
 			else
-				echo "Warning: Ignore duplicate trailer setting \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate trailer setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		hooks:)
@@ -593,7 +647,7 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 						STAMPER_HOOKS["${hook}"]="true"
 						;;
 					*)
-						echo "Warning: Ignore wrong hook name \"${hook}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+						echo "Warning: Ignore wrong hook name \"${hook}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 						;;
 					esac
 				done
@@ -624,21 +678,21 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 					}
 					;;
 				*)
-					echo "Warning! undefined verbose mode \"$value\" at ${STAMPER_CONFIG_PATH}:$cn (allowed: 'true', 't', 'yes', 'y', 'set', 'ok', 1; 'false', 'f', 'no', 'n', 'none', 'notset', 'clean', 0)" >&2
+					echo "Warning! undefined verbose mode \"$value\" at ${VERSION_CONFIG_PATH}:$cn (allowed: 'true', 't', 'yes', 'y', 'set', 'ok', 1; 'false', 'f', 'no', 'n', 'none', 'notset', 'clean', 0)" >&2
 					;;
 				esac
 			else
 				# use command-line assigned verbose mode
 				if [ "true" == "${STAMPER_VERBOSE,,}" ]; then
-					echo "Warning! ignore default verbose mode \"$value\" due command line --verbose option at ${STAMPER_CONFIG_PATH}:$cn" >&2
+					echo "Warning! ignore default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
 				fi
 			fi
 			;;
 		plugin-*:)
 			temp_plugin="${param#plugin-}"
 			temp_plugin="${temp_plugin%:}"
-            temp_ignore="false"
-            temp_attrib="false"
+			temp_ignore="false"
+			temp_attrib="false"
 			while true; do
 				# note: below " ", "	" holds space or tab while [ 	] holds space and tab
 				case "${value}" in
@@ -663,12 +717,12 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 					;;
 				esac
 			done
-			__normalize_filename__ "temp_target"  "${value}"
+			__normalize_filename__ "temp_target"  "${VERSION_CONFIG_PREFIX}${value}"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
-				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			else
 				if [ -z "${STAMPER_PLUGINS[${temp_plugin}]}" ]; then
-					echo "Warning: Ignore unknown plugin-${temp_plugin} with target file \"${temp_target}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+					echo "Warning: Ignore unknown plugin-${temp_plugin} with target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 				else
 					index=${#STAMPER_CONF_PLUGIN[@]}
 					STAMPER_KNOWN_TARGETS["${temp_target}"]="conf_${index}"
@@ -676,6 +730,7 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 					STAMPER_CONF_IGNORE[${index}]="${temp_ignore}"
 					STAMPER_CONF_ATTRIB[${index}]="${temp_attrib}"
 					STAMPER_CONF_TARGET[${index}]="${temp_target}"
+					# target has VERSION_CONFIG_DIR-relative path
 				fi
 			fi
 			unset temp_ignore
@@ -688,26 +743,26 @@ if [ -f "${STAMPER_CONFIG_PATH}" ]; then
 			if [ -z "${VERSION_AUTHORSHIP}" ]; then
 				VERSION_AUTHORSHIP="$value"
 			else
-				echo "Warning: Ignore duplicate authorship \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate authorship \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		declaration:)
 			if [ -z "${VERSION_DECLARATION}" ]; then
 				VERSION_DECLARATION="$value"
 			else
-				echo "Warning: Ignore duplicate copright/copyleft declration \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate copright/copyleft declration \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		default-cmd:)
 			if [ -z "$STAMPER_DEFAULT_CMD" ]; then
 				STAMPER_DEFAULT_CMD="$value"
 			else
-				echo "Warning: Ignore duplicate default command \"${value}\" at ${STAMPER_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignore duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		*)
 			# bad syntax ...
-			DIE 2 "Bad configuration line \"${param}  ${value}\" at ${STAMPER_CONFIG_PATH}:$cn"
+			DIE 2 "Bad configuration line \"${param}  ${value}\" at ${VERSION_CONFIG_PATH}:$cn"
 			;;
 		esac
 	done
@@ -823,7 +878,7 @@ for arg in "$@"; do
 			temp_attrib="true"
 			;;
 		*)
-			__normalize_filename__ "temp_target" "${arg}"
+			__normalize_filename__ "temp_target" "${VERSION_CONFIG_PREFIX}${arg}"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at argument #$an" >&2
 			else
@@ -880,11 +935,11 @@ Available options are:
 -p       --print
               Print parsed information about current version.
 -c       --config
-              Create default configuration if if missing.
+              Create default configuration if missing.
 -s       --setup
               Setup configured hooks force. This implies --config too.
 -g       --generate
-              Execute all configured plugins. This only applies to configured plugins in ${STAMPER_CONFIG_NAME}.
+              Execute all configured plugins. This only applies to configured plugins in ${VERSION_CONFIG_NAME}.
               This implies --config and --setup too.
          --git-hook GITHOOK
               Use this option when version-stamper is running from git hook. It passes hook name (without path
@@ -1011,6 +1066,18 @@ unset index
 
 VERSION_GIT_USER="$(git --no-pager config user.name 2>/dev/null)"
 VERSION_GIT_EMAIL="$(git --no-pager config user.email 2>/dev/null)"
+if [ -z "${VERSION_GIT_USER}" ]; then
+	if [ -n "${USER}" ]; then
+		# linux-style
+		VERSION_GIT_USER="${USER}"
+	elif [ -n "${USERNAME}" ]; then
+		# windows-style
+		VERSION_GIT_USER="${USERNAME}"
+	else
+		VERSION_GIT_USER="Unknown User"
+	fi
+fi
+[ -z "${VERSION_GIT_EMAIL}" ] && VERSION_GIT_EMAIL="$(echo "${VERSION_GIT_USER}" |sed -e 's/\W/_/g')@localhost"
 __VERBOSE__ "git config user.name and user.email\n.   VERSION_GIT_USER=${VERSION_GIT_USER}\n.   VERSION_GIT_EMAIL=${VERSION_GIT_EMAIL}"
 
 __VERBOSE__ "Check and update missing information (authorship and copyright/copyleft)"
@@ -1020,7 +1087,7 @@ if [ -z "${VERSION_AUTHORSHIP}" ]; then
 	VERSION_AUTHORSHIP="${VERSION_GIT_USER}"
 	if [ -n "${VERSION_AUTHORSHIP}" ]; then
 		[ -n "${VERSION_GIT_EMAIL}" ] && VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP} <${VERSION_GIT_EMAIL}>"
-		__VERBOSE__ "authorship is based on git config\n.   VERSION_AUTHORSHIP=${VERSION_AUTHORSHIP}"
+		__VERBOSE__ "Authorship is based on git config\n.   VERSION_AUTHORSHIP=${VERSION_AUTHORSHIP}"
 	else
 		if [ "Windows_NT" == "$OS" ]; then
 			util="$(which reg.exe 2>/dev/null)"
@@ -1052,8 +1119,10 @@ fi
 # Print now (after getting actual verbose mode) detected parameters at current point:
 #
 __VERBOSE__ "
-VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"
-Config file$( [ -f "${STAMPER_CONFIG_PATH}" ] || echo " not found" ): \"${STAMPER_CONFIG_PATH}\"
+VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"  (git worktree)
+VERSION_CONFIG_DIR=\"${VERSION_CONFIG_DIR}\"  (root of relative pathes in args/configd)
+VERSION_CONFIG_PREFIX=\"${VERSION_CONFIG_PREFIX}\"
+Config file$( [ -f "${VERSION_CONFIG_PATH}" ] || echo " not found" ): \"${VERSION_CONFIG_PATH}\"
 .   verbose= \"${STAMPER_VERBOSE}\"
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
 .   leader= \"${VERSION_LEADER}\"
@@ -1295,11 +1364,12 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		esac
 	done
 fi
+
 if [ "post-merge" == "${STAMPER_EXECUTING_HOOK}" ]; then
-	git --no-pager status --porcelain --untracked-files=normal -- ":/:${STAMPER_CONFIG_NAME}"  2>/dev/null | while read status file; do
+	git --no-pager status --porcelain --untracked-files=normal -- ":/:${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}"  2>/dev/null | while read status file; do
 		case "$status" in
 		AA | AU | UA | UU | DU | UD | DD)
-			__STORE_NATIVE_EOL__ "${STAMPER_CONFIG_NAME}" <<<"$(__READ_LF__ "${STAMPER_CONFIG_NAME}")"
+			__STORE_NATIVE_EOL__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" <<<"$(__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}")"
 			;;
 		*)
 			;;
@@ -1363,7 +1433,7 @@ post-commit | post-rewrite | post-merge)
 esac
 
 __VERBOSE__ "\nExecute wanted operations -- create config, generate version file, print info etc"
-if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
+if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 	if [ -n "${VERSION_SUBMOD_NAME}" -a -z "${VERSION_LEADER}" ]; then
 		VERSION_LEADER="$(echo "${VERSION_SUBMOD_NAME}" | sed -r -e 's/\W/_/g; s/__+/_/g; s/_+$//; s/^_+//')"
 		VERSION_LEADER="${VERSION_LEADER^^}_"
@@ -1377,8 +1447,8 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 			STAMPER_HOOKS["post-rewrite"]="true"
 			STAMPER_HOOKS["post-merge"]="true"
 		fi
-		__VERBOSE__ "Create config file \"${STAMPER_CONFIG_NAME}\""
-		__STORE_NATIVE_EOL__ "${STAMPER_CONFIG_NAME}" <<-END_OF_TEXT
+		__VERBOSE__ "Create config file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\""
+		__STORE_NATIVE_EOL__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" <<-END_OF_TEXT
 			#
 			#   o p t i o n s
 			#
@@ -1433,10 +1503,10 @@ if [ ! -f "${STAMPER_CONFIG_PATH}" ]; then
 
 			#   t h e   e n d
 		END_OF_TEXT
-		__VERBOSE__ ".   git add --force -- \"${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}\""
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/${STAMPER_CONFIG_NAME}" >/dev/null
+		__VERBOSE__ ".   git add --force -- \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\""
+		git --no-pager add --force -- "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" >/dev/null
 		# add config into .gitattributes
-		STAMPER_FILL_ATTRIB["${STAMPER_CONFIG_NAME}"]="text"
+		STAMPER_FILL_ATTRIB["${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}"]="text"
 	fi
 fi
 
@@ -1710,15 +1780,16 @@ $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do ((n++)); echo -e "    F$n = 0;"
 $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 	((n++))
 	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	f="${f// /\\\\\\ }"
-	echo -e "/^\\s*#\\s*${f//./\\.}\\s+/ {"
-	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f}   ${A}\"; }"
+	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${f}")"
+	r="$(__AS_REGEX__ "${f}")"
+	echo -e "/^\\s*#\\s*${r}\\s+/ {"
+	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }   ${A}\"; }"
 	echo -e "    next;"
 	echo -e "}"
-	echo -e "/^\\s*${f//./\\.}\\s+/ {"
+	echo -e "/^\\s*${r}\\s+/ {"
 	echo -e "    if ( 0 == F$n ) {"
 	echo -e "        for ( i = 2; i <= NF; i++ ) if ( \"$A\" == \$i ) F$n = 1;"
-	echo -e "        if ( 0 == F$n ) { F$n = 1; print \"${f}   ${A}\"; } else { print; }"
+	echo -e "        if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }   ${A}\"; } else { print; }"
 	echo -e "    }"
 	echo -e "    next;"
 	echo -e "}"
@@ -1728,11 +1799,11 @@ END {
 $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 	((n++))
 	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	f="${f// /\\\\\\ }"
+	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${f}")"
 	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }   ${A}\";"
 done)
 }"
-	text_a="$(__READ_LF__ ".gitattributes")"
+	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes")"
 	[ -z "${text_a}" ] && text_a="#
 # text=true   text    assume tex file, allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
 # text=false  -text   assume binary file, disable CRLF translation
@@ -1752,9 +1823,9 @@ done)
 .gitmodules     text eol=lf"
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_ROOT_DIR}/.gitattributes"
-		__STORE_LF__ ".gitattributes" <<<"${text_b}"
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitattributes" >/dev/null
+		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitattributes"
+		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes" <<<"${text_b}"
+		git --no-pager add --force -- "${VERSION_CONFIG_PREFIX}.gitattributes" >/dev/null
 	else
 		__VERBOSE__ ".   OK .gitattributes, use it as-is"
 	fi
@@ -1768,13 +1839,13 @@ BEGIN {
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do echo -e "    F$n = 0;"; done)
 }
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	f="${STAMPER_FILL_IGNORE[${n}]}"
-	f="${f// /\\\\\\ }"
-	echo -e "/^\\s*#\\s*${f//./\\.}\\s*\$/ {"
-	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f}\"; }"
+	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${STAMPER_FILL_IGNORE[${n}]}")"
+	r="$(__AS_REGEX__ "${f}")"
+	echo -e "/^\\s*#\\s*${r}\\s*\$/ {"
+	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }\"; }"
 	echo -e "    next;"
 	echo -e "}"
-	echo -e "/^\\s*${f//./\\.}\\s*\$/ {"
+	echo -e "/^\\s*${r}\\s*\$/ {"
 	echo -e "    if ( 0 == F$n ) { F$n = 1; print; }"
 	echo -e "    next;"
 	echo -e "}"
@@ -1782,12 +1853,12 @@ done)
     { print; }
 END {
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	f="${STAMPER_FILL_IGNORE[${n}]}"
-	f="${f// /\\\\\\ }"
-	echo -e "    if ( F$n == 0 ) print \"${f}\";"
+	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${STAMPER_FILL_IGNORE[${n}]}")"
+	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }\";"
 done)
 }"
-	text_a="$(__READ_LF__ ".gitignore")"
+
+	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitignore")"
 	if [ -z "${text_a}" ]; then
 			text_a="#
 # temporary, intermediate and target files
@@ -1976,11 +2047,12 @@ $[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 
 # ..."
 	fi
+
 	text_b="$(awk -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
-		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_ROOT_DIR}/.gitignore"
-		__STORE_LF__ ".gitignore" <<<"${text_b}"
-		git --no-pager add --force -- "${VERSION_ROOT_DIR}/.gitignore" >/dev/null
+		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitignore"
+		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitignore" <<<"${text_b}"
+		git --no-pager add --force -- "${VERSION_CONFIG_PREFIX}.gitignore" >/dev/null
 	else
 		__VERBOSE__ ".   OK .gitignore, use it as-is"
 	fi
@@ -2389,7 +2461,7 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 			# version-stamper is installed and is used from install location
 			STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
 		else
-			STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" "${STAMPER_SCRIPT_PATH}")"
+			STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" -- "${STAMPER_SCRIPT_PATH}")"
 		fi
 		__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
 

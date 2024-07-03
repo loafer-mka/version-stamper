@@ -273,8 +273,8 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
 
   `VERSION_AUTHORSHIP` и `VERSION_DECLARATION` - берутся из конфигурационного
   файла `.version-stamper`, при его создании первоначально присваиваются
-  на основе имени пользователя, конфигурации git и стандартной параметров
-  в файле `version-stamper-config`.
+  на основе имени пользователя, конфигурации git и начального значения
+  параметра `STAMPER_DEFAULT_DECL` в файле `version-stamper-config`.
   
   `VERSION_COMMIT_AUTHOR` и `VERSION_COMMIT_EMAIL` - извлекаются из сведений
   о текущем коммите. Если репозиторий совсем пустой, то на основе имени
@@ -435,10 +435,10 @@ your_project> ./tools/stamper/version-stamper ... MAKEFILE -i build/version.mk
   произвольным образом ... но не забывайте о том, чтобы она соответствовала
   принятой в вашем проекте лицензии. По умолчанию в создаваемом файле
   конфигурации она формируется из параметра `STAMPER_DEFAULT_DECL`
-  (см. файл `version-stamper-conf` из состава version-stamper), задающего
-  начало строки (т.е. "Copyright (c)" или "Copyleft" и т.п.), авторства
-  (как в параметре `authorship`) и года первого коммита в проекте или
-  текущего года, если проект ещё пустой.
+  (см. файл `version-stamper-config` из состава version-stamper), задающего
+  текст начала строки (т.е. "Copyright (c)" или "Copyleft" и т.п.),
+  авторства (как в параметре `authorship`) и года первого коммита в проекте
+  или текущего года, если проект ещё пустой.
 
 6. `default-cmd` - команда, подставляемая по умолчанию, если в командной
    строке version-stamper нет никаких существенных команд и параметров.

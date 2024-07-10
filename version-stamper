@@ -127,13 +127,83 @@ done
 unset ref
 unset an
 
+# path under windows may contain C:/... prefix instead of /c/...  or /cygdrive/c/...
+# note 1: normal mingw/cygwin/SUA/... absolute path starts with "/"; the '$0' contains path
+#         as it was used and it may starts with C:/... if script was executed by windows
+#         application
+# note 2: cygpath utility defines:
+#         - "unix" path as "/some/folder/file"
+#         - "windows" path as "c:\some\folder\path\file"
+#         - "mixed" path as "c:/some/folder/path/file"
+#         really the cygpath is not mutual property of cygwin, it accomplishes
+#         also mingw and msys2 (SFU, SUA, etc were not checked);
+#         we may state that mixed path _may_ be used for '$0' and for other
+#         purposes in environment that does not support the mixed path format.
+#         for example "readlink", "realpath" etc will print unchanged argument
+#         if mixed path was used
+# note 3: git-for-windows built on mingw/msys2 may return path in _mixed_ format...
+# note 4: realpath may return /C/... (capitalized drive letter) if /C/... form was
+#         used as input argument; elsewere lowercase drive letter will be used.
+#         So we may have two different pathes starting from uppercase or lowercase
+#         drive letter; this may mess up nested path detection
+#         (i.e. 'realpath --relative-to=parent nested' will return path via root
+#         "../../../../C/folder1/folder2/parent/folder4/nested").
+#         same shit is for cd/pwd, pushd/popd, realpath, readlink ... :(
+#         the only twin (input_path -> windows_path -> unix_path convertion will
+#         normalize drive letter case.
+if [ -z "${STAMPER_CYGPATH}" ]; then
+	function __git_filter_path__
+	{
+		git --no-pager "$@" 2>/dev/null
+	}
+	function __normalize_path__
+	{
+		if [ -z "$2" ]; then
+			realpath -m -- "$1"
+		else
+			realpath -m --relative-base="$2" -- "$1"
+		fi
+	}
+else
+	function __git_filter_path__
+	{
+		git --no-pager "$@" 2>/dev/null | "${STAMPER_CYGPATH}" -u -f - 2>/dev/null
+	}
+	function __normalize_path__
+	{
+		if [ -z "$2" ]; then
+			realpath -m -- "$("${STAMPER_CYGPATH}" -u -- "$("${STAMPER_CYGPATH}" -w -- "$1")")"
+		else
+			realpath -m --relative-base="$2" -- "$("${STAMPER_CYGPATH}" -u -- "$("${STAMPER_CYGPATH}" -w -- "$1")")"
+		fi
+	}
+fi
+if [ -n "${STAMPER_DOS2UNIX}" ]; then
+	function __git_filter_eols__
+	{
+		git --no-pager "$@" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
+	}
+	function __cat_filter_eols__
+	{
+		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/$@" 2>/dev/null
+	}
+else
+	function __git_filter_eols__
+	{
+		git --no-pager "$@" 2>/dev/null
+	}
+	function __cat_filter_eols__
+	{
+		cat "${VERSION_ROOT_DIR}/$@" 2>/dev/null
+	}
+fi
+
 #
 # check for changed directory
 #
 if [ -n "${STAMPER_CURRENT_DIR}" ]; then
-	if [ -n "${STAMPER_CYGPATH}" ]; then STAMPER_CURRENT_DIR="$("${STAMPER_CYGPATH}" -u "${STAMPER_CURRENT_DIR}")"; fi
-	STAMPER_CURRENT_DIR="$(readlink -m -- "${STAMPER_CURRENT_DIR}")"
-	[ 0 -ne $? -o ! -d "${STAMPER_CURRENT_DIR}" ] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
+	STAMPER_CURRENT_DIR="$(__normalize_path__  "${STAMPER_CURRENT_DIR}")"
+	[ ! -d "${STAMPER_CURRENT_DIR}" ] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
 	pushd "${STAMPER_CURRENT_DIR}" >/dev/null 2>&1
 fi
 # now we must be at wanted folder, so we may perform basic checks and load configuration file
@@ -182,51 +252,6 @@ true)
 esac
 unset temp
 
-# path under windows may contain C:/... prefix instead of /c/...  or /cygdrive/c/...
-# note 1: normal mingw/cygwin/SUA/... absolute path starts with "/"; the '$0' contains path
-#         as it was used and it may starts with C:/... if script was executed by windows
-#         application
-# note 2: cygpath utility defines:
-#         - "unix" path as "/some/folder/file"
-#         - "windows" path as "c:\some\folder\path\file"
-#         - "mixed" path as "c:/some/folder/path/file"
-#         really the cygpath is not mutual property of cygwin, it accomplishes
-#         also mingw and msys2 (SFU, SUA, etc were not checked);
-#         we may state that mixed path _may_ be used for '$0' and for other
-#         purposes in environment that does not support the mixed path format.
-#         for example "readlink", "realpath" etc will print unchanged argument
-#         if mixed path was used
-# note 3: git-for-windows built on mingw/msys2 returns path in _mixed_ format...
-if [ -z "${STAMPER_CYGPATH}" ]; then
-	function __git_filter_path__
-	{
-		git --no-pager "$@" 2>/dev/null
-	}
-else
-	function __git_filter_path__
-	{
-		git --no-pager "$@" 2>/dev/null | "${STAMPER_CYGPATH}" -u -f - 2>/dev/null
-	}
-fi
-if [ -n "${STAMPER_DOS2UNIX}" ]; then
-	function __git_filter_eols__
-	{
-		git --no-pager "$@" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
-	}
-	function __cat_filter_eols__
-	{
-		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/$@" 2>/dev/null
-	}
-else
-	function __git_filter_eols__
-	{
-		git --no-pager "$@" 2>/dev/null
-	}
-	function __cat_filter_eols__
-	{
-		cat "${VERSION_ROOT_DIR}/$@" 2>/dev/null
-	}
-fi
 if [ "${STAMPER_VERBOSE}" == "true" ]; then
 	function __VERBOSE__
 	{
@@ -341,9 +366,9 @@ unset VERSION_SUBMOD_OK
 
 #
 # strip leading ./ and / symbols, so we get correct working_tree_relative_file_path
-#   __normalize_filename__  varname  filename
+#   __normalize_local_path__  varname  filename
 #
-function __normalize_filename__
+function __normalize_local_path__
 {
 	local    local_temp_filename
 
@@ -364,92 +389,99 @@ function __READ_LF__
 	local	merge_status
 	local	awk_script
 	local	file
-	__normalize_filename__ file "$1"
 
+__VERBOSE__ "__READ_LF__ \"$1\""
 	# note 1: always pass via dos2unix on reading from FS under windows because filters (sed, awk etc.) are eol-sensetive
-	# note 2: the file of FS may be corrupted due to merge collisions; try to resolve them when detected (prefer our before their)
-	# note 3: pathspec has special "magic signatures" (see 'man gitglossary' for more informatin)
-	#         magic signature :/: means "from top of repository"
-	#         (!) if you are use this magic AND start path with "./" prefix then 'git status' will interpret existing and controlled files as untracked
-	#         git status ... -- :/:./controlled-filename           will return "?? ./controlled-filename" for unchanged 'controlled-filename' (changed too)
-	#         git status ... -- :/:controlled-filename             will return "" for unchanged 'controlled-filename'
-	#         git status ... -- controlled-filename                will return "" for unchanged 'controlled-filename'
-	merge_status="$(git --no-pager status --porcelain  --untracked-files=normal --ignored -- ":/:${file}")"
-	__VERBOSE__ "git status --porcelain --untracked-files=normal --ignored -- \":/:${file}\"\n.   status=\"$merge_status\""
-	# really <<<<<<, ======, >>>>>> are bigger than in script below
-	awk_script='
-		BEGIN{ mode = 1; }
-		mode == 1 && /^\s*<<<<<<*\s/   { mode = 2; next; }
-		mode == 2 && /^\s*======*\s*$/ { mode = 4; next; }
-		mode == 2 && /^\s*\|\|\|\|\|\|*\s*$/ { mode = 8; next; }
-		mode == 8 && /^\s*======*\s*$/ { mode = 4; next; }
-		mode == 4 && /^\s*>>>>>>*\s/   { mode = 1; next; }
-		0 != and( mode, F )            { print; }
-	'
-
-	case "$merge_status" in
-	"UU "* | "AA "* | "AU "* | "UA "*)
-		# UU	unmerged, both modified
-		# AA	unmerged, both added
-		# AU	unmerged, added by us
-		# UA	unmerged, added by them
-			# 1) to use our/their file at once:
-			#	git checkout --ours|--theirs -- "filename"
-			#
-			# 2) to use merged file with preference of our/their in conflicted areas (normally merged other areas):
-			#	git show :1:"filename" >tmp.base
-			#	git show :2:"filename" >tmp.our
-			#	git show :3:"filename" >tmp.their
-			#	git merge-file --ours --stdout tmp.our tmp.base tmp.their >"filename"
-			#	rm tmp.base tmp.our tmp.their
-			#
-			# 3) alternative way to build combined file with our/their preference for collisions
-			#	is to use merged with collisions file and filter wanted parts by our script
-		if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-			# always parse via dos2unix on reading from FS under windows because fileters (sed, awk etc.) are eol-sensetive
-			__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-			__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
-		else
-			__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
-			# unmerged, deleted by them
-			__VERBOSE__ "git show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
-			__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 "$awk_script"
-		fi
-		;;
-	"UD "*)
-		# unmerged, deleted by them
-		__VERBOSE__ "git show -- \":2:${file}\"\n.   ..."
-		__git_filter_eols__ show -- ":2:${file}"
-		;;
-	"DU "*)
-		# unmerged, deleted by us
-		__VERBOSE__ "git show -- \":3:${file}\"\n.   ..."
-		__git_filter_eols__ show -- ":3:${file}"
-		;;
-	"DD "*)
-		# unmerged, both deleted		??? conflict?
-		__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" file was deleted on both merge sides; assume empty"
-		;;
-	M?" "* | ?M" "*)
-		# on some commit hook (pre-commit, commit-msg, post-commit) conflicted files may become 'modified' after adding in stagged area
-		# in this case they may have '<<<...===...>>>' insertions
-		if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-			# always parse via dos2unix on reading from FS under windows because fileters (sed, awk etc.) are eol-sensetive
-			__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-			__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
-		else
-			__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found in worktree"
-		fi
+	case "$1" in
+	"/"*)
+		# abs path out of tree (note: mixed and widnows forms must be excluded by the caller logic
+		__VERBOSE__ "cat \"$1\"\n.   ... (external file)"
+		__cat_filter_eols__ "$1"
 		;;
 	*)
-		# empty or some other
-		if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-			# always parse via dos2unix on reading from FS under windows because fileters (sed, awk etc.) are eol-sensetive
-			__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\"\n.   ..."
-			__cat_filter_eols__ "${file}"
-		else
-			__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
-		fi
+		file="$1"
+		# note 2: the file on FS may be corrupted due to merge collisions; try to resolve them when detected (prefer our before their)
+		# note 3: pathspec has special "magic signatures" (see 'man gitglossary' for more informatin)
+		#         magic signature :/: means "from top of repository"
+		#         (!) if you are use this magic AND start path with "./" prefix then 'git status' will interpret existing and controlled files as untracked
+		#         git status ... -- :/:./controlled-filename           will return "?? ./controlled-filename" for unchanged 'controlled-filename' (changed too)
+		#         git status ... -- :/:controlled-filename             will return "" for unchanged 'controlled-filename'
+		#         git status ... -- controlled-filename                will return "" for unchanged 'controlled-filename'
+		merge_status="$(git --no-pager status --porcelain  --untracked-files=normal --ignored -- ":/:${file}")"
+		__VERBOSE__ "git status --porcelain --untracked-files=normal --ignored -- \":/:${file}\"\n.   status=\"$merge_status\""
+		# really <<<<<<, ======, >>>>>> are bigger than in script below
+		awk_script='
+			BEGIN{ mode = 1; }
+			mode == 1 && /^\s*<<<<<<*\s/   { mode = 2; next; }
+			mode == 2 && /^\s*======*\s*$/ { mode = 4; next; }
+			mode == 2 && /^\s*\|\|\|\|\|\|*\s*$/ { mode = 8; next; }
+			mode == 8 && /^\s*======*\s*$/ { mode = 4; next; }
+			mode == 4 && /^\s*>>>>>>*\s/   { mode = 1; next; }
+			0 != and( mode, F )            { print; }
+		'
+
+		case "$merge_status" in
+		"UU "* | "AA "* | "AU "* | "UA "*)
+			# UU	unmerged, both modified
+			# AA	unmerged, both added
+			# AU	unmerged, added by us
+			# UA	unmerged, added by them
+				# 1) to use our/their file at once:
+				#	git checkout --ours|--theirs -- "filename"
+				#
+				# 2) to use merged file with preference of our/their in conflicted areas (normally merged other areas):
+				#	git show :1:"filename" >tmp.base
+				#	git show :2:"filename" >tmp.our
+				#	git show :3:"filename" >tmp.their
+				#	git merge-file --ours --stdout tmp.our tmp.base tmp.their >"filename"
+				#	rm tmp.base tmp.our tmp.their
+				#
+				# 3) alternative way to build combined file with our/their preference for collisions
+				#	is to use merged with collisions file and filter wanted parts by our script
+			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
+			else
+				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
+				# unmerged, deleted by them
+				__VERBOSE__ "git show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 "$awk_script"
+			fi
+			;;
+		"UD "*)
+			# unmerged, deleted by them
+			__VERBOSE__ "git show -- \":2:${file}\"\n.   ..."
+			__git_filter_eols__ show -- ":2:${file}"
+			;;
+		"DU "*)
+			# unmerged, deleted by us
+			__VERBOSE__ "git show -- \":3:${file}\"\n.   ..."
+			__git_filter_eols__ show -- ":3:${file}"
+			;;
+		"DD "*)
+			# unmerged, both deleted		??? conflict?
+			__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" file was deleted on both merge sides; assume empty"
+			;;
+		M?" "* | ?M" "*)
+			# on some commit hook (pre-commit, commit-msg, post-commit) conflicted files may become 'modified' after adding in stagged area
+			# in this case they may have '<<<...===...>>>' insertions
+			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
+			else
+				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found in worktree"
+			fi
+			;;
+		*)
+			# empty or some other
+			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\"\n.   ..."
+				__cat_filter_eols__ "${file}"
+			else
+				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
+			fi
+			;;
+		esac
 		;;
 	esac
 }
@@ -578,16 +610,16 @@ if [ -n "${STAMPER_CURRENT_DIR}" ]; then
 	# NOTE: r/w functions (READ_LF, STORE_LF etc) and git commands use
 	# worktree-relative pathes, but -cd option may choose folder inside
 	# worktree. We suppose that folder 'like-as-nested-worktree' (i.e.
-	# it becomes submodule or subrepo in futuire or was one in past). So
+	# it becomes submodule or subrepo in future or was one in past). So
 	# this folder contains own .version-stamper, .gitattributes and
 	# .gitignore files; so these files define pathes relative folder
 	# given by -cd option. That path differs from worktree-relative path
 	# by fixed prefix - relative path of VERSION_CURRENT_DIR inside
 	# VERSION_ROOT_DIR.
 	VERSION_CONFIG_DIR="${VERSION_CURRENT_DIR}"
-	VERSION_CONFIG_PREFIX="$(realpath -m --relative-to="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_DIR}")"
+	VERSION_CONFIG_PREFIX="$(realpath -m --relative-base="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_DIR}")"
 	case "${VERSION_CONFIG_PREFIX}" in
-	"../*")
+	"/"* | "../"**)
 		DIE 2 "Wrong target directory \"${STAMPER_CURRENT_DIR}\" outside of repository tree \"${VERSION_ROOT_DIR}\""
 		;;
 	".")
@@ -607,7 +639,7 @@ else
 fi
 VERSION_CONFIG_PATH="${VERSION_CONFIG_DIR}/${VERSION_CONFIG_NAME}"
 
-__VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_PATH}\""
+__VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\" (full path: \"${VERSION_CONFIG_PATH}\")"
 if [ -f "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
@@ -717,7 +749,18 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 					;;
 				esac
 			done
-			__normalize_filename__ "temp_target"  "${VERSION_CONFIG_PREFIX}${value}"
+			# assume path starting from '/' or '\' as VERSION_CONFIG_DIR-relative path, so normalize [\/] and remove leading / and ./
+			__normalize_local_path__ "temp_target"  "${value}"
+			case "${temp_target}" in
+			"../"* | ?":/"*)
+				# outside relative and/or windows-style absolute
+				temp_target="$(__normalize_path__ "${temp_target}")"
+				;;
+			*)
+				# nothing
+				;;
+			esac
+#			__normalize_local_path__ "temp_target"  "${VERSION_CONFIG_PREFIX}${value}"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			else
@@ -878,7 +921,20 @@ for arg in "$@"; do
 			temp_attrib="true"
 			;;
 		*)
-			__normalize_filename__ "temp_target" "${VERSION_CONFIG_PREFIX}${arg}"
+__VERBOSE__ "arg=\"${STAMPER_CURRENT_DIR}\" (BEFORE)"
+			case "${arg}" in
+			"/"* | ?":/"* | "../"*)
+				# root-relative path, normalize drive-letter form and case
+				temp_target="$(__normalize_path__ "${arg}" "${VERSION_ROOT_DIR}")"
+__VERBOSE__ "normalize path"
+				;;
+			*)
+				# any other path (change \ to / and strip leading ./ and / -- usefull for pathes given by stamper config)
+				__normalize_local_path__ "temp_target" "${VERSION_CONFIG_PREFIX}${arg}"
+__VERBOSE__ "normalize local path"
+				;;
+			esac
+__VERBOSE__ "arg=\"${temp_target}\" (AFTER)"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at argument #$an" >&2
 			else
@@ -1656,7 +1712,40 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					echo "         (for example: changed leader or trailer); remove target file(s)" 1>&2
 					echo "         before or rename old identifiers manually." 1>&2
 				else
-					# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
+					case "${target}" in
+					"/"*)
+						# outside of tree, nothing
+						;;
+					*)
+						# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
+						__VERBOSE__ "git check-ignore -- \":/:${target}\""
+						if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
+							__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
+							git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
+						else
+							__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
+						fi
+						;;
+					esac
+				fi
+			fi
+		else
+			__VERBOSE__ ".      was read ${#indata} bytes\n.   (re)create new file \"${target}\" using __PLUGIN_${plugin}_CREATE__"
+			outdata="$(__PLUGIN_${plugin}_CREATE__ "${target}")"
+			case "${target}" in
+			"/"*)
+				# outside of tree, nothing
+				__VERBOSE__ ".      skip gitignore/gitattributes for external file \"${target}\""
+				;;
+			*)
+				# update .gitattributes on creation target file
+				[ "true" == "${STAMPER_EXEC_ATTRIB[${index}]}" ] && STAMPER_FILL_ATTRIB["${target}"]="$(__PLUGIN_${plugin}_ATTRIB__)"
+				# update .gitignore on creation target file
+				if [ "true" == "${STAMPER_EXEC_IGNORE[${index}]}" ]; then
+					# check .gitignore content later
+					STAMPER_FILL_IGNORE[${#STAMPER_FILL_IGNORE[@]}]="${target}"
+				else
+					# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 					__VERBOSE__ "git check-ignore -- \":/:${target}\""
 					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
 						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
@@ -1665,26 +1754,8 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 						__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 					fi
 				fi
-			fi
-		else
-			__VERBOSE__ ".      was read ${#indata} bytes\n.   (re)create new file \"${target}\" using __PLUGIN_${plugin}_CREATE__"
-			outdata="$(__PLUGIN_${plugin}_CREATE__ "${target}")"
-			# update .gitattributes on creation target file
-			[ "true" == "${STAMPER_EXEC_ATTRIB[${index}]}" ] && STAMPER_FILL_ATTRIB["${target}"]="$(__PLUGIN_${plugin}_ATTRIB__)"
-			# update .gitignore on creation target file
-			if [ "true" == "${STAMPER_EXEC_IGNORE[${index}]}" ]; then
-				# check .gitignore content later
-				STAMPER_FILL_IGNORE[${#STAMPER_FILL_IGNORE[@]}]="${target}"
-			else
-				# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
-				__VERBOSE__ "git check-ignore -- \":/:${target}\""
-				if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-					__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
-					git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
-				else
-					__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
-				fi
-			fi
+				;;
+			esac
 		fi
 		unset indata
 		unset outdata
@@ -2456,12 +2527,13 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 		fi
 
 		STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
-		__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on_path=\"$STAMPER_SCRIPT_CMD\""
-		if [ "$STAMPER_SCRIPT_CMD" == "${STAMPER_SCRIPT_PATH}" ]; then
+		__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on PATH=\"${STAMPER_SCRIPT_CMD}\""
+		if [ "${STAMPER_SCRIPT_CMD}" == "${STAMPER_SCRIPT_PATH}" ]; then
 			# version-stamper is installed and is used from install location
 			STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
 		else
-			STAMPER_SCRIPT_CMD="./$(realpath -m --relative-to="${VERSION_ROOT_DIR}" -- "${STAMPER_SCRIPT_PATH}")"
+			STAMPER_SCRIPT_CMD="$(realpath -m --relative-base="${VERSION_ROOT_DIR}" -- "${STAMPER_SCRIPT_PATH}")"
+			[[ ${STAMPER_SCRIPT_CMD} =~ ^/ ]] || STAMPER_SCRIPT_CMD="./${STAMPER_SCRIPT_CMD}"
 		fi
 		__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
 

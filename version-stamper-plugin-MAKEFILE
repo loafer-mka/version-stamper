@@ -10,7 +10,7 @@
 
 function __PLUGIN_MAKEFILE_NOTICE__
 {
-	echo "   plugin-MAKEILE    Makefile; eol=LF"
+	echo "   plugin-MAKEFILE    Makefile; eol=LF"
 }
 
 function __PLUGIN_MAKEFILE_SAMPLE__

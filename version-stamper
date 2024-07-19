@@ -181,20 +181,20 @@ fi
 if [ -n "${STAMPER_DOS2UNIX}" ]; then
 	function __git_filter_eols__
 	{
-		git --no-pager "$@" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
+		git --no-pager "$1" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
 	}
 	function __cat_filter_eols__
 	{
-		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/$@" 2>/dev/null
+		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/$1" 2>/dev/null
 	}
 else
 	function __git_filter_eols__
 	{
-		git --no-pager "$@" 2>/dev/null
+		git --no-pager "$1" 2>/dev/null
 	}
 	function __cat_filter_eols__
 	{
-		cat "${VERSION_ROOT_DIR}/$@" 2>/dev/null
+		cat "${VERSION_ROOT_DIR}/$1" 2>/dev/null
 	}
 fi
 
@@ -390,13 +390,12 @@ function __READ_LF__
 	local	awk_script
 	local	file
 
-__VERBOSE__ "__READ_LF__ \"$1\""
 	# note 1: always pass via dos2unix on reading from FS under windows because filters (sed, awk etc.) are eol-sensetive
 	case "$1" in
 	"/"*)
 		# abs path out of tree (note: mixed and widnows forms must be excluded by the caller logic
-		__VERBOSE__ "cat \"$1\"\n.   ... (external file)"
-		__cat_filter_eols__ "$1"
+		__VERBOSE__ "$([ -n "${STAMPER_DOS2UNIX}" ] && echo "dos2unix" || echo "cat") \"$1\"\n.   ... (external file)"
+		[ -n "${STAMPER_DOS2UNIX}" ] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat "$1" 2>/dev/null
 		;;
 	*)
 		file="$1"
@@ -489,7 +488,7 @@ __VERBOSE__ "__READ_LF__ \"$1\""
 # __STORE_LF__  worktree_relative_filename   text
 function __STORE_LF__
 {
-	local path="${VERSION_ROOT_DIR}/$@"
+	[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 	local dir="$(dirname "${path}")"
 	[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
 	# we assume LF-eols in text string
@@ -498,7 +497,7 @@ function __STORE_LF__
 # __STORE_CRLF__  worktree_relative_filename   text
 function __STORE_CRLF__
 {
-	local path="${VERSION_ROOT_DIR}/$@"
+	[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 	local dir="$(dirname "${path}")"
 	[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
 	# we assume LF-eols in text string
@@ -508,7 +507,7 @@ if [ "Windows_NT" == "$OS" ]; then
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
 	function __STORE_NATIVE_EOL__
 	{
-		local path="${VERSION_ROOT_DIR}/$@"
+		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 		local dir="$(dirname "${path}")"
 		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
 		# we assume LF-eols in text string
@@ -518,7 +517,7 @@ else
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
 	function __STORE_NATIVE_EOL__
 	{
-		local path="${VERSION_ROOT_DIR}/$@"
+		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 		local dir="$(dirname "${path}")"
 		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
 		# we assume LF-eols in text string

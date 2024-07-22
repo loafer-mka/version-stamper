@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 
 # +--------------------------------------------------------------------+
 # | This Source Code Form is subject to the terms of the Mozilla       |
@@ -16,7 +15,19 @@ STAMPER_CYGPATH="$(which cygpath 2>/dev/null)"
 [ -n "${STAMPER_CYGPATH}" ] && STAMPER_SCRIPT_PATH="$("${STAMPER_CYGPATH}" -u "${STAMPER_SCRIPT_PATH}")"
 
 # load stamper's version information
-. "${STAMPER_SCRIPT_PATH}-this"
+if [ "0" -ne "$(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this")" ]; then
+	set -o allexport
+	source <(awk '
+		BEGIN{ mode = 0; }
+		mode == 0 && /^\s*<<<<<<*\s/   { mode = 1; next; }
+		mode == 1 && ( /^\s*======*\s*$/ || /^\s*\|\|\|\|\|\|*\s*$/) { mode = 2; next; }
+		mode == 2 && /^\s*>>>>>>*\s/   { mode = 0; next; }
+		mode <= 1 { print; }
+	' "${STAMPER_SCRIPT_PATH}-this")
+	set +o allexport
+else
+	source "${STAMPER_SCRIPT_PATH}-this"
+fi
 
 export STAMPER_SUITE="Version stamper suite ${STAMPER_VERSION_TEXT}"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text

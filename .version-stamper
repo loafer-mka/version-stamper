@@ -44,6 +44,7 @@ default-cmd:     --list
 # path to version target file which will created or updated by given plugin
 plugin-BAT:      ./tests/samples/sample-BAT.bat
 plugin-C:        ./tests/samples/sample-C.h
+plugin-CMAKE:    ./tests/samples/sample-CMAKE.cmake
 plugin-CS:       ./tests/samples/sample-AssemblyInfo.cs
 plugin-M:        ./tests/samples/sample-M.m
 plugin-MAKEFILE: ./tests/samples/sample-MAKEFILE.mk

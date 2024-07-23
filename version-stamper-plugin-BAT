@@ -27,7 +27,7 @@ function __PLUGIN_BAT_GETVER__
 {
 	# strong name compare here - so changing version or changing leader/trailer will lead to rewrite target file
 	sed --binary --regexp-extended --silent \
-		-e "s/^(\s*set\s+${NAME_VERSION_TEXT}=\s*)(.*)$/\\2/p"
+		-e "s/^(\s*set\s+\w*VERSION_TEXT\w*=\s*)(.*)$/\\2/p"
 }
 
 function __PLUGIN_BAT_CREATE__

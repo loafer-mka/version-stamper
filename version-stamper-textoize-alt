@@ -1,0 +1,17 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2024
+
+#
+# this script makes VERSION_TEXT value in form 'v0.0.0-opt'
+# where 'opt' is an 'optimized' branch name (see version-stamper-rename)
+#
+source ${STAMPER_SCRIPT_PATH}-rename
+VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD}.${VERSION_RENAMED}${VERSION_DIRTY}"
+unset VERSION_RENAMED

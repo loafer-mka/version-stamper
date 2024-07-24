@@ -282,7 +282,7 @@ fi
 	# default copyright/copyleft to paste into newly created config files
 	STAMPER_DEFAULT_DECL="Copyright (c)"
 END_OF_TEXT
-. "${STAMPER_SCRIPT_PATH}-config" 2>/dev/null
+source "${STAMPER_SCRIPT_PATH}-config" 2>/dev/null
 
 #
 # detect main git folders
@@ -566,7 +566,7 @@ __VERBOSE__ "\n${STAMPER_SUITE_TITLE}\n"
 declare -A STAMPER_PLUGINS
 __VERBOSE__ "Load available plugins:"
 for plugin in "${STAMPER_SCRIPT_PATH}-plugin-"*; do
-	. "${plugin}"
+	source "${plugin}"
 	temp="${plugin##*/${STAMPER_SCRIPT_NAME}-plugin-}"
 	__VERBOSE__ ".   $temp: $plugin"
 	if [ \
@@ -590,6 +590,7 @@ done
 #
 STAMPER_ABBREV_LEN=""
 STAMPER_DEFAULT_CMD=""
+STAMPER_TEXTOIZE=""
 # operations
 STAMPER_SETUP_CONFIG="false"
 STAMPER_GENERATE="false"
@@ -650,7 +651,7 @@ fi
 VERSION_CONFIG_PATH="${VERSION_CONFIG_DIR}/${VERSION_CONFIG_NAME}"
 
 __VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\" (full path: \"${VERSION_CONFIG_PATH}\")"
-if [ -f "${VERSION_CONFIG_PATH}" ]; then
+if [ -r "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
 		((cn++))
@@ -661,21 +662,21 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 			if [ -z "${STAMPER_ABBREV_LEN}" ]; then
 				STAMPER_ABBREV_LEN="$value"
 			else
-				echo "Warning: Ignore duplicate abbreviation length \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate abbreviation length \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		leader:)
 			if [ -z "${VERSION_LEADER}" ]; then
 				VERSION_LEADER="$value"
 			else
-				echo "Warning: Ignore duplicate leader setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate leader setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		trailer:)
 			if [ -z "${VERSION_TRAILER}" ]; then
 				VERSION_TRAILER="$value"
 			else
-				echo "Warning: Ignore duplicate trailer setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate trailer setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		hooks:)
@@ -689,7 +690,7 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 						STAMPER_HOOKS["${hook}"]="true"
 						;;
 					*)
-						echo "Warning: Ignore wrong hook name \"${hook}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+						echo "Warning: Ignoring wrong hook name \"${hook}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 						;;
 					esac
 				done
@@ -726,7 +727,7 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 			else
 				# use command-line assigned verbose mode
 				if [ "true" == "${STAMPER_VERBOSE,,}" ]; then
-					echo "Warning! ignore default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
+					echo "Warning! ignoring default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
 				fi
 			fi
 			;;
@@ -770,12 +771,11 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 				# nothing
 				;;
 			esac
-#			__normalize_local_path__ "temp_target"  "${VERSION_CONFIG_PREFIX}${value}"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
-				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			else
 				if [ -z "${STAMPER_PLUGINS[${temp_plugin}]}" ]; then
-					echo "Warning: Ignore unknown plugin-${temp_plugin} with target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+					echo "Warning: Ignoring unknown plugin-${temp_plugin} with target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 				else
 					index=${#STAMPER_CONF_PLUGIN[@]}
 					STAMPER_KNOWN_TARGETS["${temp_target}"]="conf_${index}"
@@ -796,21 +796,32 @@ if [ -f "${VERSION_CONFIG_PATH}" ]; then
 			if [ -z "${VERSION_AUTHORSHIP}" ]; then
 				VERSION_AUTHORSHIP="$value"
 			else
-				echo "Warning: Ignore duplicate authorship \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate authorship \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		declaration:)
 			if [ -z "${VERSION_DECLARATION}" ]; then
 				VERSION_DECLARATION="$value"
 			else
-				echo "Warning: Ignore duplicate copright/copyleft declration \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate copright/copyleft declration \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		default-cmd:)
 			if [ -z "$STAMPER_DEFAULT_CMD" ]; then
 				STAMPER_DEFAULT_CMD="$value"
 			else
-				echo "Warning: Ignore duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				echo "Warning: Ignoring duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+			fi
+			;;
+		textoize:)
+			if [ -z "$STAMPER_TEXTOIZE" ]; then
+				if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${value}" ]; then
+					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${value}"
+				else
+					echo "Warning: Ignoring non-existent textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+				fi
+			else
+				echo "Warning: Ignoring duplicate textoize script \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		*)
@@ -1484,8 +1495,12 @@ done
 VERSION_SHA_SHORT="${sha_temp[@]}"
 unset sha_temp
 unset temp
-VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD}.${VERSION_BRANCH}${VERSION_DIRTY}"
+
 printf -v VERSION_ID "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
+VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
+if [ -n "${STAMPER_TEXTOIZE}" ]; then
+	source "${STAMPER_TEXTOIZE}"
+fi
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)
@@ -1555,6 +1570,12 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 			# the default command
 			# it will be used if stamper is running without argumentss (if not set, --help is ssumed)
 			default-cmd:     --list --print
+			#
+			# the version textoize script
+			# it will be used to build VERSION_TEXT using other VERSION_* variables
+			# if not set, then use hardcoded v0.0.0-branch+ form, otherwise you may choose
+			# one of$(for f in ${STAMPER_SCRIPT_PATH}-textoize-*; do f=$(basename -- "$f"); echo -n " '${f#*-textoize-}'"; done)
+			#textoize:        alt
 
 			#   p l u g i n s
 			#
@@ -2437,7 +2458,7 @@ function __update_all_hooks__
 			# today 'stamper-'
 			hook_version="$(head -n 128 "${hook_path}" \
 					|awk   '
-						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+\.[0-9]+-[0-9]+\.[[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
+						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[.-][0-9]+\.[0-9]+[.-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 					')"
 			if [ -n "${hook_version}" ]; then
 				__VERBOSE__ "Suite version of \"${hook}\" is \"${hook_version}\" (our is \"stamper-${STAMPER_VERSION_TEXT}\") -- this is known hook"
@@ -2532,7 +2553,7 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 			# for version stamper project itself executed plugin may change
 			# current version data, so reload version file before updating hooks.
 			__VERBOSE__ "Reload version information before check/create hooks"
-			. "${STAMPER_SCRIPT_PATH}-this"
+			source "${STAMPER_SCRIPT_PATH}-this"
 			unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
 		fi
 

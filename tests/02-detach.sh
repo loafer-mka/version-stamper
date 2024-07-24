@@ -36,8 +36,8 @@ popd >/dev/null 2>&1
 # PRINT_A_B
 
 [ \
-	   "X1.2-4.F" == "${A[VERSION_TEXT]}" \
-	-a "X1.2-13.F" == "${B[VERSION_TEXT]}" \
+	   "X1.2.4-F" == "${A[VERSION_TEXT]}" \
+	-a "X1.2.13-F" == "${B[VERSION_TEXT]}" \
 	-a "X" == "${A[VERSION_PREFIX]}"      -a "X" == "${B[VERSION_PREFIX]}" \
 	-a "1" == "${A[VERSION_MAJOR]}"       -a "1" == "${B[VERSION_MAJOR]}" \
 	-a "2" == "${A[VERSION_MINOR]}"       -a "2" == "${B[VERSION_MINOR]}" \

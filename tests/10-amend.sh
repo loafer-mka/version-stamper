@@ -178,8 +178,8 @@ source ver.sh
     -a -n "${F2[.git/hooks/post-commit]}" 			-a -n "${F2[.git/hooks/post-merge]}" \
     -a -n "${F2[.git/hooks/post-rewrite]}" 			-a -n "${F2[.git/hooks/pre-commit]}" \
     -a -n "${C2[.gitattributes]}"					-a -n "${C2[.version-stamper]}" \
-    -a -n "${C2[ver.sh]}" 							-a "v0.0-26.MASTER+" == "${A2_VERSION_TEXT}" \
-] || MSG="$MSG; Bad state v0.0-26"
+    -a -n "${C2[ver.sh]}" 							-a "v0.0.26-MASTER+" == "${A2_VERSION_TEXT}" \
+] || MSG="$MSG; Bad state v0.0.26"
 
 [ \
        "10" == "${#F3[@]}"           				-a "0" == "${#C3[@]}" \
@@ -188,8 +188,8 @@ source ver.sh
     -a -n "${F3[.git/]}"     						-a -n "${F3[.git/hooks/post-checkout]}" \
     -a -n "${F3[.git/hooks/post-commit]}" 			-a -n "${F3[.git/hooks/post-merge]}" \
     -a -n "${F3[.git/hooks/post-rewrite]}" 			-a -n "${F3[.git/hooks/pre-commit]}" \
-    -a "v0.0-27.MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA_LONG}" != "${A3_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad state v0.0-27"
+    -a "v0.0.27-MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA_LONG}" != "${A3_VERSION_SHA_LONG}" \
+] || MSG="$MSG; Bad state v0.0.27"
 
 # version text and SHA must not be changed after amend
 [ \
@@ -200,7 +200,7 @@ source ver.sh
     -a -n "${F4[.git/hooks/post-commit]}" 			-a -n "${F4[.git/hooks/post-merge]}" \
     -a -n "${F4[.git/hooks/post-rewrite]}" 			-a -n "${F4[.git/hooks/pre-commit]}" \
     -a "${A3_VERSION_TEXT}" == "${A4_VERSION_TEXT}"	-a "${A3_VERSION_SHA_LONG}" == "${A4_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad amend v0.0-27"
+] || MSG="$MSG; Bad amend v0.0.27"
 
 
 if [ -z "$MSG" ]; then

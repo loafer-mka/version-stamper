@@ -1,0 +1,35 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2024
+
+#
+# this script makes 'optimized' variant of branchname
+# (VERSION_RENAMED) which is shorter than original branchname
+# in some cases (by changing some typical prefixes like as
+# 'feature/xxx' -> 'f:xxx'
+#
+
+VERSION_RENAMED="${VERSION_BRANCH}"
+case "${VERSION_RENAMED,,}" in
+"feature"[-/:]*)
+	VERSION_RENAMED="f:${VERSION_RENAMED#feature?}"
+	;;
+"release"[-/:]*)
+	VERSION_RENAMED="R:${VERSION_RENAMED#release?}"
+	;;
+"hotfix"[-/:]*)
+	VERSION_RENAMED="x:${VERSION_RENAMED#hotfix?}"
+	;;
+"fix"[-/:]*)
+	VERSION_RENAMED="x:${VERSION_RENAMED#fix?}"
+	;;
+"issue"[-/:]*)
+	VERSION_RENAMED="#${VERSION_RENAMED#fix?}"
+	;;
+esac

@@ -32,8 +32,8 @@ CLEAN_HOOKS clone-m/.git/modules/ORIGIN_ONE-U0
 #PRINT_A_B
 
 [ \
-	   "v0.0-21.U0" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-21.U0" == "${B[VERSION_TEXT]}" \
+	   "v0.0.21-U0" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.21-U0" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
@@ -72,8 +72,8 @@ CLEAN_HOOKS clone-m/.git/modules/origin_one-U
 # PRINT_A_B
 
 [ \
-	   "v0.0-27.U" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-27.U" == "${B[VERSION_TEXT]}" \
+	   "v0.0.27-U" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.27-U" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
@@ -112,8 +112,8 @@ CLEAN_HOOKS clone-m/.git/modules/origin-one_N
 # PRINT_A_B
 
 [ \
-	   "v0.0-20.ONE/N" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-20.ONE/N" == "${B[VERSION_TEXT]}" \
+	   "v0.0.20-ONE/N" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.20-ONE/N" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
@@ -153,8 +153,8 @@ CLEAN_HOOKS clone-m/.git/modules/origin-F
 # PRINT_A_B
 
 [ \
-	   "v0.0-12.F" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-12.F" == "${B[VERSION_TEXT]}" \
+	   "v0.0.12-F" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.12-F" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \

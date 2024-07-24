@@ -25,9 +25,10 @@ function __PLUGIN_C_ATTRIB__
 
 function __PLUGIN_C_GETVER__
 {
-	# strong name compare here - so changing version or changing leader/trailer will lead to rewrite target file
+	# note: use strong name compare (${NAME_VERSION_TEXT} rather than \w*VERSION_TEXT\w*)
+	# so changing version or changing leader/trailer must lead to rewrite target file.
 	sed --binary --regexp-extended --silent \
-		-e "s/^(\s*#\s*define\s+\w*VERSION_TEXT\w*\s+\")(.*)(\".*)$/\\2/p"
+		-e "s/^(\s*#\s*define\s+${NAME_VERSION_TEXT}\s+\")(.*)(\".*)$/\\2/p"
 }
 
 function __PLUGIN_C_CREATE__

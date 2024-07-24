@@ -37,8 +37,8 @@ sleep 2s
 # version-stamper run, so it may be same or may differs for 1..2 sec.
 
 [ \
-	   "v0.0-0.MASTER" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-0.MASTER" == "${B[VERSION_TEXT]}" \
+	   "v0.0.0-MASTER" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.0-MASTER" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \

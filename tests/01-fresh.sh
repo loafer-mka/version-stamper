@@ -35,8 +35,8 @@ popd >/dev/null 2>&1
 # PRINT_A_B
 
 [ \
-	   "v0.0-0.MASTER" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-0.MASTER" == "${B[VERSION_TEXT]}" \
+	   "v0.0.0-MASTER" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.0-MASTER" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \

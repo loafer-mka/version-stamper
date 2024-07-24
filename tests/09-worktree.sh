@@ -39,8 +39,8 @@ cd ..
 #PRINT_A_B
 
 [ \
-	   "v0.0-17.SUBMOD0" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-27.U" == "${B[VERSION_TEXT]}" \
+	   "v0.0.17-SUBMOD0" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.27-U" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"       -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"        -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"        -a "0" == "${B[VERSION_MINOR]}" \
@@ -73,8 +73,8 @@ CLEANUP
 #PRINT_A_B
 
 [ \
-	   "v0.0-12.F" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-20.ONE/N" == "${B[VERSION_TEXT]}" \
+	   "v0.0.12-F" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.20-ONE/N" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"       -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"        -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"        -a "0" == "${B[VERSION_MINOR]}" \

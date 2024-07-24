@@ -94,8 +94,8 @@ CLEAN_WORKTREE .
     -a "text eol=lf" == "${C[A:.gitignore]}"  -a "text eol=lf" == "${C[A:.gitattributes]}" \
     -a "text eol=lf" == "${C[A:.gitmodules]}" -a "text" == "${C[A:.version-stamper]}" \
 \
-	-a "v0.0-18.SUBMOD+" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-18.SUBMOD+" == "${VERSION_TEXT}" \
+	-a "v0.0.18-SUBMOD+" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.18-SUBMOD+" == "${VERSION_TEXT}" \
 	-a "+" == "${A[VERSION_DIRTY]}" \
 	-a "SUBMOD" == "${A[VERSION_BRANCH]}"     -a "SUBMOD+" == "${VERSION_BRANCH}" \
 	-a "00000012" == "${A[VERSION_ID]}"       -a "0x00000012" == "${VERSION_ID}" \

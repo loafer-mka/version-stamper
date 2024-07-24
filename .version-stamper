@@ -26,7 +26,7 @@ authorship:       Andrey Makarov
 #    DEFAULT_DECL is set by the 'STAMPER_DEFAULT_DECL' parameter of the file ./version-stamper-config;
 #    AUTHORSHIP is specified by the 'authorship:' parameter above;
 #    YEAR is the current year or year of initial commit.
-declaration: Copyright (c) Andrey Makarov 2022
+declaration: Copyright (c) Andrey Makarov 2022-2024
 #
 # activate hooks
 # available hooks are:  pre-commit  post-commit  post-checkout  post-rewrite  post-merge
@@ -38,6 +38,12 @@ hooks:          version-stamper pre-commit post-checkout post-rewrite post-merge
 # the default command
 # it will be used if stamper is running without argumentss (if not set, --help is ssumed)
 default-cmd:     --list
+#
+# the version textoize script
+# it will be used to build VERSION_TEXT using other VERSION_* variables
+# if not set, then use hardcoded v0.0.0-branch+ form, otherwise you may choose
+# one of 'default' 'alt'
+textoize:        alt
 
 #   p l u g i n s
 #

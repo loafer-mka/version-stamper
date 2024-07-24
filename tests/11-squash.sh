@@ -256,8 +256,8 @@ source ver.sh
     -a -n "${F2[.git/hooks/post-commit]}" 			-a -n "${F2[.git/hooks/post-merge]}" \
     -a -n "${F2[.git/hooks/post-rewrite]}" 			-a -n "${F2[.git/hooks/pre-commit]}" \
     -a -n "${C2[.gitattributes]}"					-a -n "${C2[.version-stamper]}" \
-    -a -n "${C2[ver.sh]}" 							-a "v0.0-26.MASTER+" == "${A2_VERSION_TEXT}" \
-] || MSG="$MSG; Bad state v0.0-26"
+    -a -n "${C2[ver.sh]}" 							-a "v0.0.26-MASTER+" == "${A2_VERSION_TEXT}" \
+] || MSG="$MSG; Bad state v0.0.26"
 
 [ \
        "10" == "${#F3[@]}"           				-a "0" == "${#C3[@]}" \
@@ -266,8 +266,8 @@ source ver.sh
     -a -n "${F3[.git/]}"     						-a -n "${F3[.git/hooks/post-checkout]}" \
     -a -n "${F3[.git/hooks/post-commit]}" 			-a -n "${F3[.git/hooks/post-merge]}" \
     -a -n "${F3[.git/hooks/post-rewrite]}" 			-a -n "${F3[.git/hooks/pre-commit]}" \
-    -a "v0.0-27.MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA_LONG}" != "${A3_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad commit v0.0-27"
+    -a "v0.0.27-MASTER" == "${A3_VERSION_TEXT}" 	-a "${A2_VERSION_SHA_LONG}" != "${A3_VERSION_SHA_LONG}" \
+] || MSG="$MSG; Bad commit v0.0.27"
 
 [ \
        "10" == "${#F4[@]}"           				-a "0" == "${#C4[@]}" \
@@ -276,8 +276,8 @@ source ver.sh
     -a -n "${F4[.git/]}"     						-a -n "${F4[.git/hooks/post-checkout]}" \
     -a -n "${F4[.git/hooks/post-commit]}" 			-a -n "${F4[.git/hooks/post-merge]}" \
     -a -n "${F4[.git/hooks/post-rewrite]}" 			-a -n "${F4[.git/hooks/pre-commit]}" \
-    -a "v0.0-28.MASTER" == "${A4_VERSION_TEXT}"		-a "${A3_VERSION_SHA_LONG}" != "${A4_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad commit v0.0-28"
+    -a "v0.0.28-MASTER" == "${A4_VERSION_TEXT}"		-a "${A3_VERSION_SHA_LONG}" != "${A4_VERSION_SHA_LONG}" \
+] || MSG="$MSG; Bad commit v0.0.28"
 
 [ \
        "10" == "${#F5[@]}"           				-a "0" == "${#C5[@]}" \
@@ -286,8 +286,8 @@ source ver.sh
     -a -n "${F5[.git/]}"     						-a -n "${F5[.git/hooks/post-checkout]}" \
     -a -n "${F5[.git/hooks/post-commit]}" 			-a -n "${F5[.git/hooks/post-merge]}" \
     -a -n "${F5[.git/hooks/post-rewrite]}" 			-a -n "${F5[.git/hooks/pre-commit]}" \
-    -a "v0.0-29.MASTER" == "${A5_VERSION_TEXT}"		-a "${A4_VERSION_SHA_LONG}" != "${A5_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad commit v0.0-29"
+    -a "v0.0.29-MASTER" == "${A5_VERSION_TEXT}"		-a "${A4_VERSION_SHA_LONG}" != "${A5_VERSION_SHA_LONG}" \
+] || MSG="$MSG; Bad commit v0.0.29"
 
 #[ "10" == "${#F5[@]}" ] || echo "wrong count of files"
 #[ "0" == "${#C5[@]}" ] || echo "changes detected"
@@ -301,7 +301,7 @@ source ver.sh
 #[ -n "${F5[.git/hooks/post-merge]}" ] || echo "not exist post-merge"
 #[ -n "${F5[.git/hooks/post-rewrite]}" ] || echo "not exist post-rewrite"
 #[ -n "${F5[.git/hooks/pre-commit]}" ] || echo "not exist pre-commit"
-#[ "v0.0-29.MASTER" == "${A5_VERSION_TEXT}" ] || echo "bad version ${A5_VERSION_TEXT} must be v0.0-29.MASTER"
+#[ "v0.0.29-MASTER" == "${A5_VERSION_TEXT}" ] || echo "bad version ${A5_VERSION_TEXT} must be v0.0.29-MASTER"
 #[ "${A4_VERSION_SHA_LONG}" != "${A5_VERSION_SHA_LONG}" ] || echo "bad version ${A4_VERSION_SHA_LONG} != ${A5_VERSION_SHA_LONG}"
 
 [ \
@@ -312,7 +312,7 @@ source ver.sh
     -a -n "${F6[.git/hooks/post-commit]}" 			-a -n "${F6[.git/hooks/post-merge]}" \
     -a -n "${F6[.git/hooks/post-rewrite]}" 			-a -n "${F6[.git/hooks/pre-commit]}" \
     -a "${A3_VERSION_TEXT}" == "${A6_VERSION_TEXT}"	-a "${A3_VERSION_SHA_LONG}" == "${A6_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad prepare v0.0-27"
+] || MSG="$MSG; Bad prepare v0.0.27"
 
 [ \
        "10" == "${#F6[@]}"           				-a "0" == "${#C6[@]}" \
@@ -322,7 +322,7 @@ source ver.sh
     -a -n "${F6[.git/hooks/post-commit]}" 			-a -n "${F6[.git/hooks/post-merge]}" \
     -a -n "${F6[.git/hooks/post-rewrite]}" 			-a -n "${F6[.git/hooks/pre-commit]}" \
     -a "${A4_VERSION_TEXT}" == "${A7_VERSION_TEXT}"	-a "${A4_VERSION_SHA_LONG}" != "${A7_VERSION_SHA_LONG}" \
-] || MSG="$MSG; Bad squash v0.0-28"
+] || MSG="$MSG; Bad squash v0.0.28"
 
 
 if [ -z "$MSG" ]; then

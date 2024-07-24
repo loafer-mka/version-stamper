@@ -54,7 +54,7 @@ source ver.sh
 
 [ \
 	   "0x00000000" == "${VERSION_ID}" \
-	-a "v0.0-0.MASTER+" == "${VERSION_TEXT}" \
+	-a "v0.0.0-MASTER+" == "${VERSION_TEXT}" \
 	-a "MASTER+" == "${VERSION_BRANCH}" \
 	-a "0000000000000000000000000000000000000000" == "${VERSION_SHA_LONG}" \
 	-a "000000000" == "${VERSION_SHA_SHORT}" \
@@ -82,12 +82,12 @@ sed -i -r \
 	-e 's/^\s*(#\s*?)verbose:.*$/verbose: true/' ${WIN_SED_EOL} \
 	.version-stamper
 sed -i -r \
-	-e 's/^\s*export\s+STAMPER_SUITE\s*=.*$/export STAMPER_SUITE="Version suite v0.0-0.nobranch"/' \
+	-e 's/^\s*export\s+STAMPER_SUITE\s*=.*$/export STAMPER_SUITE="Version suite v0.0.0-nobranch"/' \
 	.git/hooks/post-commit
 sed -i -r \
-	-e 's/^\s*export\s+STAMPER_SUITE\s*=.*$/export STAMPER_SUITE="Version suite v0.0-0.nobranch"/' \
+	-e 's/^\s*export\s+STAMPER_SUITE\s*=.*$/export STAMPER_SUITE="Version suite v0.0.0-nobranch"/' \
 	.git/hooks/pre-commit
-echo -e "#!/bin/bash\n\nexport STAMPER_SUITE=\"Version suite v0.0-0.nobranch\"\n" >.git/hooks/pre-receive
+echo -e "#!/bin/bash\n\nexport STAMPER_SUITE=\"Version suite v0.0.0-nobranch\"\n" >.git/hooks/pre-receive
 chmod a+x .git/hooks/pre-receive
 
 git commit -am "First commit" >/dev/null 2>&1
@@ -101,7 +101,7 @@ source ver.sh
 # note: version stamps must be done by pre-commit hook, so parent's SHA must be used (p:0000...)
 [ \
 	   "0x00000001" == "${VERSION_ID}" \
-	-a "v0.0-1.MASTER" == "${VERSION_TEXT}" \
+	-a "v0.0.1-MASTER" == "${VERSION_TEXT}" \
 	-a "MASTER" == "${VERSION_BRANCH}" \
 	-a "p:0000000000000000000000000000000000000000" == "${VERSION_SHA_LONG}" \
 	-a "p:000000000" == "${VERSION_SHA_SHORT}" \
@@ -135,7 +135,7 @@ source ver.sh
 # note: version stamps must be done by pre-commit hook, so non-null parent's SHA must be used
 [ \
 	   "0x00000002" == "${VERSION_ID}" \
-	-a "v0.0-2.MASTER" == "${VERSION_TEXT}" \
+	-a "v0.0.2-MASTER" == "${VERSION_TEXT}" \
 	-a "MASTER" == "${VERSION_BRANCH}" \
 	-a "0000000000000000000000000000000000000000" != "${VERSION_SHA_LONG#p:}" \
 	-a "000000000" != "${VERSION_SHA_SHORT}" \

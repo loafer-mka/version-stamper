@@ -41,8 +41,8 @@ B[DIR_B]="$(echo "$(ls -1 ./clone-e/sub1)")"
 #PRINT_A_B
 
 [ \
-	   "v0.0-21.U0" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-27.U" == "${B[VERSION_TEXT]}" \
+	   "v0.0.21-U0" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.27-U" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \
@@ -89,8 +89,8 @@ B[DIR_B]="$(ls ./clone-e/sub3)"
 #PRINT_A_B
 
 [ \
-	   "v0.0-20.ONE/N" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-12.F" == "${B[VERSION_TEXT]}" \
+	   "v0.0.20-ONE/N" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.12-F" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \

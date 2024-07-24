@@ -32,8 +32,8 @@ CLEAN_HOOKS clone-m/.git
 # PRINT_A_B
 
 [ \
-	   "v0.0-18.SUBMOD" == "${A[VERSION_TEXT]}" \
-	-a "v0.0-18.SUBMOD" == "${B[VERSION_TEXT]}" \
+	   "v0.0.18-SUBMOD" == "${A[VERSION_TEXT]}" \
+	-a "v0.0.18-SUBMOD" == "${B[VERSION_TEXT]}" \
 	-a "v" == "${A[VERSION_PREFIX]}"      -a "v" == "${B[VERSION_PREFIX]}" \
 	-a "0" == "${A[VERSION_MAJOR]}"       -a "0" == "${B[VERSION_MAJOR]}" \
 	-a "0" == "${A[VERSION_MINOR]}"       -a "0" == "${B[VERSION_MINOR]}" \

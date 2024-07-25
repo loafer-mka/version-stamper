@@ -2458,7 +2458,7 @@ function __update_all_hooks__
 			# today 'stamper-'
 			hook_version="$(head -n 128 "${hook_path}" \
 					|awk   '
-						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[.-][0-9]+\.[0-9]+[.-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
+						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[:._+-][0-9]+[:._+-][0-9]+[:._+-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 					')"
 			if [ -n "${hook_version}" ]; then
 				__VERBOSE__ "Suite version of \"${hook}\" is \"${hook_version}\" (our is \"stamper-${STAMPER_VERSION_TEXT}\") -- this is known hook"

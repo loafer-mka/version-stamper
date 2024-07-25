@@ -67,7 +67,7 @@ function __PLUGIN_M_MODIFY__
 {
 	sed --binary --regexp-extended \
 		-e "s/^(\s*)(\w*VERSION_ID\w*)(\s*=\s*hex2dec\(\s*')([^']*)('\s*\)\s*;.*)$/\\1${NAME_VERSION_ID}\\3${VERSION_ID}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_HEX\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${VERSION_LEADER}NAME_VERSION_HEX${VERSION_TRAILER}\\30x${VERSION_ID}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_HEX\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${VERSION_LEADER}VERSION_HEX${VERSION_TRAILER}\\30x${VERSION_ID}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_TEXT\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT//\//\\\/}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_BRANCH\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH//\//\\\/}${VERSION_DIRTY}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_DATE\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_DATE}\\3${VERSION_DATE}\\5/" \

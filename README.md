@@ -129,9 +129,9 @@ Support for different programming languages is provided by auxiliary
 - Matlab script (a class with constant fields is defined)
 ```
 	classdef sample_Matlab
-        properties (Constant)
+		properties (Constant)
 			VERSION_ID = hex2dec('0102014D');
-			NAME_VERSION_HEX = '0x0102014D';
+			VERSION_HEX = '0x0102014D';
 			VERSION_TEXT = 'v1.2.333-branchname';
 			VERSION_BRANCH = 'branchname';
 			VERSION_DATE = '2023-11-06 20:16:40';
@@ -144,7 +144,7 @@ Support for different programming languages is provided by auxiliary
 			% if information below is based on parent commit's hash then prefix 'p:' will be used
 			VERSION_SHA_SHORT = 'p:e2477886';
 			VERSION_SHA_LONG = 'p:e2477886f1fff6ddac0e533f22d7be244674e064';
-        end
+		end
 	end
 ```
 

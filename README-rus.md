@@ -49,52 +49,185 @@ Version-stamper является несложным скриптом для ге
 Информация о версии основывается на команде `git describe`, ограниченной
 примененем тэгов только вида `vMJ.MN`, где `MJ` и `MN` - целочисленные
 старший и младший номера версии, а буква `v` может быть заменена любой
-иной буквой.
-
-Так, например, на языке C/С++ генерируемый штамп может содержать:
-
-```
-#ifndef __VERSION_H__
-#       define  __VERSION_H__
-#       define  VERSION_ID          0x0102014DL
-#       define  VERSION_TEXT        "v1.2.333-branchname"
-#       define  VERSION_DATE        "2023-11-06 20:16:40"
-#       define  VERSION_SHORTDATE   "231106201640"
-#       define  VERSION_UNIXTIME    1699291000LL
-#       define  VERSION_BRANCH      "branchname"
-#       define  VERSION_HOSTINFO    "your@email.org openSUSE Leap 15.5"
-#       define  VERSION_AUTHORSHIP  "Your Name"
-#       define  VERSION_DECLARATION "Copyright (c) Your Name 2023"
-// information below based on parent commit's hash
-#       define  VERSION_SHA_SHORT   "p:e2477886"
-#       define  VERSION_SHA_LONG    "p:e2477886f1fff6ddac0e533f22d7be244674e064"
-#endif
-```
+иной буквой, расстоянии между текущим коммитом и использованным тэгом, а
+также иных сведениях - дате, авторе, хосте и т.п.
 
 Поддержка разных языков программирования реализуется вспомогательными
 "плагинами", список которых можно расширять. На данный момент поддерживаются:
 
 - язык C/C++ (значения представлены набором макросов)
+```
+	#ifndef __VERSION_GUARD_H__
+	#       define  __VERSION_GUARD_H__
+	#       define  VERSION_ID          	0x0102014DL
+	#       define  VERSION_TEXT        	"v1.2.333-branchname"
+	#       define  VERSION_DATE        	"2023-11-06 20:16:40"
+	#       define  VERSION_SHORTDATE   	"231106201640"
+	#       define  VERSION_UNIXTIME    	1699291000LL
+	#       define  VERSION_BRANCH      	"branchname"
+	#       define  VERSION_HOSTINFO    	"your@email.org openSUSE Leap 15.5"
+	#       define  VERSION_AUTHORSHIP  	"Your Name"
+	#       define  VERSION_DECLARATION 	"Copyright (c) Your Name 2023"
+	#		define  VERSION_COMMIT_AUTHOR	"Your Name <your@email.org>"
+	// information below based on parent commit's hash
+	#       define  VERSION_SHA_SHORT   	"p:e2477886"
+	#       define  VERSION_SHA_LONG    	"p:e2477886f1fff6ddac0e533f22d7be244674e064"
+	#endif
+```
 
 - язык C# (изменения записываются в традиционный Properties/AssemblyInfo.cs)
+```
+	using System.Reflection;
+	using System.Runtime.CompilerServices;
+	using System.Runtime.InteropServices;
+
+	// General Information about an assembly is controlled through the following
+	// set of attributes. Change these attribute values to modify the information
+	// associated with an assembly.
+	[assembly: AssemblyTitle("")]
+
+	...
+
+	[assembly: AssemblyVersion("1.2.333.*")]
+	[assembly: AssemblyFileVersion("1.2.333.32")]
+	// if used hash below is based on parent commit's then prefix 'p:' will be used
+	[assembly: AssemblyInformationalVersion( "v1.2.333-branchname 2023-11-06 20:16:40 your@email.org openSUSE Leap 15.5 p:e2477886" )]
+```
 
 - Makefile скрипт (определяется набор переменных)
+```
+	VERSION_ID := 0102014D
+	VERSION_TEXT := v1.2.333-branchname
+	VERSION_DATE := 2023-11-06 20:16:40
+	VERSION_SHORTDATE := 231106201640
+	VERSION_UNIXTIME := 1699291000
+	VERSION_BRANCH := branchname
+	VERSION_HOSTINFO := your@email.org openSUSE Leap 15.5
+	VERSION_AUTHORSHIP := Your Name
+	VERSION_DECLARATION := Copyright (c) Your Name 2023
+	VERSION_COMMIT_AUTHOR := Your Name <your@email.org>
+	# if information below is based on parent commit's hash then prefix 'p:' will be used
+	VERSION_SHA_SHORT := p:e2477886
+	VERSION_SHA_LONG := p:e2477886f1fff6ddac0e533f22d7be244674e064
+```
 
 - Cmake скрипт (определяется набор переменных)
+```
+	if( NOT DEFINED __VERSION_GUARD_CMAKE__ )
+        set( __VERSION_GUARD_CMAKE__ 1 )
+        set( VERSION_ID            "0102014D" )
+        set( VERSION_TEXT          "v1.2.333-branchname" )
+        set( VERSION_DATE          "2023-11-06 20:16:40" )
+        set( VERSION_SHORTDATE     "231106201640" )
+        set( VERSION_UNIXTIME      "1699291000" )
+        set( VERSION_BRANCH        "branchname" )
+        set( VERSION_HOSTINFO      "your@email.org openSUSE Leap 15.5" )
+        set( VERSION_AUTHORSHIP    "Your Name" )
+        set( VERSION_DECLARATION   "Copyright (c) Your Name 2023" )
+        set( VERSION_COMMIT_AUTHOR "Your Name <your@email.org>" )
+	#   if information below is based on parent commit's hash then prefix 'p:' will be used
+        set( VERSION_SHA_SHORT     "p:e2477886" )
+        set( VERSION_SHA_LONG      "p:e2477886f1fff6ddac0e533f22d7be244674e064" )
+	endif()
+```
 
 - Matlab скрипт (определяется класс с константными полями)
+```
+	classdef sample_Matlab
+        properties (Constant)
+			VERSION_ID = hex2dec('0102014D');
+			NAME_VERSION_HEX = '0x0102014D';
+			VERSION_TEXT = 'v1.2.333-branchname';
+			VERSION_BRANCH = 'branchname';
+			VERSION_DATE = '2023-11-06 20:16:40';
+			VERSION_SHORTDATE = '231106201640';
+			VERSION_UNIXTIME = 1699291000;
+			VERSION_HOSTINFO = 'your@email.org openSUSE Leap 15.5';
+			VERSION_AUTHORSHIP = 'Your Name';
+			VERSION_DECLARATION = 'Copyright (c) Your Name 2023';
+			VERSION_COMMIT_AUTHOR = 'Your Name <your@email.org>';
+			% if information below is based on parent commit's hash then prefix 'p:' will be used
+			VERSION_SHA_SHORT = 'p:e2477886';
+			VERSION_SHA_LONG = 'p:e2477886f1fff6ddac0e533f22d7be244674e064';
+        end
+	end
+```
 
 - Bash или Sh скрипт (определяется набор переменных)
+```
+	#!/bin/bash
+
+	VERSION_ID=0x0102014D
+	VERSION_TEXT="v1.2.333-branchname"
+	VERSION_DATE="2023-11-06 20:16:40"
+	VERSION_SHORTDATE="231106201640"
+	VERSION_UNIXTIME="1699291000"
+	VERSION_BRANCH="branchname"
+	VERSION_HOSTINFO="your@email.org openSUSE Leap 15.5"
+	VERSION_AUTHORSHIP="Your Name"
+	VERSION_DECLARATION="Copyright (c) Your Name 2023"
+	VERSION_COMMIT_AUTHOR="Your Name <your@email.org>"
+	# if information below is based on parent commit's hash then prefix 'p:' will be used
+	VERSION_SHA_SHORT="p:e2477886"
+	VERSION_SHA_LONG="p:e2477886f1fff6ddac0e533f22d7be244674e064"
+```
 
 - Windows cmd скрипт (.bat, определяется набор переменных окружения)
+```
+	@echo off
+
+	set VERSION_ID=0x0102014D
+	set VERSION_TEXT=v1.2.333-branchname
+	set VERSION_DATE=2023-11-06 20:16:40
+	set VERSION_SHORTDATE=231106201640
+	set VERSION_UNIXTIME=1699291000
+	set VERSION_BRANCH=branchname
+	set VERSION_HOSTINFO=your@email.org openSUSE Leap 15.5
+	set VERSION_AUTHORSHIP=Your Name
+	set VERSION_DECLARATION=Copyright (c) Your Name 2023
+	for /F "tokens=*" %%a in ("Your Name <your@email.org>") do set VERSION_COMMIT_AUTHOR=%%a
+	rem if information below is based on parent commit's hash then prefix 'p:' will be used
+	set VERSION_SHA_SHORT=p:e2477886
+	set VERSION_SHA_LONG=p:e2477886f1fff6ddac0e533f22d7be244674e064
+```
 
 - короткая строка информации о версии в текством файле (плагин INFO);
   может быть удобна для средств автоматического сбора сведений о версиях
   разных компонент
+```
+	v1.2.333-branchname  2023-11-06 20:16:40  clean  p:e2477886  Your Name <your@email.org>  "(previous commit) Short commit message"
+```
 
 - Markdown текст с представлением сведений о версии в виде таблички,
   сопровождаемой логом репозитория с несколькими последними коммитами
   (до 10 записей)
+```
+	# Version data:
+
+	| Version | v1.2.333-branchname |
+	|--------:|:----------------|
+	| Version ID | 0x0102014D |
+	| Branch | branchname |
+	| Date | 2023-11-06 20:16:40 |
+	| Worktree | clean |
+	| Commiter | Your Name &lt;your@email.org&gt; |
+	| Commit SHA | p:e2477886f1fff6ddac0e533f22d7be244674e064 |
+	| Build Host | your@email.org openSUSE Leap 15.5 |
+	| Unix Time | 1699291000 |
+	| Folder | `/data/home/your/prjects/test_work` |
+	| | Copyright (c) Your Name 2023 |
+
+	# Last log records:
+
+	` ` `
+	* e247788 (HEAD -> master) Short commit message
+	* 46717a2 fix: some changes
+	* 3efaaf8 (origin/master, origin/HEAD) Useless commit
+	* 0bdbef2 Too old commit
+	* a30cfe0 what do I do?
+	...
+	` ` `
+```
 
 Для поддержки другого языка или альтернативного представления штампа
 версии надо изменить или добавить соответствующий плагин.

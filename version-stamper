@@ -1729,7 +1729,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
 			existing_version="$(__PLUGIN_${plugin}_GETVER__ <<<"${indata}")"
 
-			if [ "$existing_version" == "${VERSION_TEXT}" -a -z "${VERSION_DIRTY}" ]; then
+			if [ "${existing_version}" == "${VERSION_TEXT}" -a -z "${VERSION_DIRTY}" ]; then
 				__VERBOSE__ ".   NOW \"$existing_version\" is same as generated \"${VERSION_TEXT}\" REMAIN UNCHANGED \"${target}\""
 				outdata="${indata}"
 			else

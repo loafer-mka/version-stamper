@@ -83,6 +83,14 @@ Support for different programming languages is provided by auxiliary
 
 - Windows cmd script (assigned environment variables)
 
+- a single text string with version information (INFO plugin); it can be
+  convenient for tools automatically collecting information about versions
+  of different components
+
+- Markdown text representing the version information in the table form,
+  accompanied by a repository log of the last few commits (up to 10
+  entries)
+
 To support another language or an alternative representation of the
 version stamp, you need to change or add the corresponding plugin.
 
@@ -192,9 +200,12 @@ Available options:
      CS       = Properties/sample-AssemblyInfo.cs  config, fs: len=1571 2023-11-06 20:29:21
      BAT      = -                                  Not configured
      C        = -                                  Not configured
+     CMAKE    = -                                  Not configured
+     INFO     = -                                  Not configured
      M        = -                                  Not configured
      SH       = version.sh                         config, git: 2023-11-06 20:16:40 @9e4ee3e, fs: len=868 2023-11-06 20:29:22
      MAKEFILE = -                                  Not configured
+     MARKDOWN = -                                  Not configured
 ```
 
   Plugin information contains an indication of how the plugin was launched
@@ -357,9 +368,6 @@ they are mutually exclusive:
 
 Currently supported plugins and line terminator used:
 
-- `CS` C# assembly properties, usually it is created by Visual Studio,
-  not by a plugin; line ending CR+LF.
-
 - `BAT` Windows Batch file; ending the line with CR+LF.
 
 - `C` C-style defines; line ending is native, LF on Linux/Unix and
@@ -367,11 +375,18 @@ Currently supported plugins and line terminator used:
 
 - `CMAKE` CMake script; LF line ending.
 
+- `CS` C# assembly properties, usually it is created by Visual Studio,
+  not by a plugin; line ending CR+LF.
+
+- `INFO` single-line text file; line ending is native.
+
 - `M` Matlab's class definition; line ending CR+LF.
 
-- `SH` Shell script; line ending CR+LF.
-
 - `MAKEILE` Makefile script; LF line ending.
+
+- `MARKDOWN` human-readable markdown file, line ending is native.
+
+- `SH` Shell script; line ending CR+LF.
 
 This command creates or updates a file with the latest version information.
 If such a file does not exist, a new file is created; otherwise, the file

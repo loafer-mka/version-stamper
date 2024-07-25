@@ -88,6 +88,14 @@ Version-stamper является несложным скриптом для ге
 
 - Windows cmd скрипт (.bat, определяется набор переменных окружения)
 
+- короткая строка информации о версии в текством файле (плагин INFO);
+  может быть удобна для средств автоматического сбора сведений о версиях
+  разных компонент
+
+- Markdown текст с представлением сведений о версии в виде таблички,
+  сопровождаемой логом репозитория с несколькими последними коммитами
+  (до 10 записей)
+
 Для поддержки другого языка или альтернативного представления штампа
 версии надо изменить или добавить соответствующий плагин.
 
@@ -202,9 +210,12 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
      CS       = Properties/sample-AssemblyInfo.cs  config, fs: len=1571 2023-11-06 20:29:21
      BAT      = -                                  Not configured
      C        = -                                  Not configured
+     CMAKE    = -                                  Not configured
+     INFO     = -                                  Not configured
      M        = -                                  Not configured
      SH       = version.sh                         config, git: 2023-11-06 20:16:40 @9e4ee3e, fs: len=868 2023-11-06 20:29:22
      MAKEFILE = -                                  Not configured
+     MARKDOWN = -                                  Not configured
 ```
 
   Информация о плагинах содержит признак, как плагин был запущен (аргументом
@@ -361,9 +372,6 @@ your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 Поддерживаемые на данный момент плагины и используемый символ
 завершения строки:
 
-- `CS` C# assembly properties, обычно он создаётся Visual Studio, а не
-  плагином; завершение строки CR+LF.
-
 - `BAT` Windows Batch file; завешение строки CR+LF.
 
 - `C` C-style defines; завершение строки - нативное, LF в Linux/Unix и
@@ -371,11 +379,18 @@ your_project> ./tools/stamper/version-stamper ... PLUGIN [plugin_options] FILE
 
 - `CMAKE` CMake script; завершение строки LF.
 
+- `CS` C# assembly properties, обычно он создаётся Visual Studio, а не
+  плагином; завершение строки CR+LF.
+
+- `INFO` однострочный текствый файл, завершение строки нативное.
+
 - `M` Matlab's class defiition; завершение строки CR+LF.
 
-- `SH` Shell script; завершение строки CR+LF.
-
 - `MAKEILE` Makefile script; завершение строки LF.
+
+- `MARKDOWN` текстовый файл с разметкой markdown, завершение строки нативное.
+
+- `SH` Shell script; завершение строки CR+LF.
 
 Эта команда создаёт или обновляет файл с актуальной информацией о версии.
 Если такой файл не существует, то создаётся новый файл; в противном случае

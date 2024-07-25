@@ -1,0 +1,64 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2023
+
+function __PLUGIN_MARKDOWN_NOTICE__
+{
+	echo "   plugin-MARKDOWN   markdown-style version infomation; .md extension; eol=native"
+}
+
+function __PLUGIN_MARKDOWN_SAMPLE__
+{
+	echo "#plugin-MARKDOWN: --gitignore  VERSION.md"
+}
+
+function __PLUGIN_MARKDOWN_ATTRIB__
+{
+	echo "text"
+}
+
+function __PLUGIN_MARKDOWN_GETVER__
+{
+	# always replace - this allows replace 'pre-commit' version file (with p:SHA) with new one
+	echo ""
+}
+
+function __PLUGIN_MARKDOWN_CREATE__
+{
+	status="${VERSION_DIRTY:-clean}"
+	status="${status/+/dirty}"
+	__STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
+		# Version data:
+
+		| Version | ${VERSION_TEXT} |
+		|--------:|:----------------|
+		| Version ID | 0x${VERSION_ID} |
+		| Branch | ${VERSION_BRANCH} |
+		| Date | ${VERSION_DATE} |
+		| Worktree | ${status} |
+		| Commiter | ${VERSION_COMMIT_AUTHOR} &lt;${VERSION_COMMIT_EMAIL}&gt; |
+		| Commit SHA | ${VERSION_SHA_LONG} |
+		| Build Host | ${VERSION_HOSTINFO} |
+		| Unix Time | ${VERSION_UNIXTIME} |
+		| Folder | \`${VERSION_ROOT_DIR}\` |
+		| | ${VERSION_DECLARATION} |
+
+		# Last log records:
+
+		\`\`\`
+		$(git --no-pager log --all --oneline --decorate --date-order --graph -n 10 HEAD 2>&1)
+		...
+		\`\`\`
+END_OF_TEXT
+}
+
+function __PLUGIN_MARKDOWN_MODIFY__
+{
+	__PLUGIN_MARKDOWN_CREATE__ "$1"
+}

@@ -143,9 +143,9 @@ unset an
 #         as it was used and it may starts with C:/... if script was executed by windows
 #         application
 # note 2: cygpath utility defines:
-#         - "unix" path as "/some/folder/file"
-#         - "windows" path as "c:\some\folder\path\file"
-#         - "mixed" path as "c:/some/folder/path/file"
+#         - "unix" path as "/c/some/folder/file"
+#         - "windows" path as "c:\some\folder\file"
+#         - "mixed" path as "c:/some/folder/file"
 #         really the cygpath is not mutual property of cygwin, it accomplishes
 #         also mingw and msys2 (SFU, SUA, etc were not checked);
 #         we may state that mixed path _may_ be used for '$0' and for other
@@ -352,9 +352,9 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 			__VERBOSE__ ".   .   = yes, we are at submodule path\n.   .   VERSION_SUBMOD_NAME=\"${modname}\"\n.   .   VERSION_SUBMOD_PATH=\"${moddir}\""
 			# initialize+update it if not done; this will create .git/modules/... hierarchy, so VERSION_GIT_DIR may be set to actual location
 			if [ "false" == "${VERSION_SUBMOD_OK}" ]; then
-				pushd "${modpath}" >/dev/null 2>&1
 				__VERBOSE__ ".   .   submodule was not updated yet, try do that\n.   .   git submodule update --init --force --recursive -- \"${modpath}\""
 				git submodule update --init --force --recursive -- "${modpath}" 1>&2
+				pushd "${modpath}" >/dev/null 2>&1
 				[ 0 -ne "$?" ] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
 				VERSION_GIT_DIR="$(__git_filter_path__ rev-parse --absolute-git-dir 2>/dev/null)"
 				__VERBOSE__ ".   .   git rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
@@ -387,7 +387,6 @@ function __normalize_local_path__
 	local_temp_filename="${local_temp_filename##./}"
 	local_temp_filename="${local_temp_filename##./}"
 	local_temp_filename="${local_temp_filename##/}"
-
 	printf -v "$1" '%s' "${local_temp_filename##/}"
 }
 
@@ -623,10 +622,14 @@ if [ -n "${STAMPER_CURRENT_DIR}" ]; then
 	# worktree. We suppose that folder 'like-as-nested-worktree' (i.e.
 	# it becomes submodule or subrepo in future or was one in past). So
 	# this folder contains own .version-stamper, .gitattributes and
-	# .gitignore files; so these files define pathes relative folder
+	# .gitignore files; also these files define pathes relative folder
 	# given by -cd option. That path differs from worktree-relative path
 	# by fixed prefix - relative path of VERSION_CURRENT_DIR inside
 	# VERSION_ROOT_DIR.
+	# We will change directory to the root of worktree, so pathes in git
+	# and in shell commands are same; we must take in account pathes
+	# of .gitattributes, .gitignore, and .version-stamper config files
+	# and their content.
 	VERSION_CONFIG_DIR="${VERSION_CURRENT_DIR}"
 	VERSION_CONFIG_PREFIX="$(realpath -m --relative-base="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_DIR}")"
 	case "${VERSION_CONFIG_PREFIX}" in
@@ -634,7 +637,7 @@ if [ -n "${STAMPER_CURRENT_DIR}" ]; then
 		DIE 2 "Wrong target directory \"${STAMPER_CURRENT_DIR}\" outside of repository tree \"${VERSION_ROOT_DIR}\""
 		;;
 	".")
-		# VERSION_CURRENT_DIR == VERSION_ROOT_DIR
+		# assert VERSION_CURRENT_DIR == VERSION_ROOT_DIR
 		VERSION_CONFIG_DIR="${VERSION_ROOT_DIR}"
 		VERSION_CONFIG_PREFIX=""
 		;;
@@ -649,6 +652,16 @@ else
 	VERSION_CONFIG_PREFIX=""
 fi
 VERSION_CONFIG_PATH="${VERSION_CONFIG_DIR}/${VERSION_CONFIG_NAME}"
+#
+# VERSION_ROOT_DIR - actual worktree root, same as current working dir;
+# VERSION_CONFIG_DIR - full path to config folder = VERSION_ROOT_DIR + VERSION_CONFIG_PREFIX
+# VERSION_CONFIG_PATH - full path to config file = ( VERSION_ROOT_DIR + VERSION_CONFIG_PREFIX ) + VERSION_CONFIG_NAME
+# worktree-relative path to config file is VERSION_CONFIG_PREFIX + VERSION_CONFIG_NAME
+# the config folder (VERSION_CONFIG_DIR) has own .gitignore, .gitattributes, .version-stamper files
+# the pathes to plugin's target files, gitignored and others are worktree-relative
+# note: VERSION_CONFIG_PREFIX is empty or ends with '/', so we may use constructs
+# like as "${VERSION_ROOT_DIR}${VERSION_CONFIG_PREFIX}"
+#
 
 __VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\" (full path: \"${VERSION_CONFIG_PATH}\")"
 if [ -r "${VERSION_CONFIG_PATH}" ]; then
@@ -764,8 +777,8 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			__normalize_local_path__ "temp_target"  "${value}"
 			case "${temp_target}" in
 			"../"* | ?":/"*)
-				# outside relative and/or windows-style absolute
-				temp_target="$(__normalize_path__ "${temp_target}")"
+				# outside of config folder  OR  windows-style absolute
+				temp_target="$(__normalize_path__ "${temp_target}" "${VERSION_CONFIG_DIR}")"
 				;;
 			*)
 				# nothing
@@ -929,8 +942,9 @@ for arg in "$@"; do
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
 		printf -v "${ref}" '%s' "${arg}"
 		ref=""
-		# temp_plugin may be real plugin name and may be some option; there it is a option
+		# temp_plugin may be real plugin name and may be some option; there it is an option
 		temp_plugin=""
+		# note: temp_plugin is used also for syntax check - if non empty, then next arg needs
 	elif [ -n "${temp_plugin}" ]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
 		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
@@ -942,20 +956,16 @@ for arg in "$@"; do
 			temp_attrib="true"
 			;;
 		*)
-__VERBOSE__ "arg=\"${STAMPER_CURRENT_DIR}\" (BEFORE)"
 			case "${arg}" in
 			"/"* | ?":/"* | "../"*)
-				# root-relative path, normalize drive-letter form and case
-				temp_target="$(__normalize_path__ "${arg}" "${VERSION_ROOT_DIR}")"
-__VERBOSE__ "normalize path"
+				# absolute or worktree-relative path, normalize drive-letter form and case
+				temp_target="$(__normalize_path__ "${arg}" "${VERSION_CONFIG_DIR}")"
 				;;
 			*)
 				# any other path (change \ to / and strip leading ./ and / -- usefull for pathes given by stamper config)
-				__normalize_local_path__ "temp_target" "${VERSION_CONFIG_PREFIX}${arg}"
-__VERBOSE__ "normalize local path"
+				__normalize_local_path__ "temp_target" "${arg}"
 				;;
 			esac
-__VERBOSE__ "arg=\"${temp_target}\" (AFTER)"
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at argument #$an" >&2
 			else
@@ -1422,8 +1432,8 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 			__VERBOSE__ ".    \"${file}\" is not in index, so changes to it are not taken into account"
 			;;
 		X)
-			# has changes in worktree
-			if [ -z "${STAMPER_KNOWN_TARGETS[${file}]}" ]; then
+			# has changed in worktree
+			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
 				[ "false" == "${STAMPER_VERBOSE}" ] && break
@@ -1469,7 +1479,7 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 		X | C)
 			# X - has changes in worktree
 			# C - has indexed changes
-			if [ -z "${STAMPER_KNOWN_TARGETS[${file}]}" ]; then
+			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
 				[ "false" == "${STAMPER_VERBOSE}" ] && break
@@ -1575,7 +1585,7 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 			# it will be used to build VERSION_TEXT using other VERSION_* variables
 			# if not set, then use hardcoded v0.0.0-branch+ form, otherwise you may choose
 			# one of$(for f in ${STAMPER_SCRIPT_PATH}-textoize-*; do f=$(basename -- "$f"); echo -n " '${f#*-textoize-}'"; done)
-			#textoize:        alt
+			#textoize:        default
 
 			#   p l u g i n s
 			#
@@ -1695,32 +1705,32 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "   Note. The identifier names listed here are exposed in the plugin, not in the target file."
 fi
 
-NAME_VERSION_ID="${VERSION_LEADER}VERSION_ID${VERSION_TRAILER}"
-NAME_VERSION_TEXT="${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}"
-NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
-NAME_VERSION_MAJOR="${VERSION_LEADER}VERSION_MAJOR${VERSION_TRAILER}"
-NAME_VERSION_MINOR="${VERSION_LEADER}VERSION_MINOR${VERSION_TRAILER}"
-NAME_VERSION_BUILD="${VERSION_LEADER}VERSION_BUILD${VERSION_TRAILER}"
-NAME_VERSION_BRANCH="${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}"
-NAME_VERSION_DIRTY="${VERSION_LEADER}VERSION_DIRTY${VERSION_TRAILER}"
-NAME_VERSION_DATE="${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}"
-NAME_VERSION_SHORTDATE="${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}"
-NAME_VERSION_UNIXTIME="${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}"
-NAME_VERSION_SHA_LONG="${VERSION_LEADER}VERSION_SHA_LONG${VERSION_TRAILER}"
-NAME_VERSION_SHA_SHORT="${VERSION_LEADER}VERSION_SHA_SHORT${VERSION_TRAILER}"
-NAME_VERSION_HOSTINFO="${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}"
-NAME_VERSION_AUTHORSHIP="${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}"
-NAME_VERSION_DECLARATION="${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}"
-NAME_VERSION_SUBMOD_NAME="${VERSION_LEADER}VERSION_SUBMOD_NAME${VERSION_TRAILER}"
-NAME_VERSION_SUBMOD_PATH="${VERSION_LEADER}VERSION_SUBMOD_PATH${VERSION_TRAILER}"
-NAME_VERSION_COMMIT_AUTHOR="${VERSION_LEADER}VERSION_COMMIT_AUTHOR${VERSION_TRAILER}"
-NAME_VERSION_COMMIT_EMAIL="${VERSION_LEADER}VERSION_COMMIT_EMAIL${VERSION_TRAILER}"
-
 if [ "true" == "${STAMPER_GENERATE}" ]; then
+	NAME_VERSION_ID="${VERSION_LEADER}VERSION_ID${VERSION_TRAILER}"
+	NAME_VERSION_TEXT="${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}"
+	NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
+	NAME_VERSION_MAJOR="${VERSION_LEADER}VERSION_MAJOR${VERSION_TRAILER}"
+	NAME_VERSION_MINOR="${VERSION_LEADER}VERSION_MINOR${VERSION_TRAILER}"
+	NAME_VERSION_BUILD="${VERSION_LEADER}VERSION_BUILD${VERSION_TRAILER}"
+	NAME_VERSION_BRANCH="${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}"
+	NAME_VERSION_DIRTY="${VERSION_LEADER}VERSION_DIRTY${VERSION_TRAILER}"
+	NAME_VERSION_DATE="${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}"
+	NAME_VERSION_SHORTDATE="${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}"
+	NAME_VERSION_UNIXTIME="${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}"
+	NAME_VERSION_SHA_LONG="${VERSION_LEADER}VERSION_SHA_LONG${VERSION_TRAILER}"
+	NAME_VERSION_SHA_SHORT="${VERSION_LEADER}VERSION_SHA_SHORT${VERSION_TRAILER}"
+	NAME_VERSION_HOSTINFO="${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}"
+	NAME_VERSION_AUTHORSHIP="${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}"
+	NAME_VERSION_DECLARATION="${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}"
+	NAME_VERSION_SUBMOD_NAME="${VERSION_LEADER}VERSION_SUBMOD_NAME${VERSION_TRAILER}"
+	NAME_VERSION_SUBMOD_PATH="${VERSION_LEADER}VERSION_SUBMOD_PATH${VERSION_TRAILER}"
+	NAME_VERSION_COMMIT_AUTHOR="${VERSION_LEADER}VERSION_COMMIT_AUTHOR${VERSION_TRAILER}"
+	NAME_VERSION_COMMIT_EMAIL="${VERSION_LEADER}VERSION_COMMIT_EMAIL${VERSION_TRAILER}"
+
 	__VERBOSE__ "\nRun all configured plugins"
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		plugin="${STAMPER_EXEC_PLUGIN[${index}]}"
-		target="${STAMPER_EXEC_TARGET[${index}]}"
+		target="${VERSION_CONFIG_PREFIX}${STAMPER_EXEC_TARGET[${index}]}"
 
 		__VERBOSE__ "\n+ Use \"${plugin}\" with \"${target}\"; try to read it"
 		indata="$(__READ_LF__ "${target}")"
@@ -1840,13 +1850,13 @@ if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 			if [ "${plugin}" == "${temp_plugin[${target}]}" ]; then
 				if [ -n "${target}" ]; then
 					empty="false"
-					if [ ! -f "${VERSION_ROOT_DIR}/${target}" ]; then
+					if [ ! -f "${VERSION_CONFIG_DIR}/${target}" ]; then
 						info="fs: NONE"
 					else
-						info="fs: len=$(ls -l --time-style="+%Y-%m-%d %H:%M:%S" "${VERSION_ROOT_DIR}/${target}" |cut -d " " -f 5-7)"
+						info="fs: len=$(ls -l --time-style="+%Y-%m-%d %H:%M:%S" "${VERSION_CONFIG_DIR}/${target}" |cut -d " " -f 5-7)"
 					fi
 
-					git_info="$(git --no-pager log -n 1 --date="format:%Y-%m-%d %H:%M:%S" --format="%ad @%h" -- "${target}" 2>/dev/null)"
+					git_info="$(git --no-pager log -n 1 --date="format:%Y-%m-%d %H:%M:%S" --format="%ad @%h" -- "${VERSION_CONFIG_PREFIX}${target}" 2>/dev/null)"
 					[ -n "${git_info}" ] && info="git: ${git_info}, ${info}"
 					[ "true" == "${temp_ignore[${target}]}" ] && info=".gitignore, ${info}"
 					[ "true" == "${temp_attrib[${target}]}" ] && info="$(__PLUGIN_${temp_plugin[${target}]}_ATTRIB__), ${info}"
@@ -1882,7 +1892,6 @@ $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do ((n++)); echo -e "    F$n = 0;"
 $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 	((n++))
 	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${f}")"
 	r="$(__AS_REGEX__ "${f}")"
 	echo -e "/^\\s*#\\s*${r}\\s+/ {"
 	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }   ${A}\"; }"
@@ -1901,7 +1910,6 @@ END {
 $(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 	((n++))
 	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${f}")"
 	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }   ${A}\";"
 done)
 }"
@@ -1935,13 +1943,14 @@ done)
 	unset text_a
 	unset script
 fi
+
 if [ 0 != ${#STAMPER_FILL_IGNORE[@]} ]; then
 	script="
 BEGIN {
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do echo -e "    F$n = 0;"; done)
 }
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${STAMPER_FILL_IGNORE[${n}]}")"
+	f="${STAMPER_FILL_IGNORE[${n}]}"
 	r="$(__AS_REGEX__ "${f}")"
 	echo -e "/^\\s*#\\s*${r}\\s*\$/ {"
 	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }\"; }"
@@ -1955,7 +1964,7 @@ done)
     { print; }
 END {
 $(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	[ -n "${VERSION_CONFIG_PREFIX}" ] && f="$(realpath -m --relative-to="${VERSION_CONFIG_PREFIX}" -- "${STAMPER_FILL_IGNORE[${n}]}")"
+	f="${STAMPER_FILL_IGNORE[${n}]}"
 	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }\";"
 done)
 }"
@@ -2107,7 +2116,7 @@ sql/
 *.[Cc]ache
 [Cc]lientBin/
 [Ss]tyle[Cc]op.*
-~$*
+~\$*
 *.dbmdl
 *.[Pp]ublish.xml
 *.pfx
@@ -2140,14 +2149,11 @@ ehthumbs.db
 [Dd]esktop.ini
 
 # Recycle Bin used on file shares
-$[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
+\$[Rr][Ee][Cc][Yy][Cc][Ll][Ee].[Bb][Ii][Nn]/
 
 # Mac desktop service store files
 .[Dd][Ss]_[Ss]tore"
 		fi
-		text_a="${text_a}
-
-# ..."
 	fi
 
 	text_b="$(awk -e "${script}" <<<"${text_a}")"

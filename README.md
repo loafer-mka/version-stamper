@@ -527,6 +527,11 @@ is read and its version information is selectively changed. This allows
 you to supplement such files with any additional information that will
 be saved from update to update.
 
+Instead of a file name, it is acceptable to specify `-`, in which case a
+version stamp will be created and printed to standard output, or `--`, in
+which case the version stamp will be read from standard input, updated and
+then printed to standard output.
+
 Example:
 
 ```
@@ -916,6 +921,16 @@ END_OF_TEXT
 }
 ```
 
+Keep in mind that "$1" can be either the name of a real file or some
+special value:
+
+- `//-` is used to indicate a stamp to be written to standard output,
+  with `__PLUGIN_XXX_CREATE__` called to create the stamp.
+
+- `//--` indicates that the stamp was received from the standard input,
+  modified, and the stamp after the changes is sent to the standard output,
+  for which the function `__PLUGIN_XXX_MODIFY__` should have been called.
+
 ### `__PLUGIN_XXX_MODIFY__` <a name="C5.1.6"/>
 
 This function is used in cases where a stamp file already exists and
@@ -972,6 +987,16 @@ that, the identifier (2) in the output line is replaced with a new one
 (the prefix and/or suffix can be changed), the value (4) is replaced with
 a new one, awhile the beginning of the line, the middle part with the
 assignment operator and the rest of the line are preserved.
+
+Keep in mind that "$1" can be either the name of a real file or some
+special value:
+
+- `//-` is used to indicate a stamp to be written to standard output,
+  with `__PLUGIN_XXX_CREATE__` called to create the stamp.
+
+- `//--` indicates that the stamp was received from the standard input,
+  modified, and the stamp after the changes is sent to the standard output,
+  for which the function `__PLUGIN_XXX_MODIFY__` should have been called.
 
 ## Improve version text formatting <a name="C5.2"/>
 

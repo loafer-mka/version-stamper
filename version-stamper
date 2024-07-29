@@ -498,40 +498,72 @@ function __READ_LF__
 # __STORE_LF__  worktree_relative_filename   text
 function __STORE_LF__
 {
-	[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-	local dir="$(dirname "${path}")"
-	[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
-	# we assume LF-eols in text string
-	cat >"${path}"
-}
-# __STORE_CRLF__  worktree_relative_filename   text
-function __STORE_CRLF__
-{
-	[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-	local dir="$(dirname "${path}")"
-	[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
-	# we assume LF-eols in text string
-	"$STAMPER_UNIX2DOS" --quiet >"${path}"
-}
-if [ "Windows_NT" == "$OS" ]; then
-	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
-	function __STORE_NATIVE_EOL__
-	{
-		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-		local dir="$(dirname "${path}")"
-		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
-		# we assume LF-eols in text string
-		"$STAMPER_UNIX2DOS" --quiet >"${path}"
-	}
-else
-	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
-	function __STORE_NATIVE_EOL__
-	{
+	case "$1" in
+	"//-" | "//--")
+		# stdout or stdin->stdout
+		cat
+		;;
+	*)
 		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 		local dir="$(dirname "${path}")"
 		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
 		# we assume LF-eols in text string
 		cat >"${path}"
+		;;
+	esac
+}
+# __STORE_CRLF__  worktree_relative_filename   text
+function __STORE_CRLF__
+{
+	case "$1" in
+	"//-" | "//--")
+		# stdout or stdin->stdout
+		"$STAMPER_UNIX2DOS" --quiet
+		;;
+	*)
+		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
+		local dir="$(dirname "${path}")"
+		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+		# we assume LF-eols in text string
+		"$STAMPER_UNIX2DOS" --quiet >"${path}"
+		;;
+	esac
+}
+if [ "Windows_NT" == "$OS" ]; then
+	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
+	function __STORE_NATIVE_EOL__
+	{
+		case "$1" in
+		"//-" | "//--")
+			# stdout or stdin->stdout
+			"$STAMPER_UNIX2DOS" --quiet
+			;;
+		*)
+			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
+			local dir="$(dirname "${path}")"
+			[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+			# we assume LF-eols in text string
+			"$STAMPER_UNIX2DOS" --quiet >"${path}"
+			;;
+		esac
+	}
+else
+	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
+	function __STORE_NATIVE_EOL__
+	{
+		case "$1" in
+		"//-" | "//--")
+			# stdout or stdin->stdout
+			cat
+			;;
+		*)
+			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
+			local dir="$(dirname "${path}")"
+			[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+			# we assume LF-eols in text string
+			cat >"${path}"
+			;;
+		esac
 	}
 fi
 
@@ -774,14 +806,23 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				esac
 			done
 			# assume path starting from '/' or '\' as VERSION_CONFIG_DIR-relative path, so normalize [\/] and remove leading / and ./
-			__normalize_local_path__ "temp_target"  "${value}"
-			case "${temp_target}" in
-			"../"* | ?":/"*)
-				# outside of config folder  OR  windows-style absolute
-				temp_target="$(__normalize_path__ "${temp_target}" "${VERSION_CONFIG_DIR}")"
+			case "${value}" in
+			"-" | "--")
+				# print stamp to stdout (-) or read from stdin and print to stdout (--)
+				# replace with special value which cannot be after path normalization
+				temp_target="//${value}"
 				;;
 			*)
-				# nothing
+				__normalize_local_path__ "temp_target"  "${value}"
+				case "${temp_target}" in
+				"../"* | ?":/"*)
+					# outside of config folder  OR  windows-style absolute
+					temp_target="$(__normalize_path__ "${temp_target}" "${VERSION_CONFIG_DIR}")"
+					;;
+				*)
+					# nothing
+					;;
+				esac
 				;;
 			esac
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
@@ -957,6 +998,11 @@ for arg in "$@"; do
 			;;
 		*)
 			case "${arg}" in
+			"-" | "--")
+				# stdout or stdin->stdout
+				# replace with special value which cannot be after path normalization
+				temp_target="//${arg}"
+				;;
 			"/"* | ?":/"* | "../"*)
 				# absolute or worktree-relative path, normalize drive-letter form and case
 				temp_target="$(__normalize_path__ "${arg}" "${VERSION_CONFIG_DIR}")"
@@ -1733,7 +1779,18 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 		target="${VERSION_CONFIG_PREFIX}${STAMPER_EXEC_TARGET[${index}]}"
 
 		__VERBOSE__ "\n+ Use \"${plugin}\" with \"${target}\"; try to read it"
-		indata="$(__READ_LF__ "${target}")"
+		case "${target}" in
+		"//-")
+			indata=""
+			;;
+		"//--")
+			__VERBOSE__ "Waiting incoming version stamp on stdin..."
+			indata="$(cat)"
+			;;
+		*)
+			indata="$(__READ_LF__ "${target}")"
+			;;
+		esac
 
 		if [ -n "${indata}" ]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
@@ -1741,11 +1798,19 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 
 			if [ "${existing_version}" == "${VERSION_TEXT}" -a -z "${VERSION_DIRTY}" ]; then
 				__VERBOSE__ ".   NOW \"$existing_version\" is same as generated \"${VERSION_TEXT}\" REMAIN UNCHANGED \"${target}\""
-				outdata="${indata}"
 			else
 				# generate new file 1) if versions mismatch and/or 2) if dirty flag set because 'date of sources' will be changed every time
 				__VERBOSE__ ".   update existing file \"${target}\" (\"$existing_version\" => \"${VERSION_TEXT}\") using __PLUGIN_${plugin}_MODIFY__"
-				outdata="$(__PLUGIN_${plugin}_MODIFY__ "${target}" <<<"${indata}")"
+				__PLUGIN_${plugin}_MODIFY__ "${target}" <<<"${indata}"
+				# file was changed?
+				case "${target}" in
+				"//-" | "//--")
+					outdata="_${indata}_"
+					;;
+				*)
+					outdata="$(__READ_LF__ "${target}")"
+					;;
+				esac
 				if [ "${indata}" == "${outdata}" ]; then
 					__VERBOSE__ "-------------------------------------------------"
 					echo "WARNING: Plugin \"$plugin\" did not modify \"${target}\"" 1>&2
@@ -1755,7 +1820,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				else
 					case "${target}" in
 					"/"*)
-						# outside of tree, nothing
+						# outside of tree or special target (//- //--), do nothing
 						;;
 					*)
 						# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
@@ -1772,7 +1837,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 			fi
 		else
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   (re)create new file \"${target}\" using __PLUGIN_${plugin}_CREATE__"
-			outdata="$(__PLUGIN_${plugin}_CREATE__ "${target}")"
+			__PLUGIN_${plugin}_CREATE__ "${target}"
 			case "${target}" in
 			"/"*)
 				# outside of tree, nothing

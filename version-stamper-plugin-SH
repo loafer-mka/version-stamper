@@ -50,7 +50,13 @@ function __PLUGIN_SH_CREATE__
 		${NAME_VERSION_SHA_SHORT}="${VERSION_SHA_SHORT}"
 		${NAME_VERSION_SHA_LONG}="${VERSION_SHA_LONG}"
 END_OF_TEXT
-	[ "Windows_NT" != "${OS}" ] && chmod a+x "$1"
+	case "$1" in
+	"//-" | "//--")
+		;;
+	*)
+		[ "Windows_NT" != "${OS}" ] && chmod a+x "$1"
+		;;
+	esac
 }
 
 function __PLUGIN_SH_MODIFY__

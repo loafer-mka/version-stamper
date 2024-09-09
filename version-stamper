@@ -304,8 +304,8 @@ function __detect_hooks_dir__
 	# VERSION_GIT_DIR may now points to actual .git directory with full content
 	# or to reduced .git directory of worktree with only HEAD, config, logs/ ...
 	# so hooks/ subfolder must be detected in main .git directory
-	if [ -d "${VERSION_GIT_DIR}/hooks" ]; then
-		VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
+	VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
+	if [ -d "${VERSION_HOOKS_DIR}" ]; then
 		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	else
 		VERSION_HOOKS_DIR="$(__git_filter_path__ rev-parse --git-common-dir 2>/dev/null)/hooks"
@@ -1353,9 +1353,9 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 			unset temp_branch
 		fi
 		if [ -z "${VERSION_BRANCH}" ]; then
-			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" ${VERSION_SHA_LONG} 2>/dev/null)"
+			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" --exclude="pipelines/*" ${VERSION_SHA_LONG} 2>/dev/null)"
 			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
-			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" ${VERSION_SHA_LONG}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
+			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" --exclude=\"pipelines/*\" ${VERSION_SHA_LONG}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
 			if [ "undefined" == "${VERSION_BRANCH}" ]; then
 				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
 				# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
@@ -2616,7 +2616,7 @@ function __update_all_hooks__
 #
 if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 	if [ -z "${VERSION_HOOKS_DIR}" ]; then
-		echo "Warning: cannot find '.git/hooks' folder to update git hooks" 1>&2
+		__VERBOSE__ "Warning: cannot find '.git/hooks' folder to update git hooks"
 	else
 		__VERBOSE__ "Update hooks now"
 		

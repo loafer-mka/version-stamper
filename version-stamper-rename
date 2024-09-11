@@ -30,6 +30,6 @@ case "${VERSION_RENAMED,,}" in
 	VERSION_RENAMED="x:${VERSION_RENAMED#fix?}"
 	;;
 "issue"[-/:]*)
-	VERSION_RENAMED="#${VERSION_RENAMED#fix?}"
+	VERSION_RENAMED="#${VERSION_RENAMED#issue?}"
 	;;
 esac

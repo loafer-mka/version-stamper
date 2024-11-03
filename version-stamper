@@ -295,6 +295,7 @@ __VERBOSE__ "git rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROO
 __VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 [ -n "${VERSION_ROOT_DIR}" -a -n "${VERSION_GIT_DIR}" ] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
 
+# if STAMPER_CURRENT_DIR was assigned by option, then folder was changed and VERSION_CURRENT_DIR becomes identical
 VERSION_CURRENT_DIR="$(readlink -m -- "$(pwd 2>/dev/null)" 2>/dev/null)"
 __VERBOSE__ "readlink -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\""
 
@@ -382,12 +383,10 @@ unset VERSION_SUBMOD_OK
 function __normalize_local_path__
 {
 	local    local_temp_filename
+	declare -g "$1"
 
 	local_temp_filename="${2//\\//}"
-	local_temp_filename="${local_temp_filename##./}"
-	local_temp_filename="${local_temp_filename##./}"
-	local_temp_filename="${local_temp_filename##/}"
-	printf -v "$1" '%s' "${local_temp_filename##/}"
+	printf -v "$1" '%s' "${local_temp_filename/#+(.\/|\/)/}"
 }
 
 #
@@ -700,6 +699,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
 		((cn++))
+		eval "printf -v 'value' '%s' \"${value}\""
 		case "${param,,}" in
 		"" | "#"*)
 			;;
@@ -981,11 +981,12 @@ for arg in "$@"; do
 	if [ -n "${ref}" ]; then
 		# assign *ref = 2nd_arg
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
+		[ "${ref}" != "ref" -a -n "${!ref}" ] && echo "Warning: Override ${temp_plugin/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
 		printf -v "${ref}" '%s' "${arg}"
 		ref=""
 		# temp_plugin may be real plugin name and may be some option; there it is an option
 		temp_plugin=""
-		# note: temp_plugin is used also for syntax check - if non empty, then next arg needs
+		# note: temp_plugin is used also for syntax check - if it is non empty after parsing all args, then missing argument
 	elif [ -n "${temp_plugin}" ]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
 		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
@@ -1012,7 +1013,7 @@ for arg in "$@"; do
 				__normalize_local_path__ "temp_target" "${arg}"
 				;;
 			esac
-			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
+			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" -a "//-" != "${temp_target}" -a "//--" != "${temp_target}" ]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at argument #$an" >&2
 			else
 				index=${#STAMPER_EXEC_PLUGIN[@]}
@@ -1074,6 +1075,14 @@ Available options are:
 -g       --generate
               Execute all configured plugins. This only applies to configured plugins in ${VERSION_CONFIG_NAME}.
               This implies --config and --setup too.
+         --leader TEXT
+              Override configured leader text or assign new one if ${VERSION_CONFIG_NAME} is not exist
+         --trailer TEXT
+              Override configured trailer text or assign new one if ${VERSION_CONFIG_NAME} is not exist
+         --authorship TEXT
+              Override configured authorship text or assign new one if ${VERSION_CONFIG_NAME} is not exist
+         --declaration TEXT
+              Override configured declaration text or assign new one if ${VERSION_CONFIG_NAME} is not exist
          --git-hook GITHOOK
               Use this option when version-stamper is running from git hook. It passes hook name (without path
               and leading '/' and/or '.'). This option turns on special processing during hook execution.
@@ -1130,6 +1139,38 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		-p | --print)
 			STAMPER_DO_PRINT_INFO="true"
+			;;
+		--trailer=*)
+			[ -n "${VERSION_TRAILER}" ] && echo "Warning: Override trailer setting \"${arg:10}\"" >&2
+			VERSION_TRAILER="${arg:10}"
+			;;
+		--trailer)
+			ref="VERSION_TRAILER"
+			temp_plugin="${arg}"
+			;;
+		--leader=*)
+			[ -n "${VERSION_LEADER}" ] && echo "Warning: Override leader setting \"${arg:9}\"" >&2
+			VERSION_LEADER="${arg:9}"
+			;;
+		--leader)
+			ref="VERSION_LEADER"
+			temp_plugin="${arg}"
+			;;
+		--authorship=*)
+			[ -n "${VERSION_AUTHORSHIP}" ] && echo "Warning: Override authorship setting \"${arg:13}\"" >&2
+			VERSION_AUTHORSHIP="${arg:13}"
+			;;
+		--authorship)
+			ref="VERSION_AUTHORSHIP"
+			temp_plugin="${arg}"
+			;;
+		--declaration=*)
+			[ -n "${VERSION_DECLARATION}" ] && echo "Warning: Override declaration setting \"${arg:14}\"" >&2
+			VERSION_DECLARATION="${arg:14}"
+			;;
+		--declaration)
+			ref="VERSION_DECLARATION"
+			temp_plugin="${arg}"
 			;;
 		*)
 			if [ -n "${STAMPER_PLUGINS[${arg}]}" ]; then
@@ -1776,7 +1817,15 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	__VERBOSE__ "\nRun all configured plugins"
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		plugin="${STAMPER_EXEC_PLUGIN[${index}]}"
-		target="${VERSION_CONFIG_PREFIX}${STAMPER_EXEC_TARGET[${index}]}"
+		target="${STAMPER_EXEC_TARGET[${index}]}"
+		case "${target}" in
+		"//-" | "//--" | "/"*)
+			# do not prefix reserved names and absolute pathes
+			;;
+		*)
+			target="${VERSION_CONFIG_PREFIX}${target}"
+			;;
+		esac
 
 		__VERBOSE__ "\n+ Use \"${plugin}\" with \"${target}\"; try to read it"
 		case "${target}" in

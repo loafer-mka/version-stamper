@@ -107,7 +107,7 @@ LOAD_CHANGES C1
 
 
 # ------ stage 2: create initial version ------
-../../../version-stamper -g
+../../../version-stamper -g  2>/dev/null
 
 LOAD_FILES F2 . .git/hooks
 LOAD_CHANGES C2

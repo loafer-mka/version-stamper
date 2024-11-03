@@ -33,7 +33,9 @@ declaration: Copyright (c) Andrey Makarov 2022-2024
 # if not set, then will be used:  pre-commit  post-checkout  post-rewrite  post-merge  (all but post-commit)
 #hooks:           pre-commit post-commit post-checkout post-rewrite post-merge
 hooks:          version-stamper pre-commit post-checkout post-rewrite post-merge
-# note: if pre-commit is used then post-commit is useless
+# note 1: if pre-commit is used then post-commit is useless
+# note 2: the 'version-stamper' hook is very special, for given self-containig repo only
+#         this affects on reloading version data after hooks upgrade
 #
 # the default command
 # it will be used if stamper is running without argumentss (if not set, --help is ssumed)

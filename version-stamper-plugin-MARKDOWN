@@ -34,7 +34,7 @@ function __PLUGIN_MARKDOWN_CREATE__
 	status="${VERSION_DIRTY:-clean}"
 	status="${status/+/dirty}"
 	__STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
-		# Version data:
+		### Version data:
 
 		| Version | ${VERSION_TEXT} |
 		|--------:|:----------------|
@@ -49,7 +49,7 @@ function __PLUGIN_MARKDOWN_CREATE__
 		| Folder | \`${VERSION_ROOT_DIR}\` |
 		| | ${VERSION_DECLARATION} |
 
-		# Last log records:
+		### Last log records:
 
 		\`\`\`
 		$(git --no-pager log --all --oneline --decorate --date-order --graph -n 10 HEAD 2>&1)

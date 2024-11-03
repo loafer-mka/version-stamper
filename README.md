@@ -197,7 +197,7 @@ Support for different programming languages is provided by auxiliary
   accompanied by a repository log of the last few commits (up to 10
   entries)
 ```
-	# Version data:
+	### Version data:
 
 	| Version | v1.2.333-branchname |
 	|--------:|:----------------|
@@ -212,7 +212,7 @@ Support for different programming languages is provided by auxiliary
 	| Folder | `/data/home/your/prjects/test_work` |
 	| | Copyright (c) Your Name 2023 |
 
-	# Last log records:
+	### Last log records:
 
 	` ` `
 	* e247788 (HEAD -> master) Short commit message
@@ -468,6 +468,33 @@ Available options:
   on special processing during hook execution.
   Note: do not set it manually (except for test only), it must be used
   by corrresponding git hooks.
+
+It is assumed that `version-stamper` is typically used in repositories
+that have a `.version-stamper` configuration file at the root of the working
+tree. However, in some cases, `version-stamper` can be used in any repositories,
+including those that do not have the required configuration file. This could
+be the case, for example, if `version-stamper` is used to create reports
+in compound projects with multiple repositories. The options listed below
+allow you to set basic parameters that would normally be obtained from the
+configuration file.
+
+*Note:* do not use the `--generate`, `--config` or `--setup` options in
+such cases, as they will create a configuration file and install interceptors,
+whereas without these options you can create the desired version stamp
+files or reports without any changes in the project working tree.
+
+- `--leader TEXT`<br/>
+- `--trailer TEXT`<br/>
+  Specify the prefix and/or suffix of symbol names, i.e. the values ​​of
+  `VERSION_LEADER` and `VERSION_TRAILER` (see above). The default values
+  ​​are empty strings, but for submodules the default assumed value of
+  `--leader` is generated based on the submodule name.
+
+- `--authorship TEXT`<br>
+- `--declaration TEXT`<br>
+  Set the copyright or copyleft text (i.e. the `declaration` parameter of
+  the configuration file) and the authorship designation (i.e. the `authorship`
+  parameter). See the configuration file description below for more details.
 
 ## Commands of version-stamper <a name="C4.2"/>
 

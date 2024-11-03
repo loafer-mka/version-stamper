@@ -1294,7 +1294,7 @@ fi
 #
 __VERBOSE__ "
 VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"  (git worktree)
-VERSION_CONFIG_DIR=\"${VERSION_CONFIG_DIR}\"  (root of relative pathes in args/configd)
+VERSION_CONFIG_DIR=\"${VERSION_CONFIG_DIR}\"  (root of relative pathes in args/configs)
 VERSION_CONFIG_PREFIX=\"${VERSION_CONFIG_PREFIX}\"
 Config file$( [ -f "${VERSION_CONFIG_PATH}" ] || echo " not found" ): \"${VERSION_CONFIG_PATH}\"
 .   verbose= \"${STAMPER_VERBOSE}\"

@@ -279,6 +279,10 @@ fi
 # load stamper's configuration information
 #
 [ -f "${STAMPER_SCRIPT_PATH}-config" ] || cat >"${STAMPER_SCRIPT_PATH}-config" <<-END_OF_TEXT
+	#
+	# this file can be freely modified; it is not part of licensed code
+	#
+
 	# default copyright/copyleft to paste into newly created config files
 	STAMPER_DEFAULT_DECL="Copyright (c)"
 END_OF_TEXT
@@ -2317,8 +2321,11 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-\"${STAMPER_SCRIPT_CMD}\" --git-hook=pre-commit --generate
-exit \$?
+if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+	\"${STAMPER_SCRIPT_CMD}\" --git-hook=pre-commit --generate
+	exit \$?
+fi
+exit 0
 " >"${hook_path}"
 			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
 			;;
@@ -2341,9 +2348,12 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 #
 
 if [ \"\$3\" == \"1\" -a -z \"\$GIT_REFLOG_ACTION\" ]; then
-	\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-checkout --generate
-	exit \$?
+	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+		\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-checkout --generate
+		exit \$?
+	fi
 fi
+exit 0
 " >"${hook_path}"
 			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
 			;;
@@ -2367,14 +2377,17 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 #
 
 if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
-	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-commit --generate)\"
-	RETVAL=\$?
-	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
-		# there are some indexed changes, create new commit now
-		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+		VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-commit --generate)\"
+		RETVAL=\$?
+		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
+			# there are some indexed changes, create new commit now
+			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+		fi
+		exit \$RETVAL
 	fi
-	exit \$RETVAL
 fi
+exit 0
 " >"${hook_path}"
 			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
 			;;
@@ -2398,14 +2411,17 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 #
 
 if [ \"\${1,,}\" == \"rebase\" ]; then
-	VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-rewrite --generate)\"
-	RETVAL=\$?
-	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
-		# there are some indexed changes, create new commit now
-		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+		VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-rewrite --generate)\"
+		RETVAL=\$?
+		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
+			# there are some indexed changes, create new commit now
+			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+		fi
+		exit \$RETVAL
 	fi
-	exit \$RETVAL
 fi
+exit 0
 " >"${hook_path}"
 			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
 			;;
@@ -2428,7 +2444,7 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate)\"
+VERSION_TEXT=\"\$([ -x \"${STAMPER_SCRIPT_CMD}\" ] && \"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate || exit 1)\"
 RETVAL=\$?
 if [ \"1\" != \"\$1\" ]; then
 	# '$1' == '1' means squash merge;

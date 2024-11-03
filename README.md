@@ -1071,44 +1071,20 @@ variable `VERSION_RENAMED`.
 ## Unit-Tests <a name="C5.3"/>
 
 The test system is being developed and updated in a separate branch
-`unit-tests`. The general idea is to keep everything related to tests in
+`tests`. The general idea is to keep everything related to tests in
 the `./tests/` folder, which is excluded from the repository (see
-`.gitignore`) in the main development branches. Thus, by simply cloning
-version-stamper into your project, nothing extra beyond the required main
-version-stamper working code will be cloned.
+`.gitignore`). Thus, by simply cloning version-stamper into your project,
+nothing extra beyond the required main version-stamper working code will
+be cloned.
 
 However, if debugging is required, or you will develop your own plugins,
-then it makes sense to connect unit tests to the current branch. In the
-simplest case, it is enough to simply extract all unit test files from
-their branch to the current one (i.e. they are in an ignored folder,
-this will not affect the state of the working tree in any way):
+then it makes sense to connect unit tests to the current branch. To do
+this, you need to add all the files contained in the `tests` branch to
+the `./tests` folder. Do it You can use the command:
 
 ```
-./tools/stamper> git checkout unit-tests -- ./tests/
-./tools/stamper> git rm -r --cached tests/
-./tools/stamper> ./tests/unit-tests.sh
+./tools/stamper> git worktree add ./tests tests
 ```
-
-And in cases where you also need to make changes to the test system, it
-is advisable to merge your working branch (or `master`) with the
-`unit-tests` branch and perform test corrections/additions directly
-in the `unit-tests` branch:
-
-```
-./tools/stamper> git checkout unit-tests
-./tools/stamper> git merge master
-./tools/stamper> ...
-```
-
-In the `unit-tests` branch, the `.gitignore` file has been changed so
-that files from the `./tests/` folder are included in the project, and
-the `./tests/samples/` and `./tests/repos/` folders containing examples
-and test repositories.
-
-However, changes to unit tests can be made without merging branches, if
-you first test them in the working branch (without including them in the
-repository), and at the end simply switch to the `unit-tests` branch and
-add the already corrected unit test files there one operation.
 
 # Appendix <a name="C6"/>
 

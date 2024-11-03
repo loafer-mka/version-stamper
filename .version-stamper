@@ -48,15 +48,15 @@ textoize:        alt
 #   p l u g i n s
 #
 # path to version target file which will created or updated by given plugin
-plugin-BAT:      ./tests/samples/sample-BAT.bat
-plugin-C:        ./tests/samples/sample-C.h
-plugin-CMAKE:    ./tests/samples/sample-CMAKE.cmake
-plugin-CS:       ./tests/samples/sample-AssemblyInfo.cs
-plugin-INFO:     ./tests/samples/sample-INFO.txt
-plugin-M:        ./tests/samples/sample-M.m
-plugin-MAKEFILE: ./tests/samples/sample-MAKEFILE.mk
-plugin-MARKDOWN: ./tests/samples/sample-MARKDOWN.md
-plugin-SH:       ./tests/samples/sample-SH.sh
+plugin-BAT:      ./samples/sample-BAT.bat
+plugin-C:        ./samples/sample-C.h
+plugin-CMAKE:    ./samples/sample-CMAKE.cmake
+plugin-CS:       ./samples/sample-AssemblyInfo.cs
+plugin-INFO:     ./samples/sample-INFO.txt
+plugin-M:        ./samples/sample-M.m
+plugin-MAKEFILE: ./samples/sample-MAKEFILE.mk
+plugin-MARKDOWN: ./samples/sample-MARKDOWN.md
+plugin-SH:       ./samples/sample-SH.sh
 plugin-SH:       ./version-stamper-this
 
 #   t h e   e n d

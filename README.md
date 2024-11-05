@@ -483,18 +483,22 @@ such cases, as they will create a configuration file and install interceptors,
 whereas without these options you can create the desired version stamp
 files or reports without any changes in the project working tree.
 
-- `--leader TEXT`<br/>
-- `--trailer TEXT`<br/>
+- `--leader TEXT` or `--leader? TEXT`<br/>
+- `--trailer TEXT` or `--trailer? TEXT`<br/>
   Specify the prefix and/or suffix of symbol names, i.e. the values ​​of
   `VERSION_LEADER` and `VERSION_TRAILER` (see above). The default values
   ​​are empty strings, but for submodules the default assumed value of
-  `--leader` is generated based on the submodule name.
+  `--leader` is generated based on the submodule name. The last forms
+  `--leader?` and `--trailer?` assign values if they are not assigned
+  by the configuration file `.version-stamper`.
 
-- `--authorship TEXT`<br>
-- `--declaration TEXT`<br>
+- `--authorship TEXT` or `--authorship? TEXT`<br>
+- `--declaration TEXT` or `--declaration? TEXT`<br>
   Set the copyright or copyleft text (i.e. the `declaration` parameter of
   the configuration file) and the authorship designation (i.e. the `authorship`
   parameter). See the configuration file description below for more details.
+  The last forms `--authorship?` and `--declaration?` assign values if they
+  are not assigned by the configuration file `.version-stamper`.
 
 ## Commands of version-stamper <a name="C4.2"/>
 

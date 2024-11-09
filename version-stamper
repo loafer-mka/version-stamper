@@ -44,6 +44,8 @@ set +m
 shopt -s lastpipe
 # use extended glob syntax by ${foo#...} and ${foo%...} expansions
 shopt -s extglob
+# use aliases (to allow __VERBOSE__ switching)
+shopt -s expand_aliases
 
 #
 # check presence of utilities
@@ -98,7 +100,7 @@ fi
 #
 STAMPER_CURRENT_DIR=""
 STAMPER_USE_DEFAULT_CMD="true"
-STAMPER_VERBOSE=""
+STAMPER_VERBOSE=""		# empty value means "not set"
 ref=""
 ((an=0))
 for a in "$@"; do
@@ -123,10 +125,10 @@ for a in "$@"; do
 			ref="STAMPER_CURRENT_DIR"
 			;;
 		-v | --verbose)
-			STAMPER_VERBOSE="true"
+			[ -z "${STAMPER_VERBOSE}" ] && STAMPER_VERBOSE="simple" || STAMPER_VERBOSE="extended"
 			;;
 		-q | --quit)
-			STAMPER_VERBOSE="false"
+			STAMPER_VERBOSE="off"
 			;;
 		*)
 			# other options will be parsed later
@@ -263,17 +265,43 @@ true)
 esac
 unset temp
 
-if [ "${STAMPER_VERBOSE}" == "true" ]; then
-	function __VERBOSE__
-	{
-		echo -e "$*" >&2
-	}
-else
-	function __VERBOSE__
-	{
-		:
-	}
-fi
+#
+# these values _may_ be used later depending on versbose command-line option and configuration settings
+STAMPER_TIMESTAMP_UNIT=1000000
+STAMPER_TIMESTAMP_START="$(date +"%s%N")"
+((STAMPER_TIMESTAMP_START=STAMPER_TIMESTAMP_START/STAMPER_TIMESTAMP_UNIT))
+STAMPER_TIMESTAMP_LAST="${STAMPER_TIMESTAMP_START}"
+
+function __VERBOSE_SIMPLE__
+{
+	echo -e "$*" >&2
+}
+function __VERBOSE_EXTENDED__
+{
+	local tnow="$(date +"%s%N")"
+	local t0="${STAMPER_TIMESTAMP_START}"
+	local tx="${STAMPER_TIMESTAMP_LAST}"
+	local tz
+	((tnow=tnow/STAMPER_TIMESTAMP_UNIT))
+	((t0=tnow-t0))
+	((tx=tnow-tx))
+	printf -v tz "[%u.%03u (+%u ms)]" $((t0/1000)) $((t0%1000)) $tx
+	echo -e "$*\n${tz}" >&2
+	STAMPER_TIMESTAMP_LAST="${tnow}"
+}
+function __VERBOSE_OFF__
+{
+	:
+}
+
+case "${STAMPER_VERBOSE}" in
+simple | extended | off)
+	alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
+	;;
+*)
+	alias __VERBOSE__=__VERBOSE_OFF__
+	;;
+esac
 
 #
 # load stamper's configuration information
@@ -748,34 +776,27 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 		verbose:)
 			if [ -z "${STAMPER_VERBOSE}" ]; then 
 				case "${value,,}" in
-				true | t | yes | y | ok | set | 1)
-					STAMPER_VERBOSE="true"
-					unset -f __VERBOSE__
-					function __VERBOSE__
-					{
-						echo -e "$*" >&2
-					}
-					#
-					# Print suite header because configuraion file turns on verbose mode while command line does not touch it
-					#
-					__VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
-
+				verbose | true | t | yes | y | ok | set | on | simple | 1)
+					STAMPER_VERBOSE="simple"
 					;;
-				false | f | no | n | none | notset | clean | 0)
-					STAMPER_VERBOSE="false"
-					unset -f __VERBOSE__
-					function __VERBOSE__
-					{
-						:
-					}
+				extended | 2)
+					STAMPER_VERBOSE="extended"
+					;;
+				false | f | no | n | none | notset | quiet | clean | off | 0)
+					STAMPER_VERBOSE="off"
 					;;
 				*)
-					echo "Warning! undefined verbose mode \"$value\" at ${VERSION_CONFIG_PATH}:$cn (allowed: 'true', 't', 'yes', 'y', 'set', 'ok', 1; 'false', 'f', 'no', 'n', 'none', 'notset', 'clean', 0)" >&2
+					echo "Warning! undefined verbose mode \"$value\" at ${VERSION_CONFIG_PATH}:$cn (allowed: 'extended', 2; 'true', 't', 'yes', 'y', 'set', 'ok', 'on', 'simple', 1; 'false', 'f', 'no', 'n', 'none', 'notset', 'clean', 'off', 0)" >&2
+					STAMPER_VERBOSE="off"
 					;;
 				esac
+				#
+				# Print suite header because configuraion file turns on verbose mode while command line does not touch it
+				alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
+				[ "off" != "${STAMPER_VERBOSE}" ] && __VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
 			else
-				# use command-line assigned verbose mode
-				if [ "true" == "${STAMPER_VERBOSE,,}" ]; then
+				# use command-line assigned verbose mode; report this in verbose mode only
+				if [ "off" != "${STAMPER_VERBOSE,,}" ]; then
 					echo "Warning! ignoring default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
 				fi
 			fi
@@ -895,24 +916,7 @@ fi
 #
 STAMPER_ABBREV_LEN="${STAMPER_ABBREV_LEN:-8}"
 # if verbose mode was not assigned nor command line nor config file, then assume super-default 'false'
-STAMPER_VERBOSE="${STAMPER_VERBOSE:-false}"
-if [ "${STAMPER_VERBOSE}" == "true" ]; then
-	function __ARRAY_DUMP__
-	{
-		local -n ref=$1
-		local i
-
-		echo "+   ============== $1.Count=${#ref[@]}" 1>&2
-		for i in "${!ref[@]}"; do
-			echo "+   $1[$i]=${ref[$i]}" 1>&2
-		done
-	}
-else
-	function __ARRAY_DUMP__
-	{
-		:
-	}
-fi
+STAMPER_VERBOSE="${STAMPER_VERBOSE:-off}"
 
 #
 # nice 3-colon table-aligned printout functions
@@ -1564,7 +1568,7 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "false" == "${STAMPER_VERBOSE}" ] && break
+				[ "off" == "${STAMPER_VERBOSE}" ] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -1610,7 +1614,7 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "false" == "${STAMPER_VERBOSE}" ] && break
+				[ "off" == "${STAMPER_VERBOSE}" ] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -2514,30 +2518,16 @@ function __update_this_hook_async__
 	local	usleep="$(which usleep)"
 	local	ps="$(which ps)"
 
-	# stdout and stderr both are redirectyed, so change __VERBOSE__ to use logger 
-	if [ "${STAMPER_VERBOSE}" == "true" ]; then
-		if [ "Windows_NT" == "$OS" ]; then
-			# if stdout and stderr are closed ... I do'nt known how to
-			# access windows syslog from msys2 bash script
-			function __VERBOSE__
-			{
-				:
-			}
-		else
-			function __VERBOSE__
-			{
-				echo -e "${STAMPER_EXECUTING_HOOK}: $*" | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
-			}
-		fi
-		function __ARRAY_DUMP__
+	# stdout and stderr both are redirected, so change __VERBOSE__ to use logger 
+	if [ "Windows_NT" == "$OS" ]; then
+		# if stdout and stderr are closed ... I do'nt known how to
+		# access windows syslog from msys2 bash script
+		alias __VERBOSE__=__VERBOSE_OFF__
+	else
+		unalias __VERBOSE__
+		function __VERBOSE__
 		{
-			local -n ref=$1
-			local i
-	
-			__VERBOSE__ "+   ============== $1.Count=${#ref[@]}"
-			for i in "${!ref[@]}"; do
-				__VERBOSE__ "+   $1[$i]=${ref[$i]}"
-			done
+			[ "off" != "${STAMPER_VERBOSE}" ] && __VERBOSE_${STAMPER_VERBOSE^^}__ "${STAMPER_EXECUTING_HOOK}: $*" 2>&1 | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
 		}
 	fi
 	ps="${ps:-ps}"

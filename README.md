@@ -302,7 +302,10 @@ Available options:
   Print this help and exit.
 
 - `-v` or `--verbose`<br/>
-  Print a lot of debugging information onto stderr.
+  Print a lot of debugging information onto stderr. If `-v` is used twice
+  then output consists additional timestamps `[S.0MS (+DMS ms)]`, where
+  `S.0MS` means second and millisecond from start of `./version-stamper`
+  and `DMS` means milliseconds from previouse timestamp.
 
 - `-q` or `--quiet`<br/>
   Turn off verbose mode.
@@ -603,11 +606,13 @@ quotes or escape it in any way.
 
 Valid parameters:
 
-1. `verbose` - talkative mode. true corresponds to the `--verbose` option
-   on the command line, and false corresponds to `--quiet`. The `--verbose`
-   and `--quiet` options (and their short forms) on the command line take
-   precedence over the `verbose` configuration option. If nothing is
-   specified, `--quiet` is assumed by default.
+1. `verbose` - verbose mode. Available values are: `0`, `notset`, `false`,
+   `quiet`, `none`, `clean`, `off`, `no`, `f`, `n` disable verbose mode
+   (match `--quiet` or `-q` option); values `1`, `verbose`, `simple`,
+   `true`, `yes`, `set`, `ok`, `on`, `t`, `y` turns on verbose mode (match
+   single `--verbose` or `-v` option); and values `2`, `extended` turns
+   on timestamps (match twin `--verbose` or `-v` option). If nothing is
+   specified, quiet mode is assumed by default.
 
 2. `abbrev` - number of characters in the short form of the hash, default
    8 characters.

@@ -989,13 +989,28 @@ for arg in "$@"; do
 	if [ -n "${ref}" ]; then
 		# assign *ref = 2nd_arg
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
-		if [ "?" == "${ref:0:1}" ]; then
+		case "${ref}" in
+		STAMPER_TEXTOIZE | \?STAMPER_TEXTOIZE)
+			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg}" ]; then
+				if [ "?" == "${ref:0:1}" ]; then
+					[ -z "${STAMPER_TEXTOIZE}" ] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+				else
+					[ -n "${STAMPER_TEXTOIZE}" ] && echo "Warning: Override textoize setting \"${arg}\"" >&2
+					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+				fi
+			else
+				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
+			fi
+			;;
+		\?*)
 			ref="${ref:1}"
-			[ -z "${!ref}" ] && printf -v "${ref}" '%s' "${arg}"
-		else
+			[ -n "${ref}" -a -z "${!ref}" ] && printf -v "${ref}" '%s' "${arg}"
+			;;
+		*)
 			[ "${ref}" != "ref" -a -n "${!ref}" ] && echo "Warning: Override ${temp_plugin/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
 			printf -v "${ref}" '%s' "${arg}"
-		fi
+			;;
+		esac
 		ref=""
 		# temp_plugin may be real plugin name and may be some option; there it is an option
 		temp_plugin=""
@@ -1190,31 +1205,54 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--leader\?=*)
-			[ -z "${VERSION_LEADER}" ] && VERSION_LEADER="${arg:9}"
+			[ -z "${VERSION_LEADER}" ] && VERSION_LEADER="${arg:10}"
 			;;
 		--leader\?)
 			ref="?VERSION_LEADER"
 			temp_plugin="${arg}"
 			;;
 		--trailer\?=*)
-			[ -z "${VERSION_TRAILER}" ] && VERSION_TRAILER="${arg:10}"
+			[ -z "${VERSION_TRAILER}" ] && VERSION_TRAILER="${arg:11}"
 			;;
 		--trailer\?)
 			ref="?VERSION_TRAILER"
 			temp_plugin="${arg}"
 			;;
 		--authorship\?=*)
-			[ -z "${VERSION_AUTHORSHIP}" ] && VERSION_AUTHORSHIP="${arg:13}"
+			[ -z "${VERSION_AUTHORSHIP}" ] && VERSION_AUTHORSHIP="${arg:14}"
 			;;
 		--authorship\?)
 			ref="?VERSION_AUTHORSHIP"
 			temp_plugin="${arg}"
 			;;
 		--declaration\?=*)
-			[ -z "${VERSION_DECLARATION}" ] && VERSION_DECLARATION="${arg:14}"
+			[ -z "${VERSION_DECLARATION}" ] && VERSION_DECLARATION="${arg:15}"
 			;;
 		--declaration\?)
 			ref="?VERSION_DECLARATION"
+			temp_plugin="${arg}"
+			;;
+		--textoize=*)
+			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg:11}" ]; then
+				[ -n "${STAMPER_TEXTOIZE}" ] && echo "Warning: Override textoize setting \"${arg:11}\"" >&2
+				STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:11}"
+			else
+				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
+			fi
+			;;
+		--textoize)
+			ref="STAMPER_TEXTOIZE"
+			temp_plugin="${arg}"
+			;;
+		--textoize\?=*)
+			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg:12}" ]; then
+				[ -z "${STAMPER_TEXTOIZE}" ] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:12}"
+			else
+				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:12}\"" >&2
+			fi
+			;;
+		--textoize\?)
+			ref="?STAMPER_TEXTOIZE"
 			temp_plugin="${arg}"
 			;;
 		*)
@@ -1639,10 +1677,11 @@ unset sha_temp
 unset temp
 
 printf -v VERSION_ID "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
-VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
+VERSION_TEXT=""
 if [ -n "${STAMPER_TEXTOIZE}" ]; then
 	source "${STAMPER_TEXTOIZE}"
 fi
+[ -z "${VERSION_TEXT}" ] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)

@@ -1,0 +1,15 @@
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2024
+
+#
+# this script does not touch VERSION_TEXT variable, so
+# hardcoded form 'v0.0.0-branch' will be used.
+# The 'none' textoize setting is same as 'not assigned'.
+#

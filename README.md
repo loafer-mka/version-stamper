@@ -32,8 +32,12 @@ with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
   - [Improve version text formatting](#C5.2)
   - [Unit-Tests](#C5.3)
 - [Appendix](#C6)
-  - [A little about git hooks](#C6.1)
-  - [Overview of the git repository directory structure](#C6.2)
+  - [Common Windows troubles](#C6.1)
+    - [Different roots of filesystems](#C6.1.1)
+    - [Symbolic links](#C6.1.2)
+    - [File access mode](#C6.1.3)
+  - [A little about git hooks](#C6.2)
+  - [Overview of the git repository directory structure](#C6.3)
 
 # About <a name="C3"/>
 
@@ -974,6 +978,12 @@ special value:
   modified, and the stamp after the changes is sent to the standard output,
   for which the function `__PLUGIN_XXX_MODIFY__` should have been called.
 
+Someone you needs in `chmod ...` after file creation. In case of some
+posix-=compatible environment under windows. like as `msys2` (the
+`git-for-windows` is based on), `cygwin` or out-of-life `SFU/SUA`, this
+utility may work inaccurate. Special function `__CHMOD__` may be used to
+avoid common troubles.
+
 ### `__PLUGIN_XXX_MODIFY__` <a name="C5.1.6"/>
 
 This function is used in cases where a stamp file already exists and
@@ -1104,7 +1114,148 @@ the `./tests` folder. Do it You can use the command:
 
 # Appendix <a name="C6"/>
 
-## A little about git hooks <a name="C6.1"/>
+## Common Windows troubles <a name="C6.1"/>
+
+The most basic problem, which often leads to failures, is the presence of
+several different and sometimes poorly incompatible implementations of
+the posix-compatible environment. Most often, the `git-for-windows` is
+used on Windows, built on the basis of the `MSYS2` project (former `mingw`),
+but also native `MSYS2` or `Cygwin` instances can be used, and on fairly
+old systems, even `SFU` or `SUA` from Microsoft can be found.
+
+It often happens that some environment, sometimes severely cut down, is
+brought along by development tools. This is, for example, quite typical
+for microcontroller software development tools, when some cut down version
+of the environment comes along with the toolchain.
+
+If entire work is done in one such environment, then there are usually no
+difficulties, but many such environments either lack the necessary development
+tools (which, for example, are not in `git-for-windows`), or do not have
+`git` itself. As a result, a situation arises when utilities of one
+posix-compatible environment are executed from another, and such a transition
+can be performed multiple times in one task.
+
+For example, the project build tools belonging to some environment execute
+the `git` command available in `git-for-windows`, and during the process
+of creating a commit, the `pre-commit` hook is executed, which in turn
+will execute a command from some third environment... and so on.
+
+The most common causes of problems are discussed below.
+
+### Different roots of filesystems <a name="C6.1.1"/>
+
+Different environments are located in different directories and have
+different "root file systems" and, accordingly, different paths to project
+files. For example, in `MSYS2` (and in `git`) the path to a folder on the
+`C:` drive might look like `/c/users/person/project/file.c`, while in
+`cygwin` it will already be represented as `/cygdrive/c/users/person/project/file.c`.
+Accordingly, an attempt to execute something like:
+
+```
+$ git add /cygdrive/c/users/person/project/file.c
+```
+
+Will result in an error, since such a file path is not supported in `git`.
+
+There are a couple of options that can be suggested for the solution:
+
+- the easiest way is to use the "mixed" way of representing file names,
+  i.e. in the form `c:/users/person/project/file.c` - almost like in Windows,
+  but the separator is a forward slash instead of a backward slash. Programs
+  in Posix-compatible environments usually understand this way, and even
+  some Windows programs - too (most often, when passing arguments to
+  Windows applications, the path will still need to be converted).
+
+- sometimes tricks are possible that allow one to have access to a path
+  in another environment. For example, you can "make friends" between
+  `git-for-windows` and `cygwin` (but not vice versa) by creating a
+  `cygdrive` folder in the `git` root system and placing links to the
+  Windows disk roots there. This should be done with Windows administrator
+  rights, for example, like this (`cmd.exe` commands):
+
+```
+	c:\temp> cd "C:\Program Files\Git"
+	C:\Program Files\Git> mkdir cygdrive
+	C:\Program Files\Git> cd cygdrive
+	C:\Program Files\Git\cygdrive> mklink /J c c:\
+	C:\Program Files\Git\cygdrive> mklink /J d d:\
+	C:\Program Files\Git\cygdrive> mklink /J e e:\
+	...
+```
+
+As a result, paths like `/cygdrive/d/my/folder` and so on will be possible
+in `git`.
+
+### Symbolic links <a name="C6.1.2"/>
+
+The most ridiculous thing is that Windows does have analogs of links, both
+symbolic and hard, but posix-compatible environments usually do not
+implement them, or implement them using their own internal methods.
+
+In the first case, `ln ...` can copy a file ... or even a directory.
+For example, trying to do something like `ln foo /` in `git-for-windows`
+shell (i.e. `MSYS2`) will copy the contents of the entire `C:` drive to
+the `foo` folder - and if the `foo` folder is also on `C:`, then an
+excessively deep recursion error ... but in both cases, that's not what
+you wanted.
+
+In the second case, problems will arise when using this link in another
+environment or in a Windows program.
+
+If you need symbolic links to directories, you can use the analog of
+symbolic links in Windows - the so-called "junction". To create such a
+link, use the command:
+
+```
+   C:\temp> mklink /J link_name c:\users\person\folder
+```
+
+In theory, the same command can create "real" symbolic links to both files
+and directories, and even hard links... but for some reason you need to be
+an administrator to do this. And for a regular user, only "junction" is
+available.
+
+### File access mode <a name="C6.1.3"/>
+
+This feature is also severely limited in some posix-compatible environments,
+or implemented rather crudely.
+
+In `MSYS2` (and in `git-for-windows`), the `chmod ...` command usually has
+no effect; and attempts to set execute permissions on a file with it will
+be ignored.
+
+In `MSYS2` the execution permission bits are set automatically based on
+the file type (name extension, say, all `.exe`, `.bat`, etc. files will
+be considered executable) and its contents - if you need to make an
+executable script, then the first line of the script must contain a
+reference to the executable interpreter, i.e. something like
+
+```
+#!/bin/bash
+```
+
+in the first line of a text file will result in the execution permission
+bits being set to 1 if the specified `/bin/bash` exists and is executable.
+
+In `cygwin` and `SFU/SUA` this command is implemented and works. But it
+is important that some combinations of rights in unix style (`rwxrwxrwx`)
+are not implemented correctly in Windows at all, and the opposite is
+true - it is impossible to correctly map combinations of access rights
+implemented in Windows to 9 unix flags.
+
+In `SFU/SUA` the `chmod ...` command works "not always", being limited to
+only valid combinations of access rights, but in `cygwin` it implements
+any requested combination, but at the cost of breaking the rules (according
+to Microsoft standards, access rights lists, the so-called "ACLs", must
+be ordered - first deny, then allow). As a result, in `cygwin` an attempt
+to change access rights leads to both the cancellation of all inherited
+rights from containers and to obtaining an incorrectly ordered set of
+ACLs, which in some cases is detected by Windows disk check utilities and
+similar tools. Needless to say, correcting this "error" with such a tool
+will lead to a violation of previously assigned rights and, very likely,
+to the fact that something will stop working.
+
+## A little about git hooks <a name="C6.2"/>
 
 Below are some typical execution sequences for git hooks. These sequences
 should not be considered as a strict guide - they were obtained experimentally
@@ -1182,7 +1333,7 @@ prepare-commit-msg  ->  commit-msg  ->  post-merge 0
 (MERGE_MSG)
 ```
 
-## Overview of the git repository directory structure <a name="C6.2"/>
+## Overview of the git repository directory structure <a name="C6.3"/>
 
 In the model case, we assume that we have a git repository in the `./MAIN`
 directory, this repository has a `SUBMODULE` submodule (path to the

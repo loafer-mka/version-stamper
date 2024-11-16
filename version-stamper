@@ -11,13 +11,85 @@
 #               Copyright (c) Andrey Makarov 2023
 
 STAMPER_SCRIPT_PATH="$(readlink -f -- "$0")"
-STAMPER_CYGPATH="$(which cygpath 2>/dev/null)"
-[ -n "${STAMPER_CYGPATH}" ] && STAMPER_SCRIPT_PATH="$("${STAMPER_CYGPATH}" -u "${STAMPER_SCRIPT_PATH}")"
+
+# disable history support; this enables 'echo "foo!"' (this sample with enabled history produces 'bash: !: event not found')
+set +H
+# disable monitor
+set +m
+# last function/builtin in pipe will run in current shell
+shopt -s lastpipe
+# use extended glob syntax by ${foo#...} and ${foo%...} expansions
+shopt -s extglob
+# use aliases (to allow __VERBOSE__ switching)
+shopt -s expand_aliases
+
+function STAMPER_CYGPATH
+{
+	declare -g ${1}
+	local stamper_cygpath_path="${3}"
+	local stamper_cygpath_drive
+
+	stamper_cygpath_path="${stamper_cygpath_path//+(\/)\//\/}";		stamper_cygpath_path="${stamper_cygpath_path//+(\\)\\/\\}"
+	stamper_cygpath_path="${stamper_cygpath_path/#+(\.\/)/.\/}";	stamper_cygpath_path="${stamper_cygpath_path/#+(\.\\)/.\\}"
+	stamper_cygpath_path="${stamper_cygpath_path//\.\/\.\./..}";	stamper_cygpath_path="${stamper_cygpath_path/#\.\\\.\./..}"
+	case "${2,,}" in
+	-d | -w | d | w | dos | win | windows)
+		case "${stamper_cygpath_path}" in
+		"/dev/fs/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:8:1}:${stamper_cygpath_path:9}"
+			;;
+		"/cygdrive/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:10:1}:${stamper_cygpath_path:11}"
+			;;
+		"/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:1:1}:${stamper_cygpath_path:2}"
+			;;
+		esac
+		stamper_cygpath_path="${stamper_cygpath_path//+(\/)/\\}"
+		;;
+	-m | m | mixed)
+		case "${stamper_cygpath_path}" in
+		"/dev/fs/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:8:1}:${stamper_cygpath_path:9}"
+			;;
+		"/cygdrive/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:10:1}:${stamper_cygpath_path:11}"
+			;;
+		"/"?"/"*)
+			stamper_cygpath_path="${stamper_cygpath_path:1:1}:${stamper_cygpath_path:2}"
+			;;
+		esac
+		stamper_cygpath_path="${stamper_cygpath_path//+(\\)/\/}"
+		;;
+	-u | u | unix)
+		case "${stamper_cygpath_path}" in
+		?:*)
+			stamper_cygpath_drive="${stamper_cygpath_path:0:1}"
+			stamper_cygpath_drive="${stamper_cygpath_drive,,}"
+			if [ -d "/cygdrive" ]; then
+				stamper_cygpath_path="/cygdrive/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
+			elif [ -d "/dev/fs" ]; then
+				stamper_cygpath_path="/dev/fs/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
+			else
+				stamper_cygpath_path="/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
+			fi
+			;;
+		esac
+		stamper_cygpath_path="${stamper_cygpath_path//+(\\)/\/}"
+		;;
+	*)
+		;;
+	esac
+	printf -v "${1}" "%s" "${stamper_cygpath_path}"
+}
+if [ "Windows_NT" == "${OS}" ]; then
+	STAMPER_CYGPATH  STAMPER_SCRIPT_PATH  unix  "${STAMPER_SCRIPT_PATH}"
+fi
 
 # load stamper's version information
 if [ "0" -ne "$(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this")" ]; then
 	set -o allexport
-	source <(awk '
+	source <(awk -v RS='[\r\n]+' '
 		BEGIN{ mode = 0; }
 		mode == 0 && /^\s*<<<<<<*\s/   { mode = 1; next; }
 		mode == 1 && ( /^\s*======*\s*$/ || /^\s*\|\|\|\|\|\|*\s*$/) { mode = 2; next; }
@@ -33,19 +105,8 @@ export STAMPER_SUITE="Version stamper suite ${STAMPER_VERSION_TEXT}"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 
 # title for echoing somewere
-STAMPER_SCRIPT_NAME="$(basename -- "${STAMPER_SCRIPT_PATH}")"
+STAMPER_SCRIPT_NAME="${STAMPER_SCRIPT_PATH##*/}"
 STAMPER_SUITE_TITLE="The ${STAMPER_SUITE}. ${STAMPER_VERSION_DECLARATION}\nVersion files generator \"${STAMPER_SCRIPT_NAME}\""
-
-# disable history support; this enables 'echo "foo!"' (this sample with enabled history produces 'bash: !: event not found')
-set +H
-# disable monitor
-set +m
-# last function/builtin in pipe will run in current shell
-shopt -s lastpipe
-# use extended glob syntax by ${foo#...} and ${foo%...} expansions
-shopt -s extglob
-# use aliases (to allow __VERBOSE__ switching)
-shopt -s expand_aliases
 
 #
 # check presence of utilities
@@ -57,21 +118,19 @@ function DIE
 	echo -e "ERROR: $*" >&2
 	exit $RES
 }
-[ -n "$(which which 2>/dev/null)" ] || DIE 100 "The 'which' must be installed and available from script"
 [ -n "$(which awk 2>/dev/null)" ] || DIE 100 "The 'awk' must be installed and available from script"
-[ -n "$(which basename 2>/dev/null)" ] || DIE 100 "The 'basename' must be installed and available from script"
 [ -n "$(which cat 2>/dev/null)" ] || DIE 100 "The 'cat' must be installed and available from script"
 [ -n "$(which chmod 2>/dev/null)" ] || DIE 100 "The 'chmod' must be installed and available from script"
 [ -n "$(which cut 2>/dev/null)" ] || DIE 100 "The 'cut' must be installed and available from script"
 [ -n "$(which date 2>/dev/null)" ] || DIE 100 "The 'date' must be installed and available from script"
-[ -n "$(which dirname 2>/dev/null)" ] || DIE 100 "The 'dirname' must be installed and available from script"
 [ -n "$(which git 2>/dev/null)" ] || DIE 100 "The 'git' must be installed and available from script"
 [ -n "$(which ls 2>/dev/null)" ] || DIE 100 "The 'ls' must be installed and available from script"
-[ -n "$(which readlink 2>/dev/null)" ] || DIE 100 "The 'readlink' must be installed and available from script"
+[ -n "$(which mkdir 2>/dev/null)" ] || DIE 100 "The 'mkdir' must be installed and available from script"
 [ -n "$(which realpath 2>/dev/null)" ] || DIE 100 "The 'realpath' must be installed and available from script"
 [ -n "$(which rm 2>/dev/null)" ] || DIE 100 "The 'rm' must be installed and available from script"
 [ -n "$(which sed 2>/dev/null)" ] || DIE 100 "The 'sed' must be installed and available from script"
 [ -n "$(which sleep 2>/dev/null)" ] || DIE 100 "The 'sleep' must be installed and available from script"
+[ -n "$(which which 2>/dev/null)" ] || DIE 100 "The 'which' must be installed and available from script"
 [ -n "$(which xargs 2>/dev/null)" ] || DIE 100 "The 'xargs' must be installed and available from script"
 STAMPER_DOS2UNIX="$(which dos2unix 2>/dev/null)"
 STAMPER_UNIX2DOS="$(which unix2dos 2>/dev/null)"
@@ -86,13 +145,13 @@ else
 fi
 
 #
+# Split arg parsing in two passes: a) preliminary now; b) rest of options
+# and plugin commands after loading configuration and getting all properties
+# and version data.
 # NOTE: the argument --directory changes current folder and results of
 # 'git rev-parse --is-bare-repo', 'git rev-parse --show-toplevel' also
 # may be changed. So check for repo type, folders, read configuration
 # _after_ preliminary command line parsing;
-# Split arg parsing in two passes: a) preliminary now; b) rest of options
-# and plugin commands after loading configuration and getting all properties
-# and version data.
 #
 
 #
@@ -140,7 +199,7 @@ done
 unset ref
 unset an
 
-# path under windows may contain C:/... prefix instead of /c/...  or /cygdrive/c/...
+# path under windows may contain C:/... prefix instead of /c/...  or /cygdrive/c/... or /dev/fs/c/...
 # note 1: normal mingw/cygwin/SUA/... absolute path starts with "/"; the '$0' contains path
 #         as it was used and it may starts with C:/... if script was executed by windows
 #         application
@@ -164,50 +223,65 @@ unset an
 #         same shit is for cd/pwd, pushd/popd, realpath, readlink ... :(
 #         the only twin (input_path -> windows_path -> unix_path convertion will
 #         normalize drive letter case.
-if [ -z "${STAMPER_CYGPATH}" ]; then
+if [ "Windows_NT" == "${OS}" ]; then
 	function __git_filter_path__
 	{
-		git --no-pager "$@" 2>/dev/null
+		local __git_filter_path__var="${1}"
+		local __git_filter_path__path
+		declare -g ${__git_filter_path__var}
+		shift
+		STAMPER_CYGPATH ${__git_filter_path__var} unix "$(git --no-pager "$@" 2>/dev/null)"
 	}
 	function __normalize_path__
 	{
-		if [ -z "$2" ]; then
-			realpath -m -- "$1"
+		local __normalize_path__var="${1}"
+		local __normalize_path__path
+		declare -g ${__normalize_path__var}
+		STAMPER_CYGPATH __normalize_path__path unix "${2}"
+		if [ -z "${3}" ]; then
+			printf -v "${__normalize_path__var}" "%s" "$(realpath -m -- "${__normalize_path__path}")"
 		else
-			realpath -m --relative-base="$2" -- "$1"
+			printf -v "${__normalize_path__var}" "%s" "$(realpath -m --relative-base="${3}" -- "${__normalize_path__path}")"
 		fi
 	}
 else
 	function __git_filter_path__
 	{
-		git --no-pager "$@" 2>/dev/null | "${STAMPER_CYGPATH}" -u -f - 2>/dev/null
+		local __git_filter_path__var="${1}"
+		local __git_filter_path__path
+		declare -g ${__git_filter_path__var}
+		shift
+		printf -v "${__git_filter_path__var}" "%s" "$(git --no-pager "$@" 2>/dev/null)"
 	}
 	function __normalize_path__
 	{
-		if [ -z "$2" ]; then
-			realpath -m -- "$("${STAMPER_CYGPATH}" -u -- "$("${STAMPER_CYGPATH}" -w -- "$1")")"
+		local __normalize_path__var="${1}"
+		local __normalize_path__path="${2}"
+		declare -g ${__normalize_path__var}
+		if [ -z "${3}" ]; then
+			printf -v "${__normalize_path__var}" "%s" "$(realpath -m -- "${__normalize_path__path}")"
 		else
-			realpath -m --relative-base="$2" -- "$("${STAMPER_CYGPATH}" -u -- "$("${STAMPER_CYGPATH}" -w -- "$1")")"
+			printf -v "${__normalize_path__var}" "%s" "$(realpath -m --relative-base="${3}" -- "${__normalize_path__path}")"
 		fi
 	}
 fi
 if [ -n "${STAMPER_DOS2UNIX}" ]; then
 	function __git_filter_eols__
 	{
-		git --no-pager "$1" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
+		git --no-pager "${1}" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
 	}
 	function __cat_filter_eols__
 	{
-		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/$1" 2>/dev/null
+		"${STAMPER_DOS2UNIX}" --quiet <"${VERSION_ROOT_DIR}/${1}" 2>/dev/null
 	}
 else
 	function __git_filter_eols__
 	{
-		git --no-pager "$1" 2>/dev/null
+		git --no-pager "${1}" 2>/dev/null
 	}
 	function __cat_filter_eols__
 	{
-		cat "${VERSION_ROOT_DIR}/$1" 2>/dev/null
+		cat -- "${VERSION_ROOT_DIR}/${1}" 2>/dev/null
 	}
 fi
 
@@ -215,7 +289,7 @@ fi
 # check for changed directory
 #
 if [ -n "${STAMPER_CURRENT_DIR}" ]; then
-	STAMPER_CURRENT_DIR="$(__normalize_path__  "${STAMPER_CURRENT_DIR}")"
+	__normalize_path__  STAMPER_CURRENT_DIR  "${STAMPER_CURRENT_DIR}"
 	[ ! -d "${STAMPER_CURRENT_DIR}" ] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
 	pushd "${STAMPER_CURRENT_DIR}" >/dev/null 2>&1
 fi
@@ -293,7 +367,6 @@ function __VERBOSE_OFF__
 {
 	:
 }
-
 case "${STAMPER_VERBOSE}" in
 simple | extended | off)
 	alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
@@ -320,16 +393,15 @@ source "${STAMPER_SCRIPT_PATH}-config" 2>/dev/null
 # detect main git folders
 #
 __VERBOSE__ "Detect main folders and git submodule support"
-VERSION_ROOT_DIR="$(__git_filter_path__ rev-parse --show-toplevel 2>/dev/null)"
-VERSION_ROOT_DIR="$(readlink -f -- "${VERSION_ROOT_DIR%/}")"
-VERSION_GIT_DIR="$(__git_filter_path__ rev-parse --absolute-git-dir 2>/dev/null)"
+__git_filter_path__ VERSION_ROOT_DIR rev-parse --show-toplevel
 __VERBOSE__ "git rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
+__git_filter_path__ VERSION_GIT_DIR rev-parse --absolute-git-dir
 __VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 [ -n "${VERSION_ROOT_DIR}" -a -n "${VERSION_GIT_DIR}" ] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
 
 # if STAMPER_CURRENT_DIR was assigned by option, then folder was changed and VERSION_CURRENT_DIR becomes identical
-VERSION_CURRENT_DIR="$(readlink -m -- "$(pwd 2>/dev/null)" 2>/dev/null)"
-__VERBOSE__ "readlink -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\""
+VERSION_CURRENT_DIR="$(realpath -m -- "$(pwd 2>/dev/null)" 2>/dev/null)"
+__VERBOSE__ "realpath -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\""
 
 VERSION_HOOKS_DIR=""
 function __detect_hooks_dir__
@@ -341,7 +413,7 @@ function __detect_hooks_dir__
 	if [ -d "${VERSION_HOOKS_DIR}" ]; then
 		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	else
-		VERSION_HOOKS_DIR="$(__git_filter_path__ rev-parse --git-common-dir 2>/dev/null)/hooks"
+		__git_filter_path__ VERSION_HOOKS_DIR rev-parse --git-common-dir
 		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	fi
 	[ -d "${VERSION_HOOKS_DIR}" ] || VERSION_HOOKS_DIR=""
@@ -350,8 +422,8 @@ __detect_hooks_dir__ ""
 
 VERSION_SUBMOD_NAME=""
 VERSION_SUBMOD_PATH=""
-VERSION_SUPER_DIR="$(__git_filter_path__ rev-parse --show-superproject-working-tree 2>/dev/null)"
-__VERBOSE__ "__git_filter_path__ rev-parse --show-superproject-working-tree\n.   VERSION_SUPER_DIR=\"${VERSION_SUPER_DIR}\""
+__git_filter_path__ VERSION_SUPER_DIR rev-parse --show-superproject-working-tree
+__VERBOSE__ "git rev-parse --show-superproject-working-tree\n.   VERSION_SUPER_DIR=\"${VERSION_SUPER_DIR}\""
 if [ -z "${VERSION_SUPER_DIR}" ]; then
 	# we are out of submodule  OR  we are inside not initialized submodule
 	# in second case VERSION_ROOT_DIR and VERSION_GIT_DIR both are pointing to superproject folders
@@ -373,10 +445,16 @@ fi
 if [ -n "${VERSION_SUPER_DIR}" ]; then
 	# determine submodule name and path
 	__VERBOSE__ ".   Scan submodules\n.   git config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --null --get-regexp 'submodule\..*\.path'"
-	git --no-pager config --file="${VERSION_SUPER_DIR}/.gitmodules" --null --get-regexp 'submodule\..*\.path' 2>/dev/null |while IFS=$'\n' read -d $'\0' modname moddir ; do
+	# note: under windows may exist few unix-like nvironment at once; you may run some cygwin shell for example and call
+	# git-for-windows based on msys2, so full pathes in shell may mismatch with pathes used ny git
+	# (for example: /cygdrive/c/temp/test/.gitmodules vs /c/temp/test/.gitmodules)
+	# so do not use full pathes for git, use relative only; change current directory before run git.
+	pushd "${VERSION_SUPER_DIR}" >/dev/null 2>&1
+	git --no-pager config --file="./.gitmodules" --null --get-regexp 'submodule\..*\.path' 2>/dev/null \
+	| while IFS=$'\n' read -d $'\0' modname moddir ; do
 		modname="${modname#submodule.}"
 		modname="${modname%.path}"
-		modpath="$(readlink -m -- "${VERSION_SUPER_DIR}/${moddir}")"
+		modpath="${VERSION_SUPER_DIR}/${moddir}"
 		__VERBOSE__ ".   .   '${modname}' at folder '${moddir}' full path '${modpath}'"
 		if [ "${modpath}" == "${VERSION_CURRENT_DIR}" -o "${modpath}/" == "${VERSION_CURRENT_DIR:0:${#modpath}+1}" ]; then
 			# current folder is submodule folder or nested in ...
@@ -386,10 +464,10 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 			# initialize+update it if not done; this will create .git/modules/... hierarchy, so VERSION_GIT_DIR may be set to actual location
 			if [ "false" == "${VERSION_SUBMOD_OK}" ]; then
 				__VERBOSE__ ".   .   submodule was not updated yet, try do that\n.   .   git submodule update --init --force --recursive -- \"${modpath}\""
-				git submodule update --init --force --recursive -- "${modpath}" 1>&2
-				pushd "${modpath}" >/dev/null 2>&1
+				git submodule update --init --force --recursive -- "${moddir}" 1>&2
 				[ 0 -ne "$?" ] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
-				VERSION_GIT_DIR="$(__git_filter_path__ rev-parse --absolute-git-dir 2>/dev/null)"
+				pushd "${modpath}" >/dev/null 2>&1
+				__git_filter_path__ VERSION_GIT_DIR rev-parse --absolute-git-dir
 				__VERBOSE__ ".   .   git rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 				VERSION_ROOT_DIR="${modpath}"
 				__VERBOSE__ ".   .   change worktree directory\n.   .   .   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
@@ -402,6 +480,7 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 		unset moddir
 		unset modpath
 	done
+	popd >/dev/null 2>&1
 fi
 unset VERSION_SUBMOD_OK
 #
@@ -414,11 +493,11 @@ unset VERSION_SUBMOD_OK
 #
 function __normalize_local_path__
 {
-	local    local_temp_filename
-	declare -g "$1"
+	local    __normalize_local_path__filename
+	declare -g "${1}"
 
-	local_temp_filename="${2//\\//}"
-	printf -v "$1" '%s' "${local_temp_filename/#+(.\/|\/)/}"
+	__normalize_local_path__filename="${2//\\//}"
+	printf -v "${1}" '%s' "${__normalize_local_path__filename/#+(.\/|\/)/}"
 }
 
 #
@@ -432,11 +511,11 @@ function __READ_LF__
 	local	file
 
 	# note 1: always pass via dos2unix on reading from FS under windows because filters (sed, awk etc.) are eol-sensetive
-	case "$1" in
+	case "${1}" in
 	"/"*)
 		# abs path out of tree (note: mixed and widnows forms must be excluded by the caller logic
 		__VERBOSE__ "$([ -n "${STAMPER_DOS2UNIX}" ] && echo "dos2unix" || echo "cat") \"$1\"\n.   ... (external file)"
-		[ -n "${STAMPER_DOS2UNIX}" ] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat "$1" 2>/dev/null
+		[ -n "${STAMPER_DOS2UNIX}" ] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat -- "$1" 2>/dev/null
 		;;
 	*)
 		file="$1"
@@ -479,23 +558,23 @@ function __READ_LF__
 				# 3) alternative way to build combined file with our/their preference for collisions
 				#	is to use merged with collisions file and filter wanted parts by our script
 			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
+				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
 			else
 				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
 				# unmerged, deleted by them
-				__VERBOSE__ "git show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 "$awk_script"
+				__VERBOSE__ "__git_filter_eols__ show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
 			fi
 			;;
 		"UD "*)
 			# unmerged, deleted by them
-			__VERBOSE__ "git show -- \":2:${file}\"\n.   ..."
+			__VERBOSE__ "__git_filter_eols__ show -- \":2:${file}\"\n.   ..."
 			__git_filter_eols__ show -- ":2:${file}"
 			;;
 		"DU "*)
 			# unmerged, deleted by us
-			__VERBOSE__ "git show -- \":3:${file}\"\n.   ..."
+			__VERBOSE__ "__git_filter_eols__ show -- \":3:${file}\"\n.   ..."
 			__git_filter_eols__ show -- ":3:${file}"
 			;;
 		"DD "*)
@@ -506,8 +585,8 @@ function __READ_LF__
 			# on some commit hook (pre-commit, commit-msg, post-commit) conflicted files may become 'modified' after adding in stagged area
 			# in this case they may have '<<<...===...>>>' insertions
 			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__cat_filter_eols__ "${file}" |awk -v F=3 "$awk_script"
+				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
+				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
 			else
 				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found in worktree"
 			fi
@@ -515,7 +594,7 @@ function __READ_LF__
 		*)
 			# empty or some other
 			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
-				__VERBOSE__ "cat \"${VERSION_ROOT_DIR}/${file}\"\n.   ..."
+				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\"\n.   ..."
 				__cat_filter_eols__ "${file}"
 			else
 				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
@@ -536,8 +615,8 @@ function __STORE_LF__
 		;;
 	*)
 		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-		local dir="$(dirname "${path}")"
-		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+		local dir="${path%/*}"
+		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
 		cat >"${path}"
 		;;
@@ -553,8 +632,8 @@ function __STORE_CRLF__
 		;;
 	*)
 		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-		local dir="$(dirname "${path}")"
-		[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+		local dir="${path%/*}"
+		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
 		"$STAMPER_UNIX2DOS" --quiet >"${path}"
 		;;
@@ -571,12 +650,38 @@ if [ "Windows_NT" == "$OS" ]; then
 			;;
 		*)
 			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-			local dir="$(dirname "${path}")"
-			[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+			local dir="${path%/*}"
+			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
 			"$STAMPER_UNIX2DOS" --quiet >"${path}"
 			;;
 		esac
+	}
+	# __CHMOD__ mode path
+	function __CHMOD__
+	{
+		if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
+			# Cygwin or SFU/SUA: they support chmod but may store file
+			# permissions in wrong order (cygwin) or implement subset
+			# of available 'rwxrwxrwx' modes
+			local mode="${1}"
+			case "${mode,,}" in
+			a+x)
+				mode="770"
+				;;
+			a-x)
+				mode="660"
+				;;
+			a*)
+				mode="ug${1:1}"
+				;;
+			esac
+			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
+			chmod "${mode}" -- "${2}"
+		else
+			# assume unsupported operation, msys's chmod does nothing
+			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
+		fi
 	}
 else
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
@@ -589,12 +694,18 @@ else
 			;;
 		*)
 			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
-			local dir="$(dirname "${path}")"
-			[ -d "${dir}" ] || mkdir --parents "${dir}" 1>&2
+			local dir="${path%/*}"
+			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
 			cat >"${path}"
 			;;
 		esac
+	}
+	# __CHMOD__ mode path
+	function __CHMOD__
+	{
+		[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   chmod \"${1}\" -- \"${2}\""
+		chmod "${1}" -- "${2}"
 	}
 fi
 
@@ -731,6 +842,9 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
 		((cn++))
+		param="${param//+([[:space:]])/}"
+		value="${value/#+([[:space:]])/}"
+		value="${value/%+([[:space:]])/}"
 		eval "printf -v 'value' '%s' \"${value}\""
 		case "${param,,}" in
 		"" | "#"*)
@@ -842,7 +956,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				case "${temp_target}" in
 				"../"* | ?":/"*)
 					# outside of config folder  OR  windows-style absolute
-					temp_target="$(__normalize_path__ "${temp_target}" "${VERSION_CONFIG_DIR}")"
+					__normalize_path__  temp_target  "${temp_target}" "${VERSION_CONFIG_DIR}"
 					;;
 				*)
 					# nothing
@@ -1034,7 +1148,7 @@ for arg in "$@"; do
 				;;
 			"/"* | ?":/"* | "../"*)
 				# absolute or worktree-relative path, normalize drive-letter form and case
-				temp_target="$(__normalize_path__ "${arg}" "${VERSION_CONFIG_DIR}")"
+				__normalize_path__  temp_target  "${arg}"  "${VERSION_CONFIG_DIR}"
 				;;
 			*)
 				# any other path (change \ to / and strip leading ./ and / -- usefull for pathes given by stamper config)
@@ -1349,8 +1463,15 @@ if [ -z "${VERSION_AUTHORSHIP}" ]; then
 		if [ "Windows_NT" == "$OS" ]; then
 			util="$(which reg.exe 2>/dev/null)"
 			if [ -n "$util" ]; then
-				VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
-						| awk '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+				if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
+					# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
+					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
+							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+				else
+					# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
+					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
+							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+				fi
 				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
 			fi
 		else
@@ -1447,11 +1568,11 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 	# note 1: HEAD may contain text "SHA1"  or  "ref: refs/heads/branchname"
 	# note 2: this looks strange ("ref: ... syntax" means attached head, so git rev-parse ... must be OK) but ...
 	# note 3: fresh-created repo has HEAD equal to "ref: refs/heads/master" but head file ".git/refs/heads/master" is not exist
-	VERSION_BRANCH="$(awk 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
-	__VERBOSE__ "awk 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
+	VERSION_BRANCH="$(awk -v RS='[\r\n]+' 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
+	__VERBOSE__ "awk -v RS='[\\\\r\\\\n]+' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
 	if [ -z "${VERSION_BRANCH}" ]; then
 		if [ -n "${VERSION_SUBMOD_NAME}" ]; then
-			temp_branch="$(git --no-pager config --file="${VERSION_SUPER_DIR}/.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
+			temp_branch="$(pushd "${VERSION_SUPER_DIR}" >/dev/null 2>&1; git --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null; popd >/dev/null 2>&1)"
 			__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
 			if [ -n "${temp_branch}" ]; then
 				# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
@@ -1548,12 +1669,12 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		# ... somewhere this may work :(
 		util="$(which WMIC.exe 2>/dev/null)"
 		if [ -n "$util" ]; then
-			amend="$("$util" path win32_process where "Caption='git.exe'" get Commandline| awk '/--amend/ { print "true"; }')"
+			amend="$("$util" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
 		fi
 	else
 		# this may work under *nix... but windows :(
 		amend=""
-		temp="$(ps -f -p $PPID |awk 'BEGIN{ N=-1; } -1 == N { for (i=1;i<=NF;i++) if ( $i == "PPID" ) { N=i; break; } next; } { print $N; }')"
+		temp="$(ps -f -p $PPID |awk -v RS='[\r\n]+' 'BEGIN{ N=-1; } -1 == N { for (i=1;i<=NF;i++) if ( $i == "PPID" ) { N=i; break; } next; } { print $N; }')"
 		if [ -n "$temp" ]; then
 			if [ -f "/proc/$temp/cmdline" ]; then
 				__VERBOSE__ ".    look at /proc/$temp/cmdline"
@@ -1592,7 +1713,7 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 	# and detect changed in worktree non-target files - if ones exist then mark repo as dirty
 	__VERBOSE__ "git status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
-	awk 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
+	awk -v RS='[\r\n]+' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
          match( $0, /^..\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "C " ( A[2] == "" ? A[3] : A[2] ); next; }' | \
 	while read changed file; do
@@ -1637,7 +1758,7 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 	# all other hooks except pre-commit
 	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
-	awk 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
+	awk -v RS='[\r\n]+' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
          match( $0, /^..\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "C " ( A[2] == "" ? A[3] : A[2] ); next; }' | \
 	while read changed file; do
@@ -1714,7 +1835,10 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 			#
 			#   o p t i o n s
 			#
-			# verbose mode
+			# verbose mode, allowed values are:
+			#   'extended', 2
+			#   'true', 't', 'yes', 'y', 'set', 'ok', 'on', 'simple', 1
+			#   'false', 'f', 'no', 'n', 'none', 'notset', 'clean', 'off', 0
 			#verbose:         false
 			#
 			# abbreviation length
@@ -1755,7 +1879,7 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 			# the version textoize script
 			# it will be used to build VERSION_TEXT using other VERSION_* variables
 			# if not set, then use hardcoded v0.0.0-branch+ form, otherwise you may choose
-			# one of$(for f in ${STAMPER_SCRIPT_PATH}-textoize-*; do f=$(basename -- "$f"); echo -n " '${f#*-textoize-}'"; done)
+			# one of$(for f in ${STAMPER_SCRIPT_PATH}-textoize-*; do f=${f##*/}; echo -n " '${f#*-textoize-}'"; done)
 			#textoize:        default
 
 			#   p l u g i n s
@@ -1793,11 +1917,21 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	if [ "Windows_NT" == "$OS" ]; then
 		util="$(which reg.exe 2>/dev/null)"
 		if [ -n "$util" ]; then
-			temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\CurrentVersion" //t REG_SZ 2>/dev/null \
-					| awk '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
-						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
-						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
-						   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
+			if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
+				# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
+				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
+						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
+							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
+							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
+			else
+				# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
+				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ 2>/dev/null \
+						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
+							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
+							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
+			fi
 			__VERBOSE__ ".   this is windows; try \"$util\" to get os identification\n.      \"$temp\""
 		fi
 	else
@@ -1808,7 +1942,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 		fi
 		if [ -z "$temp" -a -f "/etc/os-release" ]; then
 			temp="$(cat "/etc/os-release" \
-					| awk -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
+					| awk -v RS='[\r\n]+' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
 									$1 == "NAME" { n=$2; }
 									$1 == "VERSION" { v=$2; }
 									END{ print gensub( "\"", "", "G", pn == "" ? n " " v : pn ); }')"
@@ -1817,7 +1951,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 		if [ -z "$temp" ]; then
 			util="$(which hostnamectl 2>/dev/null)"
 			if [ -n "$util" ]; then
-				temp="$(hostnamectl status |awk 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
+				temp="$(hostnamectl status |awk -v RS='[\r\n]+' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
 				__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
 			fi
 		fi
@@ -1959,8 +2093,8 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 						# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 						__VERBOSE__ "git check-ignore -- \":/:${target}\""
 						if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-							__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
-							git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
+							__VERBOSE__ ".    NON-GITIGNORED file\ngit add \":/:${target}\""
+							git --no-pager add --force -- ":/:${target}" >/dev/null
 						else
 							__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 						fi
@@ -1987,8 +2121,8 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 					__VERBOSE__ "git check-ignore -- \":/:${target}\""
 					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
-						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \"${VERSION_ROOT_DIR}/${target}\""
-						git --no-pager add --force -- "${VERSION_ROOT_DIR}/${target}" >/dev/null
+						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \":/:${target}\""
+						git --no-pager add --force -- ":/:${target}" >/dev/null
 					else
 						__VERBOSE__ ".    is GITIGNORED file -- do not add into repo"
 					fi
@@ -2129,7 +2263,7 @@ done)
 .gitignore      text eol=lf
 .gitattributes  text eol=lf
 .gitmodules     text eol=lf"
-	text_b="$(awk -e "${script}" <<<"${text_a}")"
+	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
 		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitattributes"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes" <<<"${text_b}"
@@ -2354,7 +2488,7 @@ ehthumbs.db
 		fi
 	fi
 
-	text_b="$(awk -e "${script}" <<<"${text_a}")"
+	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
 	if [ "${text_a}" != "${text_b}" ]; then
 		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitignore"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitignore" <<<"${text_b}"
@@ -2379,8 +2513,8 @@ function __update_this_hook_really__
 
 	case "${hook_action}" in
 	remove)
-		__VERBOSE__ ".   rm -f \"${hook_path}\"    ${description}"
-		rm -f "${hook_path}"
+		__VERBOSE__ ".   rm -f -- \"${hook_path}\"    ${description}"
+		rm -f -- "${hook_path}"
 		;;
 	setup)
 		__VERBOSE__ ".   store \"${hook}\"    ${description}"
@@ -2407,7 +2541,7 @@ if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
 fi
 exit 0
 " >"${hook_path}"
-			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			__CHMOD__ a+x "${hook_path}"
 			;;
 		post-checkout)
 			echo "#!/bin/sh
@@ -2435,7 +2569,7 @@ if [ \"\$3\" == \"1\" -a -z \"\$GIT_REFLOG_ACTION\" ]; then
 fi
 exit 0
 " >"${hook_path}"
-			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			__CHMOD__ a+x "${hook_path}"
 			;;
 		post-commit)
 			echo "#!/bin/sh
@@ -2469,7 +2603,7 @@ if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
 fi
 exit 0
 " >"${hook_path}"
-			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			__CHMOD__ a+x "${hook_path}"
 			;;
 		post-rewrite)
 			echo "#!/bin/sh
@@ -2503,7 +2637,7 @@ if [ \"\${1,,}\" == \"rebase\" ]; then
 fi
 exit 0
 " >"${hook_path}"
-			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			__CHMOD__ a+x "${hook_path}"
 			;;
 		post-merge)
 			echo "#!/bin/sh
@@ -2537,7 +2671,7 @@ if [ \"1\" != \"\$1\" ]; then
 fi
 exit \$RETVAL
 " >"${hook_path}"
-			if [ "Windows_NT" != "$OS" ]; then chmod a+x "${hook_path}"; fi
+			__CHMOD__ a+x "${hook_path}"
 			;;
 		*)
 			__VERBOSE__ ".   ERROR: UNSUPPORTED HOOK TYPE \"${hook}\" FOR \"${hook_path}\" ${description}"
@@ -2610,6 +2744,7 @@ function __update_this_hook__
 		# most .. not all
 		# post-commit, for example, waits for releasing stdout and stderr channels
 		# so we must execute async function within redirected output chennels
+		export -f __CHMOD__
 		__update_this_hook_async__ "$1" "$2" "$3" "$4" >/dev/null 2>&1 &
 		#
 		# note: nohup, disown does not resolve this trouble; they can detach current parent from async childs,
@@ -2659,7 +2794,7 @@ function __update_all_hooks__
 		if [ -f "${hook_path}" ]; then
 			# today 'stamper-'
 			hook_version="$(head -n 128 "${hook_path}" \
-					|awk   '
+					|awk -v RS='[\r\n]+' '
 						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[:._+-][0-9]+[:._+-][0-9]+[:._+-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 						/export\s+STAMPER_SUITE=".*"/ { print "stamper-UNKNOWN"; exit(0); }
 					')"

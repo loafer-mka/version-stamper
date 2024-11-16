@@ -54,7 +54,7 @@ END_OF_TEXT
 	"//-" | "//--")
 		;;
 	*)
-		[ "Windows_NT" != "${OS}" ] && chmod a+x "$1"
+		__CHMOD__ a+x "$1"
 		;;
 	esac
 }

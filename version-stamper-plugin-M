@@ -33,8 +33,12 @@ function __PLUGIN_M_GETVER__
 
 function __PLUGIN_M_CREATE__
 {
+	local classname="${1##*/}"
+	classname="${classname//+([^A-Za-z0-9_])/_}"
+	classname="${classname/#+(_)/}"
+	classname="${classname/%+(_)/}"
 	__STORE_CRLF__ "$1" <<END_OF_TEXT
-classdef $(basename -s .m -- "$1" | sed -r -e 's/\W/_/g; s/__+/_/g; s/_+$//; s/^_+//')
+classdef ${classname:-${VERSION_LEADER}VERSION${VERSION_TRAILER}}
 	properties (Constant)
 		${NAME_VERSION_ID} = hex2dec('${VERSION_ID}');
 		${VERSION_LEADER}VERSION_HEX${VERSION_TRAILER} = '0x${VERSION_ID}';

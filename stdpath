@@ -1,0 +1,375 @@
+#!/bin/bash
+# +--------------------------------------------------------------------+
+# | This Source Code Form is subject to the terms of the Mozilla       |
+# | Public License, v. 2.0. If a copy of the MPL was not distributed   |
+# | with this file, You can obtain one at http://mozilla.org/MPL/2.0/. |
+# +--------------------------------------------------------------------+
+#        email: Andrey Makarov <mka-at-mailru@mail.ru>
+# Project home: https://github.com/loafer-mka/version-stamper.git
+#
+#               Copyright (c) Andrey Makarov 2024
+
+if [ "function" != "$(type -t __STDPATH_FUNCTION__)" ]; then
+	unset __STDPATH_FUNCTION__
+	function __STDPATH_FUNCTION__
+	{
+		local -a pathes
+		local -a B
+		local a p r m d
+		local arg=""
+		local ref=""
+		local __stdpath_start_dir__=""
+		local var_name=""
+		local no_parse=0
+		local no_root=0
+		local base_path=""
+		local mode="unix"
+
+		for a in "${@}"; do
+			if [ 1 -eq ${no_parse} ]; then
+				pathes[${#pathes[@]}]="${a}"
+			elif [ -n "${ref}" ]; then
+				printf -v ${ref} "%s" "${a}"
+				arg=""
+				ref=""
+			else
+				case "${a}" in
+				-v=*)
+					var_name="${a:3}"
+					;;
+				--var=*)
+					var_name="${a:6}"
+					;;
+				-v | --var)
+					arg="${a}"
+					ref="var_name"
+					;;
+				-cd=*)
+					__stdpath_start_dir__="${a:4}"
+					;;
+				--directory=*)
+					__stdpath_start_dir__="${a:12}"
+					;;
+				-cd | --directory)
+					arg="${a}"
+					ref="__stdpath_start_dir__"
+					;;
+				-b=*)
+					base_path="${a:3}"
+					;;
+				--base=*)
+					base_path="${a:7}"
+					;;
+				-b | --base)
+					arg="${a}"
+					ref="base_path"
+					;;
+				-n | --no-root)
+					no_root=1
+					;;
+				-u | --unix)
+					mode="unix"
+					;;
+				-w | --windows)
+					mode="windows"
+					;;
+				-m | --mixed)
+					mode="mixed"
+					;;
+				--sfu | --sua)
+					mode="sua"
+					;;
+				--cygwin)
+					mode="cygwin"
+					;;
+				--msys | --mingw | --git)
+					mode="msys"
+					;;
+				--)
+					no_parse=1
+					;;
+				--version)
+					cat <<=EOF=
+stdpath v1.0
+This Source Code Form is subject to the terms of the Mozilla
+Public License, v. 2.0. If a copy of the MPL was not distributed
+with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+=EOF=
+					;;
+				-h | --help)
+					cat <<=EOF=
+Usage: stdpath [OPTION]... [--] [FILE...]
+Print the resolved absolute or relative file name;
+no checks for symlinks and/or existing path, analyse text only.
+If no 'FILE' arguments then read path from stdin.
+
+  -v=VAR, --var=VAR         assign result to variable var instead of
+                            printing to stdout
+  -cd=DIR, --directory=DIR  if 'FILE' path is relative then start with
+                            given 'DIR', i.e. interpret input path as
+                            'DIR/FILE'
+  -b=DIR, --base=DIR        print relative path starting from 'DIR'
+                            instead of absolute path by default
+  -n, --no-root             print empty string if path becomes '/'
+  -u, --unix                output path is in unix form (/foo/bar)
+  -w, --windows             output path is in windows form (c:\foo\bar)
+  -m, --mixed               output path is in mixed form (c:/foo/bar)
+  --sfu, --sua              output path is in SFU/SUA (/dev/fs/c/foo/bar)
+  --cygwin                  output path is in Cygwin (/cygdrive/c/foo/bar)
+  --msys, --mingw, --git    output path is in MSYS2 (/c/foo/bar)
+
+      --help     display this help and exit
+      --version  output version information and exit
+
+This script may be included by other script and then used as function
+'__STDPATH_FUNCTION__' without subshell execution.
+=EOF=
+					return 0
+					;;
+				*)
+					pathes[${#pathes[@]}]="${a}"
+					;;
+				esac
+			fi
+		done
+		if [ -n "${ref}" ]; then
+			echo "error: missing argument after ${arg}" >&2
+			return 1
+		fi
+		[ -n "${var_name}" ] && declare -gx ${var_name}
+
+		if [ -n "${__stdpath_start_dir__}" ]; then
+			# recursive call will reset '__stdpath_start_dir__' at first lines, on declaring variables
+			# so use 'temp_start_dir' to do not mix local and global declarations of __stdpath_start_dir__
+			local temp_start_dir=""
+			__STDPATH_FUNCTION__ -v=temp_start_dir -- "${__stdpath_start_dir__}"
+			__stdpath_start_dir__="${temp_start_dir}"
+		fi
+
+		function __split_path__ {
+			local p="${1}"
+			local p0="-${p}-"
+			local c
+			while [ -n "${p}" -a "${p}" != "${p0}" ]; do
+				p0="${p}"
+				c="${p%%/*}"
+				p="${p#*/}"
+				R[${#R[@]}+1]="${c}"
+			done
+		}
+		function __put_start_dir__ {
+			path_filled=0
+			[ -z "${__stdpath_start_dir__}" ] && __stdpath_start_dir__="$(pwd)"
+			__split_path__ "${__stdpath_start_dir__}"
+		}
+		function __parse_path__ {
+			local a n
+			local path_filled=1
+			local -a C
+			declare -ag R
+
+			__split_path__ "${1//\\/\/}"
+			for n in ${!R[@]}; do
+				C[n]="${R[n]}"
+				unset R[n]
+			done
+
+			for a in "${C[@]}"; do
+				case "${a}" in
+				.)	# skip
+					;;
+				..) # up
+					if [ 0 -eq ${path_filled} ]; then
+						[ 0 -ne ${#R[@]} ] && unset R[${#R[@]}]
+					else
+						[ 0 -eq ${#R[@]} ] && __put_start_dir__
+						unset R[${#R[@]}]
+						[ 0 -eq ${#R[@]} ] && path_filled=0
+					fi
+					;;
+				"") # skip intermediate empty blocks (aka "foo//bar") but remain leading - it marks root
+					if [ 0 -eq ${#R[@]} ]; then
+						path_filled=1
+						R[1]=""
+					fi
+					;;
+				?":"*)
+					path_filled=1
+					if [ 0 -eq ${#R[@]} ]; then
+						R[1]="${a}"
+					elif [ "${OS}" == "Windows_NT" ]; then
+						R[1]="${a}"
+						for ((n=2;n<=${#R[@]};n++)); do unset R[n]; done
+					else
+						R[${#R[@]}+1]="${a}"
+					fi
+					;;
+				*)
+					[ 0 -eq ${#R[@]} ] && __put_start_dir__
+					path_filled=1
+					R[${#R[@]}+1]="${a}"
+					;;
+				esac
+			done
+			[ 0 -eq ${#R[@]} -a 0 -ne ${path_filled} ] && __put_start_dir__
+			unset C
+		}
+
+		if [ -n "${base_path}" ]; then
+			local -a R
+			local n
+			__parse_path__ "${base_path}"
+			for n in ${!R[@]}; do B[n]="${R[n]}"; done
+			unset R
+		fi
+
+		if [ 0 -eq "${#pathes[@]}" ]; then
+			while read p; do
+				pathes[${#pathes[@]}]="${p}"
+			done
+		fi
+
+		for p in "${pathes[@]}"; do
+			local -a R
+
+			__parse_path__ "${p}"
+
+			if [ 0 -ne ${#B[@]} ]; then
+				# get relative path
+				local m
+				r=""
+				[ ${#R[@]} -le ${#B[@]} ] && m=${#R[@]} || m=${#B[@]}
+				for ((n=1;n<=m;n++)); do
+					if [ "${OS}" == "Windows_NT" ]; then
+						[ "${B[n],,}" != "${R[n],,}" ] && break
+					else
+						[ "${B[n]}" != "${R[n]}" ] && break
+					fi
+				done
+				if [ "${OS}" == "Windows_NT" -a 1 -eq ${n} ]; then
+					# chage drive letter, do not use relative path
+					:
+				else
+					m=${#B[@]}
+					for ((;n<=m;m--)); do r="${r}../"; done
+				fi
+				if [ ${n} -le ${#R[@]} ]; then
+					for ((;n<${#R[@]};n++)); do r="${r}${R[n]}/"; done
+					[ ${n} -le ${#R[@]} ] && r="${r}${R[${#R[@]}]}"
+				else
+					r="${r%/}"
+				fi
+				r="${r:-.}"
+			else
+				# get absolute path
+				r=""
+				for ((n=1;n<${#R[@]};n++)); do r="${r}${R[n]}/"; done
+				[ ${n} -le ${#R[@]} ] && r="${r}${R[${#R[@]}]}"
+				[ 0 -eq ${no_root} ] && r="${r:-/}"
+			fi
+			unset R
+			
+			case "${mode}" in
+			sua)
+				case "${r}" in
+				?:*)
+					d="${r:0:1}"
+					r="/dev/fs/${d,,}${r:2}"
+					;;
+				esac
+				r="${r//\\/\/}"
+				;;
+			cygwin)
+				case "${r}" in
+				?:*)
+					d="${r:0:1}"
+					r="/cygdrive/${d,,}${r:2}"
+					;;
+				esac
+				r="${r//\\/\/}"
+				;;
+			msys)
+				case "${r}" in
+				?:*)
+					d="${r:0:1}"
+					r="/${d,,}${r:2}"
+					;;
+				esac
+				r="${r//\\/\/}"
+				;;
+			unix)
+				case "${r}" in
+				?:*)
+					d="${r:0:1}"
+					if [ -d "/cygdrive" ]; then
+						r="/cygdrive/${d,,}${r:2}"
+					elif [ -d "/dev/fs" ]; then
+						r="/dev/fs/${d,,}${r:2}"
+					else
+						r="/${d,,}${r:2}"
+					fi
+					;;
+				esac
+				r="${r//\\/\/}"
+				;;
+			windows)
+				case "${r}" in
+				/dev/fs/?/*)
+					d="${r:8:1}"
+					r="${d^^}:${r:9}"
+					;;
+				/cygdrive/?/*)
+					d="${r:10:1}"
+					r="${d^^}:${r:11}"
+					;;
+				/?/*)
+					d="${r:1:1}"
+					r="${d^^}:${r:2}"
+					;;
+				?:*)
+					d="${r:0:1}"
+					r="${d^^}:${r:2}"
+					;;
+				esac
+				r="${r//\//\\}"
+				;;
+			mixed)
+				case "${r}" in
+				/dev/fs/?/*)
+					d="${r:8:1}"
+					r="${d,,}:${r:9}"
+					;;
+				/cygdrive/?/*)
+					d="${r:10:1}"
+					r="${d,,}:${r:11}"
+					;;
+				/?/*)
+					d="${r:1:1}"
+					r="${d,,}:${r:2}"
+					;;
+				?:*)
+					d="${r:0:1}"
+					r="${d,,}:${r:2}"
+					;;
+				esac
+				r="${r//\\/\/}"
+				;;
+			esac
+
+			if [ -n "${var_name}" ]; then
+				printf -v ${var_name} "%s" "${r}"
+				export ${var_name}
+			else
+				echo "${r}"
+			fi
+		done
+		return 0
+	}
+fi
+
+if [ "stdpath" == "${0##*/}" ]; then
+	__STDPATH_FUNCTION__ "${@}"
+	exit $?
+else
+	export -f __STDPATH_FUNCTION__
+fi

@@ -23,67 +23,10 @@ shopt -s extglob
 # use aliases (to allow __VERBOSE__ switching)
 shopt -s expand_aliases
 
-function STAMPER_CYGPATH
-{
-	declare -g ${1}
-	local stamper_cygpath_path="${3}"
-	local stamper_cygpath_drive
+source ${STAMPER_SCRIPT_PATH%/*}/stdpath
 
-	stamper_cygpath_path="${stamper_cygpath_path//+(\/)\//\/}";		stamper_cygpath_path="${stamper_cygpath_path//+(\\)\\/\\}"
-	stamper_cygpath_path="${stamper_cygpath_path/#+(\.\/)/.\/}";	stamper_cygpath_path="${stamper_cygpath_path/#+(\.\\)/.\\}"
-	stamper_cygpath_path="${stamper_cygpath_path//\.\/\.\./..}";	stamper_cygpath_path="${stamper_cygpath_path/#\.\\\.\./..}"
-	case "${2,,}" in
-	-d | -w | d | w | dos | win | windows)
-		case "${stamper_cygpath_path}" in
-		"/dev/fs/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:8:1}:${stamper_cygpath_path:9}"
-			;;
-		"/cygdrive/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:10:1}:${stamper_cygpath_path:11}"
-			;;
-		"/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:1:1}:${stamper_cygpath_path:2}"
-			;;
-		esac
-		stamper_cygpath_path="${stamper_cygpath_path//+(\/)/\\}"
-		;;
-	-m | m | mixed)
-		case "${stamper_cygpath_path}" in
-		"/dev/fs/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:8:1}:${stamper_cygpath_path:9}"
-			;;
-		"/cygdrive/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:10:1}:${stamper_cygpath_path:11}"
-			;;
-		"/"?"/"*)
-			stamper_cygpath_path="${stamper_cygpath_path:1:1}:${stamper_cygpath_path:2}"
-			;;
-		esac
-		stamper_cygpath_path="${stamper_cygpath_path//+(\\)/\/}"
-		;;
-	-u | u | unix)
-		case "${stamper_cygpath_path}" in
-		?:*)
-			stamper_cygpath_drive="${stamper_cygpath_path:0:1}"
-			stamper_cygpath_drive="${stamper_cygpath_drive,,}"
-			if [ -d "/cygdrive" ]; then
-				stamper_cygpath_path="/cygdrive/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
-			elif [ -d "/dev/fs" ]; then
-				stamper_cygpath_path="/dev/fs/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
-			else
-				stamper_cygpath_path="/${stamper_cygpath_drive}${stamper_cygpath_path:2}"
-			fi
-			;;
-		esac
-		stamper_cygpath_path="${stamper_cygpath_path//+(\\)/\/}"
-		;;
-	*)
-		;;
-	esac
-	printf -v "${1}" "%s" "${stamper_cygpath_path}"
-}
 if [ "Windows_NT" == "${OS}" ]; then
-	STAMPER_CYGPATH  STAMPER_SCRIPT_PATH  unix  "${STAMPER_SCRIPT_PATH}"
+	__STDPATH_FUNCTION__  --var STAMPER_SCRIPT_PATH  --mixed  "${STAMPER_SCRIPT_PATH}"
 fi
 
 # load stamper's version information
@@ -223,48 +166,7 @@ unset an
 #         same shit is for cd/pwd, pushd/popd, realpath, readlink ... :(
 #         the only twin (input_path -> windows_path -> unix_path convertion will
 #         normalize drive letter case.
-if [ "Windows_NT" == "${OS}" ]; then
-	function __git_filter_path__
-	{
-		local __git_filter_path__var="${1}"
-		local __git_filter_path__path
-		declare -g ${__git_filter_path__var}
-		shift
-		STAMPER_CYGPATH ${__git_filter_path__var} unix "$(git --no-pager "$@" 2>/dev/null)"
-	}
-	function __normalize_path__
-	{
-		local __normalize_path__var="${1}"
-		local __normalize_path__path
-		declare -g ${__normalize_path__var}
-		STAMPER_CYGPATH __normalize_path__path unix "${2}"
-		if [ -z "${3}" ]; then
-			printf -v "${__normalize_path__var}" "%s" "$(realpath -m -- "${__normalize_path__path}")"
-		else
-			printf -v "${__normalize_path__var}" "%s" "$(realpath -m --relative-base="${3}" -- "${__normalize_path__path}")"
-		fi
-	}
-else
-	function __git_filter_path__
-	{
-		local __git_filter_path__var="${1}"
-		local __git_filter_path__path
-		declare -g ${__git_filter_path__var}
-		shift
-		printf -v "${__git_filter_path__var}" "%s" "$(git --no-pager "$@" 2>/dev/null)"
-	}
-	function __normalize_path__
-	{
-		local __normalize_path__var="${1}"
-		local __normalize_path__path="${2}"
-		declare -g ${__normalize_path__var}
-		if [ -z "${3}" ]; then
-			printf -v "${__normalize_path__var}" "%s" "$(realpath -m -- "${__normalize_path__path}")"
-		else
-			printf -v "${__normalize_path__var}" "%s" "$(realpath -m --relative-base="${3}" -- "${__normalize_path__path}")"
-		fi
-	}
-fi
+# so use own path-normalization script 'stdpath'
 if [ -n "${STAMPER_DOS2UNIX}" ]; then
 	function __git_filter_eols__
 	{
@@ -289,7 +191,8 @@ fi
 # check for changed directory
 #
 if [ -n "${STAMPER_CURRENT_DIR}" ]; then
-	__normalize_path__  STAMPER_CURRENT_DIR  "${STAMPER_CURRENT_DIR}"
+#	__normalize_path__  STAMPER_CURRENT_DIR  "${STAMPER_CURRENT_DIR}"
+	__STDPATH_FUNCTION__ --var STAMPER_CURRENT_DIR --mixed "${STAMPER_CURRENT_DIR}"
 	[ ! -d "${STAMPER_CURRENT_DIR}" ] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
 	pushd "${STAMPER_CURRENT_DIR}" >/dev/null 2>&1
 fi
@@ -393,15 +296,49 @@ source "${STAMPER_SCRIPT_PATH}-config" 2>/dev/null
 # detect main git folders
 #
 __VERBOSE__ "Detect main folders and git submodule support"
-__git_filter_path__ VERSION_ROOT_DIR rev-parse --show-toplevel
+git rev-parse --show-toplevel 2>/dev/null | __STDPATH_FUNCTION__ --var VERSION_ROOT_DIR --mixed
 __VERBOSE__ "git rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
-__git_filter_path__ VERSION_GIT_DIR rev-parse --absolute-git-dir
+git rev-parse --absolute-git-dir 2>/dev/null | __STDPATH_FUNCTION__ --var VERSION_GIT_DIR --mixed
 __VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 [ -n "${VERSION_ROOT_DIR}" -a -n "${VERSION_GIT_DIR}" ] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
-
 # if STAMPER_CURRENT_DIR was assigned by option, then folder was changed and VERSION_CURRENT_DIR becomes identical
-VERSION_CURRENT_DIR="$(realpath -m -- "$(pwd 2>/dev/null)" 2>/dev/null)"
-__VERBOSE__ "realpath -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\""
+# NOTE: git reports --show-toplevel and --absolute-git-dir after resolving symlinks, so
+# we must use realpath to get resolved path too and then filter it manually to normal form
+VERSION_CURRENT_DIR="$(pwd 2>/dev/null)"
+if [ "${OS}" == "Windows_NT" ]; then
+	case "${VERSION_CURRENT_DIR,,}" in
+	"/cygdrive/"?"/"*)
+		STAMPER_PATH_TYPE="cygwin"
+		;;
+	"/dev/fs/"?"/"*)
+		STAMPER_PATH_TYPE="sua"
+		;;
+	"/"?"/"*)
+		STAMPER_PATH_TYPE="msys"
+		;;
+	*)
+		for temp in /usr/bin/msys-*.dll /usr/bin/cygwin*.dll /bin/msys-*.dll /bin/cygwin*.dll; do
+			case "${temp,,}" in
+			"/usr/bin/msys-*.dll" | "/usr/bin/cygwin*.dll" | "/bin/msys-*.dll" | "/bin/cygwin*.dll")
+				;;
+			*"bin/msys-"*)
+				STAMPER_PATH_TYPE="msys"
+				break
+				;;
+			*"bin/cygwin"*)
+				STAMPER_PATH_TYPE="cygwin"
+				break
+				;;
+			esac
+		done
+		[ -z "${STAMPER_PATH_TYPE}" ] && STAMPER_PATH_TYPE="unix"
+		;;
+	esac
+else
+	STAMPER_PATH_TYPE="unix"
+fi
+__STDPATH_FUNCTION__ --var VERSION_CURRENT_DIR --mixed -- "$(realpath -m -- "${VERSION_CURRENT_DIR}" 2>/dev/null)"
+__VERBOSE__ "realpath -m -- \"\$(pwd)\"\n.   VERSION_CURRENT_DIR=\"${VERSION_CURRENT_DIR}\"\n.   STAMPER_PATH_TYPE=\"${STAMPER_PATH_TYPE}\""
 
 VERSION_HOOKS_DIR=""
 function __detect_hooks_dir__
@@ -413,7 +350,7 @@ function __detect_hooks_dir__
 	if [ -d "${VERSION_HOOKS_DIR}" ]; then
 		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	else
-		__git_filter_path__ VERSION_HOOKS_DIR rev-parse --git-common-dir
+		git rev-parse --git-common-dir 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_HOOKS_DIR --mixed
 		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	fi
 	[ -d "${VERSION_HOOKS_DIR}" ] || VERSION_HOOKS_DIR=""
@@ -422,7 +359,7 @@ __detect_hooks_dir__ ""
 
 VERSION_SUBMOD_NAME=""
 VERSION_SUBMOD_PATH=""
-__git_filter_path__ VERSION_SUPER_DIR rev-parse --show-superproject-working-tree
+git rev-parse --show-superproject-working-tree 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_SUPER_DIR --mixed
 __VERBOSE__ "git rev-parse --show-superproject-working-tree\n.   VERSION_SUPER_DIR=\"${VERSION_SUPER_DIR}\""
 if [ -z "${VERSION_SUPER_DIR}" ]; then
 	# we are out of submodule  OR  we are inside not initialized submodule
@@ -455,8 +392,13 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 		modname="${modname#submodule.}"
 		modname="${modname%.path}"
 		modpath="${VERSION_SUPER_DIR}/${moddir}"
+		temp="${VERSION_CURRENT_DIR}"
+		if [ "${OS}" == "Windows_NT" ]; then
+			modpath="${modpath,,}"
+			temp="${temp,,}"
+		fi
 		__VERBOSE__ ".   .   '${modname}' at folder '${moddir}' full path '${modpath}'"
-		if [ "${modpath}" == "${VERSION_CURRENT_DIR}" -o "${modpath}/" == "${VERSION_CURRENT_DIR:0:${#modpath}+1}" ]; then
+		if [ "${modpath}" == "${temp}" -o "${modpath}/" == "${temp:0:${#modpath}+1}" ]; then
 			# current folder is submodule folder or nested in ...
 			VERSION_SUBMOD_NAME="${modname}"
 			VERSION_SUBMOD_PATH="${moddir}"
@@ -467,7 +409,7 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 				git submodule update --init --force --recursive -- "${moddir}" 1>&2
 				[ 0 -ne "$?" ] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
 				pushd "${modpath}" >/dev/null 2>&1
-				__git_filter_path__ VERSION_GIT_DIR rev-parse --absolute-git-dir
+				git  rev-parse --absolute-git-dir 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_GIT_DIR --mixed
 				__VERBOSE__ ".   .   git rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
 				VERSION_ROOT_DIR="${modpath}"
 				__VERBOSE__ ".   .   change worktree directory\n.   .   .   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
@@ -476,9 +418,7 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 			fi
 			break
 		fi
-		unset modname
-		unset moddir
-		unset modpath
+		unset modname moddir modpath temp
 	done
 	popd >/dev/null 2>&1
 fi
@@ -660,7 +600,12 @@ if [ "Windows_NT" == "$OS" ]; then
 	# __CHMOD__ mode path
 	function __CHMOD__
 	{
-		if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
+		case "${STAMPER_PATH_TYPE}" in
+		msys)
+			# assume unsupported operation, msys's chmod does nothing
+			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
+			;;
+		*)
 			# Cygwin or SFU/SUA: they support chmod but may store file
 			# permissions in wrong order (cygwin) or implement subset
 			# of available 'rwxrwxrwx' modes
@@ -678,10 +623,8 @@ if [ "Windows_NT" == "$OS" ]; then
 			esac
 			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
 			chmod "${mode}" -- "${2}"
-		else
-			# assume unsupported operation, msys's chmod does nothing
-			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
-		fi
+			;;
+		esac
 	}
 else
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
@@ -805,7 +748,8 @@ if [ -n "${STAMPER_CURRENT_DIR}" ]; then
 	# of .gitattributes, .gitignore, and .version-stamper config files
 	# and their content.
 	VERSION_CONFIG_DIR="${VERSION_CURRENT_DIR}"
-	VERSION_CONFIG_PREFIX="$(realpath -m --relative-base="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_DIR}")"
+	__STDPATH_FUNCTION__ --var VERSION_CONFIG_PREFIX --base "${VERSION_ROOT_DIR}" --mixed -- "${VERSION_CONFIG_DIR}"
+	
 	case "${VERSION_CONFIG_PREFIX}" in
 	"/"* | "../"**)
 		DIE 2 "Wrong target directory \"${STAMPER_CURRENT_DIR}\" outside of repository tree \"${VERSION_ROOT_DIR}\""
@@ -837,9 +781,15 @@ VERSION_CONFIG_PATH="${VERSION_CONFIG_DIR}/${VERSION_CONFIG_NAME}"
 # like as "${VERSION_ROOT_DIR}${VERSION_CONFIG_PREFIX}"
 #
 
-__VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\" (full path: \"${VERSION_CONFIG_PATH}\")"
+__VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}\"
+.   VERSION_CONFIG_PATH=\"${VERSION_CONFIG_PATH}\"
+.   VERSION_CONFIG_DIR=\"${VERSION_CONFIG_DIR}\"
+.   VERSION_CONFIG_PREFIX=\"${VERSION_CONFIG_PREFIX}\"
+.   VERSION_CONFIG_NAME=\"${VERSION_CONFIG_NAME}\""
+
 if [ -r "${VERSION_CONFIG_PATH}" ]; then
 	((cn=0))
+	VERSION_CONFIG_MISSING=""
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
 		((cn++))
 		param="${param//+([[:space:]])/}"
@@ -952,11 +902,11 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				temp_target="//${value}"
 				;;
 			*)
-				__normalize_local_path__ "temp_target"  "${value}"
+				temp_target="${value/#+(.\/|\/)/}"
 				case "${temp_target}" in
 				"../"* | ?":/"*)
 					# outside of config folder  OR  windows-style absolute
-					__normalize_path__  temp_target  "${temp_target}" "${VERSION_CONFIG_DIR}"
+					__STDPATH_FUNCTION__ --var temp_target --directory "${VERSION_CONFIG_DIR}" --mixed -- "${temp_target}"
 					;;
 				*)
 					# nothing
@@ -1023,6 +973,9 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			;;
 		esac
 	done
+else
+	__VERBOSE__ ".   It is not readable"
+	VERSION_CONFIG_MISSING=" not found"
 fi
 
 #
@@ -1146,13 +1099,13 @@ for arg in "$@"; do
 				# replace with special value which cannot be after path normalization
 				temp_target="//${arg}"
 				;;
-			"/"* | ?":/"* | "../"*)
+			/* | ?:/* | ../*)
 				# absolute or worktree-relative path, normalize drive-letter form and case
-				__normalize_path__  temp_target  "${arg}"  "${VERSION_CONFIG_DIR}"
+				__STDPATH_FUNCTION__ --var temp_target --base "${VERSION_CONFIG_DIR}" --mixed -- "${arg}"
 				;;
 			*)
 				# any other path (change \ to / and strip leading ./ and / -- usefull for pathes given by stamper config)
-				__normalize_local_path__ "temp_target" "${arg}"
+				__STDPATH_FUNCTION__ --var temp_target --base "${VERSION_CONFIG_DIR}" --mixed -- "${VERSION_CONFIG_DIR}/${arg/#+(.\/|\/)/}"
 				;;
 			esac
 			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" -a "//-" != "${temp_target}" -a "//--" != "${temp_target}" ]; then
@@ -1463,15 +1416,18 @@ if [ -z "${VERSION_AUTHORSHIP}" ]; then
 		if [ "Windows_NT" == "$OS" ]; then
 			util="$(which reg.exe 2>/dev/null)"
 			if [ -n "$util" ]; then
-				if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
-					# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
-					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
-							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
-				else
+				case "${STAMPER_PATH_TYPE}" in
+				msys)
 					# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
 					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
 							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
-				fi
+					;;
+				*)
+					# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
+					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
+							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+					;;
+				esac
 				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
 			fi
 		else
@@ -1497,10 +1453,7 @@ fi
 # Print now (after getting actual verbose mode) detected parameters at current point:
 #
 __VERBOSE__ "
-VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\"  (git worktree)
-VERSION_CONFIG_DIR=\"${VERSION_CONFIG_DIR}\"  (root of relative pathes in args/configs)
-VERSION_CONFIG_PREFIX=\"${VERSION_CONFIG_PREFIX}\"
-Config file$( [ -f "${VERSION_CONFIG_PATH}" ] || echo " not found" ): \"${VERSION_CONFIG_PATH}\"
+Config file${VERSION_CONFIG_MISSING}: \"${VERSION_CONFIG_PATH}\"
 .   verbose= \"${STAMPER_VERBOSE}\"
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
 .   leader= \"${VERSION_LEADER}\"
@@ -1917,21 +1870,24 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	if [ "Windows_NT" == "$OS" ]; then
 		util="$(which reg.exe 2>/dev/null)"
 		if [ -n "$util" ]; then
-			if [ -d "/cygdrive" -o -d "/dev/fs" ]; then
-				# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
-				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
-						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
-							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
-							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
-							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
-			else
+			case "${STAMPER_PATH_TYPE}" in
+			msys)
 				# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
 				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ 2>/dev/null \
 						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
 							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
 							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
 							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
-			fi
+				;;
+			*)
+				# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
+				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
+						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
+							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
+							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
+			   ;;
+			esac
 			__VERBOSE__ ".   this is windows; try \"$util\" to get os identification\n.      \"$temp\""
 		fi
 	else
@@ -2901,7 +2857,7 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 			# version-stamper is installed and is used from install location
 			STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
 		else
-			STAMPER_SCRIPT_CMD="$(realpath -m --relative-base="${VERSION_ROOT_DIR}" -- "${STAMPER_SCRIPT_PATH}")"
+			__STDPATH_FUNCTION__ --var STAMPER_SCRIPT_CMD --base "${VERSION_ROOT_DIR}" --mixed -- "${STAMPER_SCRIPT_PATH}"
 			[[ ${STAMPER_SCRIPT_CMD} =~ ^/ ]] || STAMPER_SCRIPT_CMD="./${STAMPER_SCRIPT_CMD}"
 		fi
 		__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""

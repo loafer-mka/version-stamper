@@ -63,7 +63,7 @@ B[DIR_B]="$(echo "$(ls -1 ./clone-e/sub1)")"
 	-a "sub1" == "${B[VERSION_SUBMOD_PATH]}" \
 	-a "" == "${A[DIR_A]}"                -a "" == "${B[DIR_A]}" \
 	-a "README.txt" == "${A[DIR_B]}"      -a "README.txt" == "${A[DIR_B]}" \
-] || DIE 1 "[FAIL]  $0  WRONG DATA"
+] || DIE 1 "[FAIL]  $0   WRONG DATA"
 
 [ "true" == "$(HOOKS_EXIST clone-e/.git/modules/ORIGIN_ONE-U0)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub0"
 [ "true" == "$(HOOKS_EXIST clone-e/.git/modules/ORIGIN_ONE-U)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub1"
@@ -111,7 +111,7 @@ B[DIR_B]="$(ls ./clone-e/sub3)"
 	-a "sub3" == "${B[VERSION_SUBMOD_PATH]}" \
 	-a "" == "${A[DIR_A]}"                -a "" == "${B[DIR_A]}" \
 	-a "README.txt" == "${A[DIR_B]}"      -a "README.txt" == "${A[DIR_B]}" \
-] || DIE 1 "[FAIL]  $0  WRONG DATA"
+] || DIE 1 "[FAIL]  $0   WRONG DATA"
 
 [ "true" == "$(HOOKS_EXIST clone-e/.git/modules/ORIGIN-ONE_N)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub2"
 [ "true" == "$(HOOKS_EXIST clone-e/.git/modules/ORIGIN-F)" ] && DIE 1 "[FAIL]  $0   UNWANTED HOOK FOUND FOR clone-e/sub3"

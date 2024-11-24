@@ -234,7 +234,7 @@ version stamp, you need to change or add the corresponding plugin.
 If one project uses many subprojects in separate repositories, it may
 happen that several different "stamps" from different subprojects must
 be used simultaneously. To avoid confusion with matching identifiers
-(for example, VERSION_TEXT) of different stamps, these identifiers can
+(for example, `VERSION_TEXT`) of different stamps, these identifiers can
 be modified by adding specific prefixes and/or suffixes to them, for
 example, `YOURPROJECT_VERSION_TEXT` or `VERSION_TEXT_YOURPROJECT`.
 This and some other things are achieved by editing the .version-stamp
@@ -460,6 +460,19 @@ Available options:
   `VERSION_SUBMOD_NAME` and `VERSION_SUBMOD_PATH` match empty strings
   unless stamps are created for a project submodule. In this case, the
   `VERSION_SUPER_DIR` parameter also becomes non-empty.
+
+  Note: the `VERSION_TEXT`, `VERSION_BRANCH`, `VERSION_DIRTY`,
+  `VERSION_DATE`, `VERSION_HOSTINFO`, `VERSION_AUTHORSHIP`,
+  `VERSION_DECLARATION`, `VERSION_SUBMOD_NAME`, `VERSION_SUBMOD_PATH`,
+  `VERSION_COMMIT_AUTHOR`, and `VERSION_COMMIT_EMAIL` strings may contain
+  some special symbols, those somewhere must be escaped or duplicated etc.
+  So each of these symbols has special 'buddies' ended with `_QUOTED` and
+  `_RQREG` suffixes (for example: `VERSION_TEXT`, `VERSION_TEXT_QUOTED`
+  and `VERSION_TEXT_RQREG`) which may be used in scripts when substituted
+  into qouted string (`..._QUOTED`) or into right part of enquoted `sed`
+  extended regular expression (`..._RQREG`), i.e. into expressions like
+  `sed --regexp-extended -e "s/.../...${VERSION_TEXT_RQREG.../"`, see
+  plugins' sources as examples of usage.
 
 - `-c` or `--config`<br/>
   Create a .version-stamper configuration file if it is missing and

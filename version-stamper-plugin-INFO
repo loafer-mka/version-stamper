@@ -25,9 +25,6 @@ function __PLUGIN_INFO_ATTRIB__
 
 function __PLUGIN_INFO_GETVER__
 {
-	#sed --binary --regexp-extended --silent \
-	#	-e "s/^(\s*)([A-Za-z][0-9]+[:._+-][0-9]+[:._+-][0-9]+[:._+-][[:graph:]]+)(\s.*)$/\\2/p"
-	#
 	# always replace - this allows replace 'pre-commit' version file (with p:SHA) with new one
 	echo ""
 }

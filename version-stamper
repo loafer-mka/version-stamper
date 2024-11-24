@@ -9,6 +9,41 @@
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
 #               Copyright (c) Andrey Makarov 2023
+#
+# check presence of utilities
+#
+function DIE
+{
+	local	RES=$1
+	shift
+	echo -e "ERROR: $*" >&2
+	exit $RES
+}
+type -p awk >/dev/null || DIE 100 "The 'awk' must be installed and available from script"
+type -p cat >/dev/null || DIE 100 "The 'cat' must be installed and available from script"
+type -p chmod >/dev/null || DIE 100 "The 'chmod' must be installed and available from script"
+type -p cut >/dev/null || DIE 100 "The 'cut' must be installed and available from script"
+type -p date >/dev/null || DIE 100 "The 'date' must be installed and available from script"
+type -p git >/dev/null || DIE 100 "The 'git' must be installed and available from script"
+type -p ls >/dev/null || DIE 100 "The 'ls' must be installed and available from script"
+type -p mkdir >/dev/null || DIE 100 "The 'mkdir' must be installed and available from script"
+type -p realpath >/dev/null || DIE 100 "The 'realpath' must be installed and available from script"
+type -p rm >/dev/null || DIE 100 "The 'rm' must be installed and available from script"
+type -p sed >/dev/null || DIE 100 "The 'sed' must be installed and available from script"
+type -p sleep >/dev/null || DIE 100 "The 'sleep' must be installed and available from script"
+type -p which >/dev/null || DIE 100 "The 'which' must be installed and available from script"
+type -p xargs >/dev/null || DIE 100 "The 'xargs' must be installed and available from script"
+STAMPER_DOS2UNIX="$(type -p dos2unix 2>/dev/null)"
+STAMPER_UNIX2DOS="$(type -p unix2dos 2>/dev/null)"
+if [ "Windows_NT" == "$OS" ]; then
+	[ -n "${STAMPER_DOS2UNIX}" ] || DIE 100 "The 'dos2unix' must be installed and available from script"
+	[ -n "${STAMPER_UNIX2DOS}" ] || DIE 100 "The 'unix2dos' must be installed and available from script"
+	# posix utilities need in linux-style EOLs (lf), so we will transfer all files via dos2unix.
+	# under windows this is mandatry; under linux we will do same because some source files may have crlf EOLs
+else
+	type -p whoami >/dev/null || DIE 100 "The 'whoami' must be installed and available from script"
+	type -p ps >/dev/null || DIE 100 "The 'ps' must be installed and available from script"
+fi
 
 STAMPER_SCRIPT_PATH="$(readlink -f -- "$0")"
 
@@ -50,42 +85,6 @@ export STAMPER_SUITE="Version stamper suite ${STAMPER_VERSION_TEXT}"
 # title for echoing somewere
 STAMPER_SCRIPT_NAME="${STAMPER_SCRIPT_PATH##*/}"
 STAMPER_SUITE_TITLE="The ${STAMPER_SUITE}. ${STAMPER_VERSION_DECLARATION}\nVersion files generator \"${STAMPER_SCRIPT_NAME}\""
-
-#
-# check presence of utilities
-#
-function DIE
-{
-	local	RES=$1
-	shift
-	echo -e "ERROR: $*" >&2
-	exit $RES
-}
-[ -n "$(which awk 2>/dev/null)" ] || DIE 100 "The 'awk' must be installed and available from script"
-[ -n "$(which cat 2>/dev/null)" ] || DIE 100 "The 'cat' must be installed and available from script"
-[ -n "$(which chmod 2>/dev/null)" ] || DIE 100 "The 'chmod' must be installed and available from script"
-[ -n "$(which cut 2>/dev/null)" ] || DIE 100 "The 'cut' must be installed and available from script"
-[ -n "$(which date 2>/dev/null)" ] || DIE 100 "The 'date' must be installed and available from script"
-[ -n "$(which git 2>/dev/null)" ] || DIE 100 "The 'git' must be installed and available from script"
-[ -n "$(which ls 2>/dev/null)" ] || DIE 100 "The 'ls' must be installed and available from script"
-[ -n "$(which mkdir 2>/dev/null)" ] || DIE 100 "The 'mkdir' must be installed and available from script"
-[ -n "$(which realpath 2>/dev/null)" ] || DIE 100 "The 'realpath' must be installed and available from script"
-[ -n "$(which rm 2>/dev/null)" ] || DIE 100 "The 'rm' must be installed and available from script"
-[ -n "$(which sed 2>/dev/null)" ] || DIE 100 "The 'sed' must be installed and available from script"
-[ -n "$(which sleep 2>/dev/null)" ] || DIE 100 "The 'sleep' must be installed and available from script"
-[ -n "$(which which 2>/dev/null)" ] || DIE 100 "The 'which' must be installed and available from script"
-[ -n "$(which xargs 2>/dev/null)" ] || DIE 100 "The 'xargs' must be installed and available from script"
-STAMPER_DOS2UNIX="$(which dos2unix 2>/dev/null)"
-STAMPER_UNIX2DOS="$(which unix2dos 2>/dev/null)"
-if [ "Windows_NT" == "$OS" ]; then
-	[ -n "${STAMPER_DOS2UNIX}" ] || DIE 100 "The 'dos2unix' must be installed and available from script"
-	[ -n "${STAMPER_UNIX2DOS}" ] || DIE 100 "The 'unix2dos' must be installed and available from script"
-	# posix utilities need in linux-style EOLs (lf), so we will transfer all files via dos2unix.
-	# under windows this is mandatry; under linux we will do same because some source files may have crlf EOLs
-else
-	[ -n "$(which whoami 2>/dev/null)" ] || DIE 100 "The 'whoami' must be installed and available from script"
-	[ -n "$(which ps 2>/dev/null)" ] || DIE 100 "The 'ps' must be installed and available from script"
-fi
 
 #
 # Split arg parsing in two passes: a) preliminary now; b) rest of options
@@ -454,7 +453,12 @@ function __READ_LF__
 	case "${1}" in
 	"/"*)
 		# abs path out of tree (note: mixed and widnows forms must be excluded by the caller logic
-		__VERBOSE__ "$([ -n "${STAMPER_DOS2UNIX}" ] && echo "dos2unix" || echo "cat") \"$1\"\n.   ... (external file)"
+		case "${STAMPER_VERBOSE,,}" in
+		simple | extended)
+			# avoid complex string expansion using subshell execution if result is unused
+			__VERBOSE__ "$([ -n "${STAMPER_DOS2UNIX}" ] && echo "dos2unix" || echo "cat") \"$1\"\n.   ... (external file)"
+			;;
+		esac
 		[ -n "${STAMPER_DOS2UNIX}" ] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat -- "$1" 2>/dev/null
 		;;
 	*)
@@ -655,20 +659,48 @@ fi
 #
 # Translate path to use inside regex
 #
-function __AS_REGEX__
+# value encoded for substitution into awk's block regexp 
+# /block-regexp/ { ... }
+function __AS_REGEX_IN__
 {
-	arg="$@"
-	arg="${arg// /\\\\\\ }"
+	local arg
+	local var="${1}"
+	declare -g ${var}
+	shift
+	arg="${@// /\\\\\\ }"
 	arg="${arg//\//\\\/}"
 	arg="${arg//./\\.}"
-	echo "${arg}"
+	printf -v "${var}" "${arg}"
 }
-function __AS_REGEX_DQ__
+#
+# value encoded for substitution into right part of "sed --regexp-extended 's/.../right-part/'"
+function __AS_REGEX_OUT__
 {
-	arg="$@"
+	local arg
+	local var="${1}"
+	declare -g ${var}
+	shift
+	arg="${@//\\/\\\\\\\\}"
 	arg="${arg//\//\\\/}"
+	arg="${arg//&/\\&}"
+	printf -v "${var}" "${arg}"
+}
+#
+# var_QUOTED : encoded for substitution into quoted C-style string
+# var_RQREG : right part of enquoted 'sed --regexp-extended "s/.../right-part/"'
+function __AS_PREPARED_VALUES__
+{
+	local arg
+	local var="${1}"
+	declare -g ${var}_QUOTED
+	shift
+	arg="${@//\\/\\\\\\\\}"
 	arg="${arg//\"/\\\\\"}"
-	echo "${arg}"
+	printf -v "${var}_QUOTED" "${arg}"
+	arg="${arg//\\/\\\\}"
+	arg="${arg//\//\\\/}"
+	arg="${arg//&/\\&}"
+	printf -v "${var}_RQREG" "${arg}"
 }
 
 #
@@ -1401,7 +1433,11 @@ if [ -z "${VERSION_GIT_USER}" ]; then
 		VERSION_GIT_USER="Unknown User"
 	fi
 fi
-[ -z "${VERSION_GIT_EMAIL}" ] && VERSION_GIT_EMAIL="$(echo "${VERSION_GIT_USER}" |sed -e 's/\W/_/g')@localhost"
+if [ -z "${VERSION_GIT_EMAIL}" ]; then
+	VERSION_GIT_EMAIL="${VERSION_GIT_USER//+([!A-Za-z0-9_])/_}@localhost"
+	VERSION_GIT_EMAIL="${VERSION_GIT_EMAIL/#_/}"
+	VERSION_GIT_EMAIL="${VERSION_GIT_EMAIL/%_/}@localhost"
+fi
 __VERBOSE__ "git config user.name and user.email\n.   VERSION_GIT_USER=${VERSION_GIT_USER}\n.   VERSION_GIT_EMAIL=${VERSION_GIT_EMAIL}"
 
 __VERBOSE__ "Check and update missing information (authorship and copyright/copyleft)"
@@ -1416,18 +1452,8 @@ if [ -z "${VERSION_AUTHORSHIP}" ]; then
 		if [ "Windows_NT" == "$OS" ]; then
 			util="$(which reg.exe 2>/dev/null)"
 			if [ -n "$util" ]; then
-				case "${STAMPER_PATH_TYPE}" in
-				msys)
-					# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
-					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ //v RegisteredOrganization 2>/dev/null \
-							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
-					;;
-				*)
-					# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
-					VERSION_AUTHORSHIP=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
-							| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
-					;;
-				esac
+				VERSION_AUTHORSHIP=$(MSYS_NO_PATHCONV=1 "$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
+						| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
 				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
 			fi
 		else
@@ -1533,20 +1559,30 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 	__VERBOSE__ "awk -v RS='[\\\\r\\\\n]+' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
 	if [ -z "${VERSION_BRANCH}" ]; then
 		if [ -n "${VERSION_SUBMOD_NAME}" ]; then
-			temp_branch="$(pushd "${VERSION_SUPER_DIR}" >/dev/null 2>&1; git --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null; popd >/dev/null 2>&1)"
+			temp_branch="$(git -C "${VERSION_SUPER_DIR}" --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
 			__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
 			if [ -n "${temp_branch}" ]; then
 				# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
 				temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --contains=HEAD 2>/dev/null)"
 				# if temp non-empty then HEAD is somewhere on assigned branch
-				__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
+				case "${STAMPER_VERBOSE,,}" in
+				simple | extended)
+					# avoid complex string expansion using subshell execution if result is unused
+					__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
+					;;
+				esac
 				if [ -z "${temp}" ]; then
 					# may be branch heads are in past -- some commits were made on detached HEAD in we are in future?
 					# use git rev-list to read history of commits from HEAD down to initial commit
 					# and check if local or remote branch with '${temp_branch}' name if on way ...
 					# git for-each-ref prints all SHAs of matched branches, grep filters history
 					temp="$(git --no-pager rev-list HEAD | grep $(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null))"
-					__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git rev-list HEAD | grep \$(git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
+					case "${STAMPER_VERBOSE,,}" in
+					simple | extended)
+						# avoid complex string expansion using subshell execution if result is unused
+						__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git rev-list HEAD | grep \$(git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
+						;;
+					esac
 					# some like may be made by 'git log --ancestry-path OLD..NEW' ... but assigned branch may be as local as remote and we may have few SHAs matched same name
 					# so ... did few attempts for few kinds of branches or use grep to check few variants at once
 				fi
@@ -1630,7 +1666,7 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		# ... somewhere this may work :(
 		util="$(which WMIC.exe 2>/dev/null)"
 		if [ -n "$util" ]; then
-			amend="$("$util" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
+			amend="$(MSYS_NO_PATHCONV=1 "$util" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
 		fi
 	else
 		# this may work under *nix... but windows :(
@@ -1779,7 +1815,9 @@ esac
 __VERBOSE__ "\nExecute wanted operations -- create config, generate version file, print info etc"
 if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 	if [ -n "${VERSION_SUBMOD_NAME}" -a -z "${VERSION_LEADER}" ]; then
-		VERSION_LEADER="$(echo "${VERSION_SUBMOD_NAME}" | sed -r -e 's/\W/_/g; s/__+/_/g; s/_+$//; s/^_+//')"
+		VERSION_LEADER="${VERSION_SUBMOD_NAME//+([!A-Za-z0-9_])/_}"
+		VERSION_LEADER="${VERSION_LEADER/#+_/}"
+		VERSION_LEADER="${VERSION_LEADER/%+_/}"
 		VERSION_LEADER="${VERSION_LEADER^^}_"
 	fi
 	if [ "true" == "${STAMPER_SETUP_CONFIG}" ]; then
@@ -1870,7 +1908,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	VERSION_HOSTINFO="${USER:-$USERNAME}"
 	VERSION_HOSTINFO="${VERSION_HOSTINFO//\\//}"
 	__VERBOSE__ "Build VERSION_HOSTINFO description\n.   user=\"${VERSION_HOSTINFO}\""
-	temp="${HOSTNAME:-$($(which hostname 2>/dev/null))}"
+	temp="${HOSTNAME:-$(hostname 2>/dev/null)}"
 	temp="${temp:-localhost}"
 	__VERBOSE__ ".   host=\"$temp\""
 	VERSION_HOSTINFO="${VERSION_HOSTINFO}@${temp}"
@@ -1878,24 +1916,11 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	if [ "Windows_NT" == "$OS" ]; then
 		util="$(which reg.exe 2>/dev/null)"
 		if [ -n "$util" ]; then
-			case "${STAMPER_PATH_TYPE}" in
-			msys)
-				# supose mingw/msys; the path translation is not trivial, '/c'-like optons becomes 'c:' so double '/' characters on call
-				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" //t REG_SZ 2>/dev/null \
-						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
-							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
-							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
-							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
-				;;
-			*)
-				# cygwin or SFU/SUA; the path translation is simple, '/c'-like optons remains untranslated
-				temp=$("$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
-						| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
-							   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
-							   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
-							   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
-			   ;;
-			esac
+			temp=$(MSYS_NO_PATHCONV=1 "$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
+					| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
+						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
+						   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
 			__VERBOSE__ ".   this is windows; try \"$util\" to get os identification\n.      \"$temp\""
 		fi
 	else
@@ -1981,6 +2006,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
 	NAME_VERSION_MAJOR="${VERSION_LEADER}VERSION_MAJOR${VERSION_TRAILER}"
 	NAME_VERSION_MINOR="${VERSION_LEADER}VERSION_MINOR${VERSION_TRAILER}"
+	NAME_VERSION_SUFFIX="${VERSION_LEADER}VERSION_SUFFIX${VERSION_TRAILER}"
 	NAME_VERSION_BUILD="${VERSION_LEADER}VERSION_BUILD${VERSION_TRAILER}"
 	NAME_VERSION_BRANCH="${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}"
 	NAME_VERSION_DIRTY="${VERSION_LEADER}VERSION_DIRTY${VERSION_TRAILER}"
@@ -1996,6 +2022,18 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	NAME_VERSION_SUBMOD_PATH="${VERSION_LEADER}VERSION_SUBMOD_PATH${VERSION_TRAILER}"
 	NAME_VERSION_COMMIT_AUTHOR="${VERSION_LEADER}VERSION_COMMIT_AUTHOR${VERSION_TRAILER}"
 	NAME_VERSION_COMMIT_EMAIL="${VERSION_LEADER}VERSION_COMMIT_EMAIL${VERSION_TRAILER}"
+
+	__AS_PREPARED_VALUES__ VERSION_TEXT "${VERSION_TEXT}"
+	__AS_PREPARED_VALUES__ VERSION_BRANCH "${VERSION_BRANCH}"
+	__AS_PREPARED_VALUES__ VERSION_DIRTY "${VERSION_DIRTY}"
+	__AS_PREPARED_VALUES__ VERSION_DATE "${VERSION_DATE}"
+	__AS_PREPARED_VALUES__ VERSION_HOSTINFO "${VERSION_HOSTINFO}"
+	__AS_PREPARED_VALUES__ VERSION_AUTHORSHIP "${VERSION_AUTHORSHIP}"
+	__AS_PREPARED_VALUES__ VERSION_DECLARATION "${VERSION_DECLARATION}"
+	__AS_PREPARED_VALUES__ VERSION_SUBMOD_NAME "${VERSION_SUBMOD_NAME}"
+	__AS_PREPARED_VALUES__ VERSION_SUBMOD_PATH "${VERSION_SUBMOD_PATH}"
+	__AS_PREPARED_VALUES__ VERSION_COMMIT_AUTHOR "${VERSION_COMMIT_AUTHOR}"
+	__AS_PREPARED_VALUES__ VERSION_COMMIT_EMAIL "${VERSION_COMMIT_EMAIL}"
 
 	__VERBOSE__ "\nRun all configured plugins"
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
@@ -2182,34 +2220,48 @@ fi
 # check/update .gitignore and/or .gitattributes
 #
 if [ 0 -ne ${#STAMPER_FILL_ATTRIB[@]} ]; then
-	script="
-BEGIN {
-$(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do ((n++)); echo -e "    F$n = 0;"; done)
-}
-$(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
-	((n++))
-	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	r="$(__AS_REGEX__ "${f}")"
-	echo -e "/^\\s*#\\s*${r}\\s+/ {"
-	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }   ${A}\"; }"
-	echo -e "    next;"
-	echo -e "}"
-	echo -e "/^\\s*${r}\\s+/ {"
-	echo -e "    if ( 0 == F$n ) {"
-	echo -e "        for ( i = 2; i <= NF; i++ ) if ( \"$A\" == \$i ) F$n = 1;"
-	echo -e "        if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }   ${A}\"; } else { print; }"
-	echo -e "    }"
-	echo -e "    next;"
-	echo -e "}"
-done)
-    { print; }
-END {
-$(n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
-	((n++))
-	A="${STAMPER_FILL_ATTRIB[${f}]}"
-	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }   ${A}\";"
-done)
+	declare -i n
+	r=""
+
+	script="BEGIN {"
+	n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
+		((n=n+1))
+		script="${script}
+    F${n} = 0;"
+    done
+	script="${script}
 }"
+	n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
+		((n=n+1))
+		A="${STAMPER_FILL_ATTRIB[${f}]}"
+		__AS_REGEX_IN__ r "${f}"
+		script="${script}
+/^\\s*#\\s*${r}\\s+/ {
+    if ( 0 == F${n} ) { F${n} = 1; print \"${f// /\\\\\\ }   ${A}\"; }
+	next;
+}
+/^\\s*${r}\\s+/ {
+    if ( 0 == F${n} ) {
+        for ( i = 2; i <= NF; i++ ) if ( \"$A\" == \$i ) F${n} = 1;
+        if ( 0 == F$n ) { F${n} = 1; print \"${f// /\\\\\\ }   ${A}\"; } else { print; }
+    }
+    next;
+}"
+	done
+	script="${script}
+    { print; }
+END {"
+	n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
+		((n=n+1))
+		A="${STAMPER_FILL_ATTRIB[${f}]}"
+		script="${script}
+    if ( F${n} == 0 ) print \"${f// /\\\\\\ }   ${A}\";"
+	done
+	script="${script}
+}"
+__VERBOSE__ "${script}"
+	unset r n f
+
 	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes")"
 	[ -z "${text_a}" ] && text_a="#
 # text=true   text    assume tex file, allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
@@ -2242,29 +2294,39 @@ done)
 fi
 
 if [ 0 != ${#STAMPER_FILL_IGNORE[@]} ]; then
-	script="
-BEGIN {
-$(for n in "${!STAMPER_FILL_IGNORE[@]}"; do echo -e "    F$n = 0;"; done)
-}
-$(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	f="${STAMPER_FILL_IGNORE[${n}]}"
-	r="$(__AS_REGEX__ "${f}")"
-	echo -e "/^\\s*#\\s*${r}\\s*\$/ {"
-	echo -e "    if ( 0 == F$n ) { F$n = 1; print \"${f// /\\\\\\ }\"; }"
-	echo -e "    next;"
-	echo -e "}"
-	echo -e "/^\\s*${r}\\s*\$/ {"
-	echo -e "    if ( 0 == F$n ) { F$n = 1; print; }"
-	echo -e "    next;"
-	echo -e "}"
-done)
-    { print; }
-END {
-$(for n in "${!STAMPER_FILL_IGNORE[@]}"; do
-	f="${STAMPER_FILL_IGNORE[${n}]}"
-	echo -e "    if ( F$n == 0 ) print \"${f// /\\\\\\ }\";"
-done)
+	r=""
+	script="BEGIN {"
+	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
+		script="${script}
+    F${n} = 0;"
+    done
+	script="${script}
 }"
+	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
+		f="${STAMPER_FILL_IGNORE[${n}]}"
+		__AS_REGEX_IN__ r "${f}"
+		script="${script}
+/^\\s*#\\s*${r}\\s*\$/ {
+    if ( 0 == F${n} ) { F${n} = 1; print \"${f// /\\\\\\ }\"; }
+    next;
+}
+/^\\s*${r}\\s*\$/ {
+    if ( 0 == F${n} ) { F${n} = 1; print; }
+    next;
+}"
+	done
+	script="${script}
+    { print; }
+END {"
+	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
+		f="${STAMPER_FILL_IGNORE[${n}]}"
+		script="${script}
+    if ( F${n} == 0 ) print \"${f// /\\\\\\ }\";"
+	done
+	script="${script}
+}"
+	unset r n f
+__VERBOSE__ "${script}"
 
 	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitignore")"
 	if [ -z "${text_a}" ]; then
@@ -2653,8 +2715,8 @@ exit \$RETVAL
 #
 function __update_this_hook_async__
 {
-	local	usleep="$(which usleep)"
-	local	ps="$(which ps)"
+	local	usleep="$(which usleep 2>/dev/null)"
+	local	ps="$(which ps 2>/dev/null)"
 
 	# stdout and stderr both are redirected, so change __VERBOSE__ to use logger 
 	if [ "Windows_NT" == "$OS" ]; then
@@ -2670,7 +2732,12 @@ function __update_this_hook_async__
 	fi
 	ps="${ps:-ps}"
 	if [ "Windows_NT" == "$OS" ]; then
-		__VERBOSE__ "... Wait for pid $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+		case "${STAMPER_VERBOSE,,}" in
+		simple | extended)
+			# avoid complex string expansion using subshell execution if result is unused
+			__VERBOSE__ "... Wait for pid $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+			;;
+		esac
 		while "${ps}" -p "${STAMPER_HOOK_PID}" >/dev/null 2>&1 && [ "0" == "${PIPESTATUS[0]}" ]; do
 			# sleep 1 ms
 			if [ -n "${usleep}" ]; then
@@ -2679,9 +2746,19 @@ function __update_this_hook_async__
 				sleep 0.001s
 			fi
 		done
-		__VERBOSE__ "... Done waiting $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+		case "${STAMPER_VERBOSE,,}" in
+		simple | extended)
+			# avoid complex string expansion using subshell execution if result is unused
+			__VERBOSE__ "... Done waiting $("${ps}" -s -p "${STAMPER_HOOK_PID}" |sed -n -e '/STIME/n;p')"
+			;;
+		esac
 	else
-		__VERBOSE__ "... Wait for pid $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+		case "${STAMPER_VERBOSE,,}" in
+		simple | extended)
+			# avoid complex string expansion using subshell execution if result is unused
+			__VERBOSE__ "... Wait for pid $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+			;;
+		esac
 		while "${ps}" --pid "${STAMPER_HOOK_PID}" >/dev/null 2>&1 ; do
 			# sleep 1 ms
 			if [ -n "${usleep}" ]; then
@@ -2690,7 +2767,12 @@ function __update_this_hook_async__
 				sleep 0.001s
 			fi
 		done
-		__VERBOSE__ "... Done waiting $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+		case "${STAMPER_VERBOSE,,}" in
+		simple | extended)
+			# avoid complex string expansion using subshell execution if result is unused
+			__VERBOSE__ "... Done waiting $("${ps}" --no-headers -o pid,comm --pid "${STAMPER_HOOK_PID}")"
+			;;
+		esac
 	fi
 	__update_this_hook_really__ "$1" "$2" "$3" "$4"
 }

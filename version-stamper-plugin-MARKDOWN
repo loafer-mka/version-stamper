@@ -8,6 +8,22 @@
 #
 #               Copyright (c) Andrey Makarov 2023
 
+function __MARKDOWN_FILTER__
+{
+	local arg
+	local var="${1}"
+	declare -g ${var}
+	shift
+	arg="${@//\\/\\\\\\\\}"
+	arg="${arg//_/\\_}"
+	arg="${arg//#/\\#}"
+	arg="${arg//\*/\\*}"
+	arg="${arg//&/\\&}"
+	arg="${arg//</&lt;}"
+	arg="${arg//>/&gt;}"
+	printf -v ${var} "${arg}"
+}
+
 function __PLUGIN_MARKDOWN_NOTICE__
 {
 	echo "   plugin-MARKDOWN   markdown-style version infomation; .md extension; eol=native"
@@ -31,23 +47,32 @@ function __PLUGIN_MARKDOWN_GETVER__
 
 function __PLUGIN_MARKDOWN_CREATE__
 {
-	status="${VERSION_DIRTY:-clean}"
+	local status="${VERSION_DIRTY:-clean}"
 	status="${status/+/dirty}"
+	local branch text date author email hostinfo version
+	__MARKDOWN_FILTER__ text "${VERSION_TEXT}"
+	__MARKDOWN_FILTER__ branch "${VERSION_BRANCH}"
+	__MARKDOWN_FILTER__ date "${VERSION_DATE}"
+	__MARKDOWN_FILTER__ author "${VERSION_COMMIT_AUTHOR}"
+	__MARKDOWN_FILTER__ email "${VERSION_COMMIT_EMAIL}"
+	__MARKDOWN_FILTER__ hostinfo "${VERSION_HOSTINFO}"
+	__MARKDOWN_FILTER__ version "${VERSION_DECLARATION}"
+	
 	__STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
 		### Version data:
 
-		| Version | ${VERSION_TEXT} |
+		| Version | ${text} |
 		|--------:|:----------------|
 		| Version ID | 0x${VERSION_ID} |
-		| Branch | ${VERSION_BRANCH} |
-		| Date | ${VERSION_DATE} |
+		| Branch | ${branch} |
+		| Date | ${date} |
 		| Worktree | ${status} |
-		| Commiter | ${VERSION_COMMIT_AUTHOR} &lt;${VERSION_COMMIT_EMAIL}&gt; |
+		| Commiter | ${author} &lt;${email}&gt; |
 		| Commit SHA | ${VERSION_SHA_LONG} |
-		| Build Host | ${VERSION_HOSTINFO} |
+		| Build Host | ${hostinfo} |
 		| Unix Time | ${VERSION_UNIXTIME} |
 		| Folder | \`${VERSION_ROOT_DIR}\` |
-		| | ${VERSION_DECLARATION} |
+		| | ${version} |
 
 		### Last log records:
 

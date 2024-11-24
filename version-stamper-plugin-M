@@ -34,6 +34,7 @@ function __PLUGIN_M_GETVER__
 function __PLUGIN_M_CREATE__
 {
 	local classname="${1##*/}"
+	classname="${classname%.*}"
 	classname="${classname//+([^A-Za-z0-9_])/_}"
 	classname="${classname/#+(_)/}"
 	classname="${classname/%+(_)/}"
@@ -42,15 +43,15 @@ classdef ${classname:-${VERSION_LEADER}VERSION${VERSION_TRAILER}}
 	properties (Constant)
 		${NAME_VERSION_ID} = hex2dec('${VERSION_ID}');
 		${VERSION_LEADER}VERSION_HEX${VERSION_TRAILER} = '0x${VERSION_ID}';
-		${NAME_VERSION_TEXT} = '${VERSION_TEXT}';
-		${NAME_VERSION_BRANCH} = '${VERSION_BRANCH}${VERSION_DIRTY}';
-		${NAME_VERSION_DATE} = '${VERSION_DATE}';
+		${NAME_VERSION_TEXT} = '${VERSION_TEXT//\'/\'\'}';
+		${NAME_VERSION_BRANCH} = '${VERSION_BRANCH//\'/\'\'}${VERSION_DIRTY}';
+		${NAME_VERSION_DATE} = '${VERSION_DATE//\'/\'\'}';
 		${NAME_VERSION_SHORTDATE} = '${VERSION_SHORTDATE}';
 		${NAME_VERSION_UNIXTIME} = ${VERSION_UNIXTIME};
-		${NAME_VERSION_HOSTINFO} = '${VERSION_HOSTINFO}';
-		${NAME_VERSION_AUTHORSHIP} = '${VERSION_AUTHORSHIP}';
-		${NAME_VERSION_DECLARATION} = '${VERSION_DECLARATION}';
-		${NAME_VERSION_COMMIT_AUTHOR} = '${VERSION_COMMIT_AUTHOR} <${VERSION_COMMIT_EMAIL}>';
+		${NAME_VERSION_HOSTINFO} = '${VERSION_HOSTINFO//\'/\'\'}';
+		${NAME_VERSION_AUTHORSHIP} = '${VERSION_AUTHORSHIP//\'/\'\'}';
+		${NAME_VERSION_DECLARATION} = '${VERSION_DECLARATION//\'/\'\'}';
+		${NAME_VERSION_COMMIT_AUTHOR} = '${VERSION_COMMIT_AUTHOR//\'/\'\'} <${VERSION_COMMIT_EMAIL//\'/\'\'}>';
 		% if information below is based on parent commit's hash then prefix 'p:' will be used
 		${NAME_VERSION_SHA_SHORT} = '${VERSION_SHA_SHORT}';
 		${NAME_VERSION_SHA_LONG} = '${VERSION_SHA_LONG}';
@@ -72,15 +73,15 @@ function __PLUGIN_M_MODIFY__
 	sed --binary --regexp-extended \
 		-e "s/^(\s*)(\w*VERSION_ID\w*)(\s*=\s*hex2dec\(\s*')([^']*)('\s*\)\s*;.*)$/\\1${NAME_VERSION_ID}\\3${VERSION_ID}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_HEX\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${VERSION_LEADER}VERSION_HEX${VERSION_TRAILER}\\30x${VERSION_ID}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_TEXT\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT//\//\\\/}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_BRANCH\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH//\//\\\/}${VERSION_DIRTY}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_DATE\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_DATE}\\3${VERSION_DATE}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_TEXT\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT_RQREG//\'/\'\'}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_BRANCH\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH_RQREG//\'/\'\'}${VERSION_DIRTY}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_DATE\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_DATE}\\3${VERSION_DATE_RQREG//\'/\'\'}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_SHORTDATE\w*)(\s*=\s*')([^']+)('\s*;.*)$/\\1${NAME_VERSION_SHORTDATE}\\3${VERSION_SHORTDATE}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_UNIXTIME\w*)(\s*=\s*)([0-9]+)(\s*;.*)$/\\1${NAME_VERSION_UNIXTIME}\\3${VERSION_UNIXTIME}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_HOSTINFO\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_HOSTINFO}\\3${VERSION_HOSTINFO//\//\\\/}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_AUTHORSHIP\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_AUTHORSHIP}\\3${VERSION_AUTHORSHIP//\//\\\/}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_DECLARATION\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_DECLARATION}\\3${VERSION_DECLARATION//\//\\\/}\\5/" \
-		-e "s/^(\s*)(\w*VERSION_COMMIT_AUTHOR\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_COMMIT_AUTHOR}\\3${VERSION_COMMIT_AUTHOR//\//\\\/} <${VERSION_COMMIT_EMAIL//\//\\\/}>\\5/" \
+		-e "s/^(\s*)(\w*VERSION_HOSTINFO\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_HOSTINFO}\\3${VERSION_HOSTINFO_RQREG//\'/\'\'}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_AUTHORSHIP\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_AUTHORSHIP}\\3${VERSION_AUTHORSHIP_RQREG//\'/\'\'}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_DECLARATION\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_DECLARATION}\\3${VERSION_DECLARATION_RQREG//\'/\'\'}\\5/" \
+		-e "s/^(\s*)(\w*VERSION_COMMIT_AUTHOR\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_COMMIT_AUTHOR}\\3${VERSION_COMMIT_AUTHOR_RQREG//\'/\'\'} <${VERSION_COMMIT_EMAIL_RQREG//\'/\'\'}>\\5/" \
 		-e "s/^(\s*)(\w*VERSION_SHA_SHORT\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_SHA_SHORT}\\3${VERSION_SHA_SHORT}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_SHA_LONG\w*)(\s*=\s*')([^']*)('\s*;.*)$/\\1${NAME_VERSION_SHA_LONG}\\3${VERSION_SHA_LONG}\\5/" \
 	| __STORE_CRLF__ "$1"

@@ -42,9 +42,9 @@ function __PLUGIN_BAT_CREATE__
 		set ${NAME_VERSION_SHORTDATE}=${VERSION_SHORTDATE}
 		set ${NAME_VERSION_UNIXTIME}=${VERSION_UNIXTIME}
 		set ${NAME_VERSION_BRANCH}=${VERSION_BRANCH}${VERSION_DIRTY}
-		set ${NAME_VERSION_HOSTINFO}=${VERSION_HOSTINFO}
-		set ${NAME_VERSION_AUTHORSHIP}=${VERSION_AUTHORSHIP}
-		set ${NAME_VERSION_DECLARATION}=${VERSION_DECLARATION}
+		for /F "tokens=*" %%a in ("${VERSION_HOSTINFO}") do set ${NAME_VERSION_HOSTINFO}=%%a
+		for /F "tokens=*" %%a in ("${VERSION_AUTHORSHIP}") do set ${NAME_VERSION_AUTHORSHIP}=%%a
+		for /F "tokens=*" %%a in ("${VERSION_DECLARATION}") do set ${NAME_VERSION_DECLARATION}=%%a
 		for /F "tokens=*" %%a in ("${VERSION_COMMIT_AUTHOR} <${VERSION_COMMIT_EMAIL}>") do set ${NAME_VERSION_COMMIT_AUTHOR}=%%a
 		rem if information below is based on parent commit's hash then prefix 'p:' will be used
 		set ${NAME_VERSION_SHA_SHORT}=${VERSION_SHA_SHORT}
@@ -56,15 +56,18 @@ function __PLUGIN_BAT_MODIFY__
 {
 	sed --binary --regexp-extended \
 		-e "s/^(\s*set\s+)(\w*VERSION_ID\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_ID}\\30x${VERSION_ID}/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_TEXT\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT//\//\\\/}/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_BRANCH\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH//\//\\\/}${VERSION_DIRTY}/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_DATE\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_DATE}\\3${VERSION_DATE}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_TEXT\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT_RQREG//\\\\/\\}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_BRANCH\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_BRANCH}\\3${VERSION_BRANCH_RQREG//\\\\/\\}${VERSION_DIRTY}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_DATE\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_DATE}\\3${VERSION_DATE_RQREG//\\\\/\\}/" \
 		-e "s/^(\s*set\s+)(\w*VERSION_SHORTDATE\w*\s*)(=\s*)([0-9]+)(.*)$/\\1${NAME_VERSION_SHORTDATE}\\3${VERSION_SHORTDATE}\\5/" \
 		-e "s/^(\s*set\s+)(\w*VERSION_UNIXTIME\w*\s*)(=\s*)([0-9]+)(.*)$/\\1${NAME_VERSION_UNIXTIME}\\3${VERSION_UNIXTIME}\\5/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_HOSTINFO\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_HOSTINFO}\\3${VERSION_HOSTINFO//\//\\\/}/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_AUTHORSHIP\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_AUTHORSHIP}\\3${VERSION_AUTHORSHIP//\//\\\/}/" \
-		-e "s/^(\s*set\s+)(\w*VERSION_DECLARATION\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_DECLARATION}\\3${VERSION_DECLARATION//\//\\\/}/" \
-		-e "s/^(\s*for\s+.*\s+in\s+\(\s*\")(.+)(\"\s*\)\s+do\s+set\s+)(\w*VERSION_COMMIT_AUTHOR\w*\s*)(=.*)$/\\1${VERSION_COMMIT_AUTHOR//\//\\\/} <${VERSION_COMMIT_EMAIL//\//\\\/}>\\3${NAME_VERSION_COMMIT_AUTHOR}\\5/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_HOSTINFO\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_HOSTINFO}\\3${VERSION_HOSTINFO_RQREG//\\\\/\\}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_AUTHORSHIP\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_AUTHORSHIP}\\3${VERSION_COMMIT_AUTHOR_RQREG//\\\\/\\}/" \
+		-e "s/^(\s*set\s+)(\w*VERSION_DECLARATION\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_DECLARATION}\\3${VERSION_DECLARATION_RQREG//\\\\/\\}/" \
+		-e "s/^(\s*for\s+.*\s+in\s+\(\s*\")(.+)(\"\s*\)\s+do\s+set\s+)(\w*VERSION_HOSTINFO\w*\s*)(=.*)$/\\1${VERSION_HOSTINFO_RQREG//\\\\/\\}\\3${NAME_VERSION_HOSTINFO}\\5/" \
+		-e "s/^(\s*for\s+.*\s+in\s+\(\s*\")(.+)(\"\s*\)\s+do\s+set\s+)(\w*VERSION_AUTHORSHIP\w*\s*)(=.*)$/\\1${VERSION_AUTHORSHIP_RQREG//\\\\/\\}\\3${NAME_VERSION_AUTHORSHIP}\\5/" \
+		-e "s/^(\s*for\s+.*\s+in\s+\(\s*\")(.+)(\"\s*\)\s+do\s+set\s+)(\w*VERSION_DECLARATION\w*\s*)(=.*)$/\\1${VERSION_DECLARATION_RQREG//\\\\/\\}\\3${NAME_VERSION_DECLARATION}\\5/" \
+		-e "s/^(\s*for\s+.*\s+in\s+\(\s*\")(.+)(\"\s*\)\s+do\s+set\s+)(\w*VERSION_COMMIT_AUTHOR\w*\s*)(=.*)$/\\1${VERSION_COMMIT_AUTHOR_RQREG//\\\\/\\} <${VERSION_COMMIT_EMAIL_RQREG//\\\\/\\}>\\3${NAME_VERSION_COMMIT_AUTHOR}\\5/" \
 		-e "s/^(\s*set\s+)(\w*VERSION_SHA_SHORT\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_SHA_SHORT}\\3${VERSION_SHA_SHORT}/" \
 		-e "s/^(\s*set\s+)(\w*VERSION_SHA_LONG\w*\s*)(=\s*)(.*)$/\\1${NAME_VERSION_SHA_LONG}\\3${VERSION_SHA_LONG}/" \
 	| __STORE_CRLF__ "$1"

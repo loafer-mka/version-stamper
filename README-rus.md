@@ -466,6 +466,22 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
   строкам, если только штампы не создаются для подмодуля проекта. При этом
   также становится непустым параметр `VERSION_SUPER_DIR`.
 
+  Примечание: параметры `VERSION_TEXT`, `VERSION_BRANCH`, `VERSION_DIRTY`,
+  `VERSION_DATE`, `VERSION_HOSTINFO`, `VERSION_AUTHORSHIP`,
+  `VERSION_DECLARATION`, `VERSION_SUBMOD_NAME`, `VERSION_SUBMOD_PATH`,
+  `VERSION_COMMIT_AUTHOR` и `VERSION_COMMIT_EMAIL` могут содержать
+  специальные символы, которые должны быть экранированы или продублированы
+  в некоторых случаях (скажем, `\` или `"` в строковом литерале языка C).
+  Поэтому у каждого из этих символов есть специальные 'близнецы',
+  заканчивающиеся суффиксами `_QUOTED` или `_RQREG` (например:
+  `VERSION_TEXT`, `VERSION_TEXT_QUOTED` и `VERSION_TEXT_RQREG`). Эти
+  'близнецы' могут использоваться в скриптах при подстановке в строку,
+  заключенную в двойные кавычки (`..._QUOTED`) или в правую часть
+  расширенного регулярного выражения `sed`, заключенную в двойные кавычки
+  (`..._RQREG`), т.е. в выражения вида
+  `sed --regexp-extended -e "s/.../...${VERSION_TEXT_RQREG.../"`, см.
+  исходные тексты плагинов в качестве примеров использования.
+
 - `-c` или `--config`<br/>
   Создать конфигурационный файл .version-stamper, если он отсутствует и
   установить стандартный набор перехватчиков git. Список устанавливаемых

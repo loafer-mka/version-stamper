@@ -1481,23 +1481,31 @@ done
 # get rest of version data
 #
 # get version designator from 'git describe'
-VERSION_TEXT="$(git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD 2>/dev/null \
-				| sed -r -e 's/^([A-Za-z]+[0-9]*\.[0-9]*-[0-9]*)(-g.*)/\1/')"
-__VERBOSE__ "\nDetect version data\ngit describe --long --tags --match=\"[A-Za-z][0-9]*.[0-9]*\" HEAD\n.   VERSION_TEXT='${VERSION_TEXT}'"
+# note: --match is not an regex, it is 'glob(7)', so '.' means dot, '^', '+', '$' cannot be used etc
+# pattern '[A-Za-z][0-9]*.[0-9]*' match to v1.2 and v1.2.3 while v1, v1.2b and ab1.2 are not matching
+__VERBOSE__ "\nDetect version data"
+VERSION_TEXT="$(git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD 2>/dev/null)"
 if [ $? -ne 0 -o -z "${VERSION_TEXT}" ]; then
 	# simulate if no version tags found
 	temp="$(git --no-pager rev-list --count HEAD 2>/dev/null)"
-	__VERBOSE__ ".   git rev-list --count HEAD\n.       count=\"$temp\""
 	if [ $? -ne 0 -o -z "$temp" -o "-1" == "$temp" ]; then
+		__VERBOSE__ ".   'git describe' and 'git rev-list --count' both are failed; assume\n.   VERSION_TEXT='v0.0-0'"
 		VERSION_TEXT="v0.0-0"
 	else
+		__VERBOSE__ ".   'git describe' failed, 'git rev-list --count HEAD' returns '${temp}'; assume\n.   VERSION_TEXT='v0.0-$temp'"
 		VERSION_TEXT="v0.0-$temp"
 	fi
-	__VERBOSE__ ".   simulated \"${VERSION_TEXT}\""
 	unset temp
+else
+	VERSION_TEXT="${VERSION_TEXT%%-g*}"
+	__VERBOSE__ ".   git describe --long --tags --match=\"[A-Za-z][0-9]*.[0-9]*\" HEAD\n.   VERSION_TEXT='${VERSION_TEXT}'"
 fi
-eval $(sed -r -e 's/^([A-Za-z]+)([0-9]*)\.([0-9]*)-([0-9]*)$/VERSION_PREFIX=\1\nVERSION_MAJOR=\2\nVERSION_MINOR=\3\nVERSION_BUILD=\4/' <<<"${VERSION_TEXT}")
-__VERBOSE__ "parsed data:\n.   VERSION_PREFIX=${VERSION_PREFIX}\n.   VERSION_MAJOR=${VERSION_MAJOR}\n.   VERSION_MINOR=${VERSION_MINOR}\n.   VERSION_BUILD=${VERSION_BUILD}"
+# VERSION_TEXT now may be destroyed; it will be reconstructed later using textoize addon
+VERSION_BUILD="${VERSION_TEXT##*-}";   VERSION_SUFFIX="${VERSION_TEXT%-*}"
+VERSION_PREFIX="${VERSION_TEXT:0:1}";  VERSION_SUFFIX="${VERSION_SUFFIX:1}"
+VERSION_MAJOR="${VERSION_SUFFIX%%.*}"; VERSION_SUFFIX="${VERSION_SUFFIX#*.}"
+VERSION_MINOR="${VERSION_SUFFIX%%.*}"; VERSION_SUFFIX="${VERSION_SUFFIX:${#VERSION_MINOR}}"
+__VERBOSE__ "parsed data:\n.   VERSION_PREFIX=${VERSION_PREFIX}\n.   VERSION_MAJOR=${VERSION_MAJOR}\n.   VERSION_MINOR=${VERSION_MINOR}\n.   VERSION_SUFFIX=${VERSION_SUFFIX}\n.   VERSION_BUILD=${VERSION_BUILD}"
 
 # get date
 eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
@@ -1755,7 +1763,7 @@ VERSION_TEXT=""
 if [ -n "${STAMPER_TEXTOIZE}" ]; then
 	source "${STAMPER_TEXTOIZE}"
 fi
-[ -z "${VERSION_TEXT}" ] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
+[ -z "${VERSION_TEXT}" ] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)
@@ -1946,6 +1954,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "   VERSION_PREFIX=        ${VERSION_PREFIX}"
 	echo "   VERSION_MAJOR=         ${VERSION_MAJOR}"
 	echo "   VERSION_MINOR=         ${VERSION_MINOR}"
+	echo "   VERSION_SUFFIX=        ${VERSION_SUFFIX}"
 	echo "   VERSION_BUILD=         ${VERSION_BUILD}"
 	echo "   VERSION_BRANCH=        ${VERSION_BRANCH}"
 	echo "   VERSION_DIRTY=         ${VERSION_DIRTY}"

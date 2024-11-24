@@ -364,7 +364,7 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
   git - дата и хэш коммита. Часть сведений может отсутствовать.
 
   `VERSION_CURRENT_DIR` - текущий каталог, в котором выполняется version-stamper.
-  `VERSION_ROOT_DIR` - корневой кталог рабочего дерева проекта (git worktree),
+  `VERSION_ROOT_DIR` - корневой каталог рабочего дерева проекта (git worktree),
   `VERSION_GIT_DIR` - папка `.git` репозитория, и `VERSION_SUPER_DIR` - 
   пустая строка в обычных случаях или путь к корню рабочего дерева
   суперпректа, если данный проект включён в роли подмодуля.
@@ -380,6 +380,7 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
      VERSION_PREFIX=        v
      VERSION_MAJOR=         1
      VERSION_MINOR=         2
+     VERSION_SUFFIX=
      VERSION_BUILD=         333
      VERSION_BRANCH=        branchname
      VERSION_DIRTY=       
@@ -408,10 +409,15 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
      git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD
 ```
 
-  Код версии `VERSION_ID`, равный 0102014D, это 32-х битовое число,
-  содержащее в старшем байте старший номер версии, в следующем байте -
-  младший номер, а в младшем 16-ти битовом слове - номер сборки. Имя
-  текущей ветви `branchname` - либо имя присоединённой ветви, либо
+  Код версии `VERSION_ID`, в примере равный 0102014D, это 32-х битовое
+  число, содержащее в старшем байте старший номер версии `VERSION_MAJOR`,
+  в следующем байте - младший номер `VERSION_MINOR`, а в младшем 16-ти
+  битовом слове - номер сборки `VERSION_BUILD`. Параметр `VERSION_PREFIX`
+  это первая буква (в большинстве случаев `v'), а `VERSION_SUFFIX` — это
+  обычно пустая строка, кроме случаев использования сложного имени тега
+  (например, если имя тега — `v1.22.333', то `VERSION_SUFFIX` = `.333').
+  
+  Имя текущей ветви `branchname` - либо имя присоединённой ветви, либо
   вычисляемое, если HEAD отсоединён (что часто бывает для подмодулей).
   Вычисления не могут гарантировать правильность вычисления или выбора,
   если данному коммиту может соответствовать несколько подходящих ветвей.
@@ -444,7 +450,10 @@ your_project> ./tools/stamper/version-stamper --directory="/other/working/direct
   пустыми строками, а в случае подмодуля `VERSION_LEADER` формируется из
   имени подмодуля. Задают префиксы и суффиксы имён символов в штампах
   версии (определяют модифиикацию, к примеру, общего `VERSION_TEXT` в
-  специфичный `YOURPROJECT_VERSION_TEXT`).
+  специфичный `YOURPROJECT_VERSION_TEXT`). Это может потребоваться для
+  проектов, состоящих из нескольких частей, каждая из которых имеет своё
+  обозначение версии, и в этом лучае надо, чтобы используемые для этого
+  имена переменных, объектов и/или макросов были уникальными.
 
   Команда `--print` всегда выводит обозначения без префикса и суффикса по
   двум соображениям: во-первых, это упрощает разбор в каких-либо скриптах
@@ -1072,7 +1081,7 @@ function __PLUGIN_BAT_MODIFY__
 одну строку:
 
 ```
-VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD}.${VERSION_TEXT}${VERSION_DIRTY}"
+VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}-${VERSION_BUILD}.${VERSION_TEXT}${VERSION_DIRTY}"
 ```
 
 Скрипт должен присвоить желаемое значение переменной `VERSION_TEXT`,
@@ -1087,7 +1096,7 @@ VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD
 
 ```
 source ${STAMPER_SCRIPT_PATH}-rename
-VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}-${VERSION_BUILD}.${VERSION_RENAMED}${VERSION_DIRTY}"
+VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}-${VERSION_BUILD}.${VERSION_RENAMED}${VERSION_DIRTY}"
 unset VERSION_RENAMED
 ```
 

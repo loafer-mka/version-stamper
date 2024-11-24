@@ -372,6 +372,7 @@ Available options:
      VERSION_PREFIX=        v
      VERSION_MAJOR=         1
      VERSION_MINOR=         2
+     VERSION_SUFFIX=
      VERSION_BUILD=         333
      VERSION_BRANCH=        branchname
      VERSION_DIRTY=       
@@ -400,14 +401,19 @@ Available options:
      git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD
 ```
 
-  Version code `VERSION_ID`, equal to 0102014D, is a 32-bit number
-  containing the major version number in the high byte, the minor number
-  in the next byte, and build number in the low 16-bit word. The name of
-  the current branch `branchname` is either the name of the attached
-  branch, or calculated if HEAD is detached (which is often the case
-  for submodules). Computation cannot guarantee the correctness of the
-  calculation or selection if there may be more than one matching branch
-  for a given commit.
+  Version code `VERSION_ID`, equal to 0102014D in given sample, is a
+  32-bit number containing the major version number `VERSION_MAJOR` in
+  the high byte, the minor number `VERSION_MINOR` in the next byte, and
+  build number `VERSION_BUILD` in the low 16-bit word. The `VERSION_PREFIX`
+  is a leading symbol ('v' in most cases) and `VERSION_SUFFIX` is empty
+  string, except complex tag name used (for example if tag name is
+  'v1.22.333' then `VERSION_SUFFIX` becomes '.333').
+  
+  The name of the current branch `branchname` is either the name of the
+  attached branch, or calculated if HEAD is detached (which is often the
+  case for submodules). Computation cannot guarantee the correctness of
+  the calculation or selection if there may be more than one matching
+  branch for a given commit.
 
   `VERSION_DIRTY` - flag of the changed working tree (not taking into
   account changes in version stamps). Indicated by the `+` symbol if there
@@ -439,12 +445,15 @@ Available options:
   `VERSION_LEADER` is formed from the name of the submodule. They set
   prefixes and suffixes of symbol names in version stamps (they determine
   the modification, for example, of the general `VERSION_TEXT` into a
-  specific `YOURPROJECT_VERSION_TEXT`).
+  specific `YOURPROJECT_VERSION_TEXT`). This may be required for complex
+  projects from few subprojects, each of them has its own version, so it
+  is necessary that the names of variables, objects and/or macros used
+  for this purpose are unique.
 
   The `--print` command always displays notations without a prefix and
   suffix for two reasons: firstly, it simplifies parsing in some scripts
   and, secondly, the prefix and suffix to the names are added by plugins;
-  in the plugin text they are used without prefixes and suffixes, and
+  in the plugin code they are used without prefixes and suffixes, and
   plugins are considered adaptable to the needs of the project - changing
   them and developing your own are welcome.
 

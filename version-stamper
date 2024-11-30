@@ -269,7 +269,7 @@ function __VERBOSE_OFF__
 {
 	:
 }
-case "${STAMPER_VERBOSE}" in
+case "${STAMPER_VERBOSE,,}" in
 simple | extended | off)
 	alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
 	;;
@@ -306,25 +306,23 @@ __VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_G
 VERSION_CURRENT_DIR="$(pwd 2>/dev/null)"
 if [ "${OS}" == "Windows_NT" ]; then
 	case "${VERSION_CURRENT_DIR,,}" in
-	"/cygdrive/"?"/"*)
+	/cygdrive/?/*)
 		STAMPER_PATH_TYPE="cygwin"
 		;;
-	"/dev/fs/"?"/"*)
+	/dev/fs/?/*)
 		STAMPER_PATH_TYPE="sua"
 		;;
-	"/"?"/"*)
+	/?/*)
 		STAMPER_PATH_TYPE="msys"
 		;;
 	*)
-		for temp in /usr/bin/msys-*.dll /usr/bin/cygwin*.dll /bin/msys-*.dll /bin/cygwin*.dll; do
+		for temp in /usr/bin/msys-[0-9]*.dll /usr/bin/cygwin[0-9]*.dll /bin/msys-[0-9]*.dll /bin/cygwin[0-9]*.dll; do
 			case "${temp,,}" in
-			"/usr/bin/msys-*.dll" | "/usr/bin/cygwin*.dll" | "/bin/msys-*.dll" | "/bin/cygwin*.dll")
-				;;
-			*"bin/msys-"*)
+			*bin/msys-[0-9]*)
 				STAMPER_PATH_TYPE="msys"
 				break
 				;;
-			*"bin/cygwin"*)
+			*bin/cygwin[0-9]*)
 				STAMPER_PATH_TYPE="cygwin"
 				break
 				;;
@@ -451,7 +449,7 @@ function __READ_LF__
 
 	# note 1: always pass via dos2unix on reading from FS under windows because filters (sed, awk etc.) are eol-sensetive
 	case "${1}" in
-	"/"*)
+	/* | ?:/*)
 		# abs path out of tree (note: mixed and widnows forms must be excluded by the caller logic
 		case "${STAMPER_VERBOSE,,}" in
 		simple | extended)
@@ -552,13 +550,17 @@ function __READ_LF__
 # __STORE_LF__  worktree_relative_filename   text
 function __STORE_LF__
 {
+	local path="${VERSION_ROOT_DIR}/$1"
+
 	case "$1" in
-	"//-" | "//--")
+	//- | //--)
 		# stdout or stdin->stdout
 		cat
 		;;
+	/* | ?:/*)
+		path="$1"
+		;&			# FALL THROUGH
 	*)
-		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 		local dir="${path%/*}"
 		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
@@ -569,13 +571,17 @@ function __STORE_LF__
 # __STORE_CRLF__  worktree_relative_filename   text
 function __STORE_CRLF__
 {
+	local path="${VERSION_ROOT_DIR}/$1"
+
 	case "$1" in
-	"//-" | "//--")
+	//- | //--)
 		# stdout or stdin->stdout
 		"$STAMPER_UNIX2DOS" --quiet
 		;;
+	/* | ?:/*)
+		path="$1"
+		;&			# FALL THROUGH
 	*)
-		[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 		local dir="${path%/*}"
 		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
@@ -587,13 +593,17 @@ if [ "Windows_NT" == "$OS" ]; then
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
 	function __STORE_NATIVE_EOL__
 	{
+		local path="${VERSION_ROOT_DIR}/$1"
+
 		case "$1" in
-		"//-" | "//--")
+		//- | //--)
 			# stdout or stdin->stdout
 			"$STAMPER_UNIX2DOS" --quiet
 			;;
+		/* | ?:/*)
+			path="$1"
+			;&			# FALL THROUGH
 		*)
-			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 			local dir="${path%/*}"
 			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
@@ -607,7 +617,7 @@ if [ "Windows_NT" == "$OS" ]; then
 		case "${STAMPER_PATH_TYPE}" in
 		msys)
 			# assume unsupported operation, msys's chmod does nothing
-			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
+			[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
 			;;
 		*)
 			# Cygwin or SFU/SUA: they support chmod but may store file
@@ -625,7 +635,7 @@ if [ "Windows_NT" == "$OS" ]; then
 				mode="ug${1:1}"
 				;;
 			esac
-			[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
+			[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
 			chmod "${mode}" -- "${2}"
 			;;
 		esac
@@ -634,13 +644,17 @@ else
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
 	function __STORE_NATIVE_EOL__
 	{
+		local path="${VERSION_ROOT_DIR}/$1"
+
 		case "$1" in
-		"//-" | "//--")
+		//- | //--)
 			# stdout or stdin->stdout
 			cat
 			;;
+		/* | ?:/*)
+			path="$1"
+			;&			# FALL THROUGH
 		*)
-			[[ $1 =~ ^/ ]] && local path="$1" || local path="${VERSION_ROOT_DIR}/$1"
 			local dir="${path%/*}"
 			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
@@ -651,7 +665,7 @@ else
 	# __CHMOD__ mode path
 	function __CHMOD__
 	{
-		[ "extended" == "${STAMPER_VERBOSE}" ] && __VERBOSE__ ".   chmod \"${1}\" -- \"${2}\""
+		[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   chmod \"${1}\" -- \"${2}\""
 		chmod "${1}" -- "${2}"
 	}
 fi
@@ -781,12 +795,13 @@ if [ -n "${STAMPER_CURRENT_DIR}" ]; then
 	# and their content.
 	VERSION_CONFIG_DIR="${VERSION_CURRENT_DIR}"
 	__STDPATH_FUNCTION__ --var VERSION_CONFIG_PREFIX --base "${VERSION_ROOT_DIR}" --mixed -- "${VERSION_CONFIG_DIR}"
-	
+	# non-empty VERSION_CONFIG_PREFIX must ends with /, so "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}"
+	# is normal relative pathname ('file', 'dir/file')
 	case "${VERSION_CONFIG_PREFIX}" in
-	"/"* | "../"**)
+	/* | ../* | ?:/*)
 		DIE 2 "Wrong target directory \"${STAMPER_CURRENT_DIR}\" outside of repository tree \"${VERSION_ROOT_DIR}\""
 		;;
-	".")
+	.)
 		# assert VERSION_CURRENT_DIR == VERSION_ROOT_DIR
 		VERSION_CONFIG_DIR="${VERSION_ROOT_DIR}"
 		VERSION_CONFIG_PREFIX=""
@@ -860,7 +875,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 					case "${hook}" in
 					pre-commit | post-commit | post-checkout | post-rewrite | post-merge | ${STAMPER_SCRIPT_NAME})
 						# ${STAMPER_SCRIPT_NAME} is a mark of self-server this stamper project
-						STAMPER_HOOKS["${hook}"]="true"
+						STAMPER_HOOKS["${hook,,}"]="true"
 						;;
 					*)
 						echo "Warning: Ignoring wrong hook name \"${hook}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
@@ -889,7 +904,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				#
 				# Print suite header because configuraion file turns on verbose mode while command line does not touch it
 				alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
-				[ "off" != "${STAMPER_VERBOSE}" ] && __VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
+				[ "off" != "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
 			else
 				# use command-line assigned verbose mode; report this in verbose mode only
 				if [ "off" != "${STAMPER_VERBOSE,,}" ]; then
@@ -928,7 +943,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			done
 			# assume path starting from '/' or '\' as VERSION_CONFIG_DIR-relative path, so normalize [\/] and remove leading / and ./
 			case "${value}" in
-			"-" | "--")
+			- | --)
 				# print stamp to stdout (-) or read from stdin and print to stdout (--)
 				# replace with special value which cannot be after path normalization
 				temp_target="//${value}"
@@ -936,7 +951,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			*)
 				temp_target="${value/#+(.\/|\/)/}"
 				case "${temp_target}" in
-				"../"* | ?":/"*)
+				../* | ?:/*)
 					# outside of config folder  OR  windows-style absolute
 					__STDPATH_FUNCTION__ --var temp_target --directory "${VERSION_CONFIG_DIR}" --mixed -- "${temp_target}"
 					;;
@@ -1047,7 +1062,7 @@ function __maxlen__
 if [ 0 -lt ${#STAMPER_HOOKS[@]} ]; then
 	for hook in "${!STAMPER_HOOKS[@]}"; do
 		case "${hook}" in
-		"none")
+		none)
 			unset STAMPER_HOOKS["${hook}"]
 			# no hooks at all
 			;;
@@ -1126,7 +1141,7 @@ for arg in "$@"; do
 			;;
 		*)
 			case "${arg}" in
-			"-" | "--")
+			- | --)
 				# stdout or stdin->stdout
 				# replace with special value which cannot be after path normalization
 				temp_target="//${arg}"
@@ -1372,8 +1387,13 @@ unset temp_plugin
 unset ref
 unset an
 
-if [ "false" == "${STAMPER_SETUP_HOOKS}" -a "true" == "${STAMPER_SETUP_CONFIG}" ]; then
-	STAMPER_SETUP_HOOKS="update"
+if [ -n "${VERSION_CONFIG_PREFIX}" ]; then
+	[ "false" != "${STAMPER_SETUP_HOOKS}" ] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
+	STAMPER_SETUP_HOOKS="false"
+else
+	if [ "false" == "${STAMPER_SETUP_HOOKS}" -a "true" == "${STAMPER_SETUP_CONFIG}" ]; then
+		STAMPER_SETUP_HOOKS="update"
+	fi
 fi
 if [ "true" == "${STAMPER_GENERATE}" ]; then
 	# if option -g / --generate was used then add configured plugins to the list of executed
@@ -1480,7 +1500,7 @@ fi
 #
 __VERBOSE__ "
 Config file${VERSION_CONFIG_MISSING}: \"${VERSION_CONFIG_PATH}\"
-.   verbose= \"${STAMPER_VERBOSE}\"
+.   verbose= \"${STAMPER_VERBOSE,,}\"
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
 .   leader= \"${VERSION_LEADER}\"
 .   leader= \"${VERSION_TRAILER}\"
@@ -1717,14 +1737,14 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		case "${changed}" in
 		o)
 			# not in index (ignored or not added)
-			__VERBOSE__ ".    \"${file}\" is not in index, so changes to it are not taken into account"
+			__VERBOSE__ ".    \"${file}\" is not in index, so its changes are not taken into account"
 			;;
 		X)
 			# has changed in worktree
 			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "off" == "${STAMPER_VERBOSE}" ] && break
+				[ "off" == "${STAMPER_VERBOSE,,}" ] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -1770,7 +1790,7 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "off" == "${STAMPER_VERBOSE}" ] && break
+				[ "off" == "${STAMPER_VERBOSE,,}" ] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -1868,7 +1888,7 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 			#
 			# activate hooks
 			# available hooks are:  pre-commit  post-commit  post-checkout  post-rewrite  post-merge
-			hooks:           ${!STAMPER_HOOKS[@]}
+			$([ -n "${VERSION_CONFIG_PREFIX}" ] && echo "# ")hooks:           ${!STAMPER_HOOKS[@]}
 			# note: if pre-commit is used then post-commit is useless
 			#
 			# the default command
@@ -2039,9 +2059,13 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		plugin="${STAMPER_EXEC_PLUGIN[${index}]}"
 		target="${STAMPER_EXEC_TARGET[${index}]}"
+
 		case "${target}" in
-		"//-" | "//--" | "/"*)
+		//- | //-- | /* | ?:/*)
 			# do not prefix reserved names and absolute pathes
+			;;
+		../*)
+			__STDPATH_FUNCTION__ --var=target --base="${VERSION_ROOT_DIR}" --directory="${VERSION_ROOT_DIR}" -- "${VERSION_CONFIG_PREFIX}${target}"
 			;;
 		*)
 			target="${VERSION_CONFIG_PREFIX}${target}"
@@ -2050,10 +2074,10 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 
 		__VERBOSE__ "\n+ Use \"${plugin}\" with \"${target}\"; try to read it"
 		case "${target}" in
-		"//-")
+		//-)
 			indata=""
 			;;
-		"//--")
+		//--)
 			__VERBOSE__ "Waiting incoming version stamp on stdin..."
 			indata="$(cat)"
 			;;
@@ -2061,7 +2085,6 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 			indata="$(__READ_LF__ "${target}")"
 			;;
 		esac
-
 		if [ -n "${indata}" ]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
 			existing_version="$(__PLUGIN_${plugin}_GETVER__ <<<"${indata}")"
@@ -2074,7 +2097,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				__PLUGIN_${plugin}_MODIFY__ "${target}" <<<"${indata}"
 				# file was changed?
 				case "${target}" in
-				"//-" | "//--")
+				//- | //--)
 					outdata="_${indata}_"
 					;;
 				*)
@@ -2089,7 +2112,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					echo "         before or rename old identifiers manually." 1>&2
 				else
 					case "${target}" in
-					"/"*)
+					/* | ?:/* | ../*)
 						# outside of tree or special target (//- //--), do nothing
 						;;
 					*)
@@ -2109,8 +2132,8 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   (re)create new file \"${target}\" using __PLUGIN_${plugin}_CREATE__"
 			__PLUGIN_${plugin}_CREATE__ "${target}"
 			case "${target}" in
-			"/"*)
-				# outside of tree, nothing
+			/* | ?:/* | ../*)
+				# special names //-, //-- or outside of tree, nothing
 				__VERBOSE__ ".      skip gitignore/gitattributes for external file \"${target}\""
 				;;
 			*)
@@ -2144,11 +2167,13 @@ fi
 if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 	# list after generation, file data may be changed
 	echo "Folders:"
-	echo "   VERSION_CURRENT_DIR= ${VERSION_CURRENT_DIR}"
-	echo "   VERSION_GIT_DIR=     ${VERSION_GIT_DIR}"
-	echo "   VERSION_HOOKS_DIR=   ${VERSION_HOOKS_DIR:-(not found)}"
-	echo "   VERSION_ROOT_DIR=    ${VERSION_ROOT_DIR}"
-	echo "   VERSION_SUPER_DIR=   ${VERSION_SUPER_DIR}"
+	echo "   VERSION_SUPER_DIR=     ${VERSION_SUPER_DIR}"
+	echo "   VERSION_CURRENT_DIR=   ${VERSION_CURRENT_DIR}"
+	echo "   VERSION_ROOT_DIR=      ${VERSION_ROOT_DIR}"
+	echo "   VERSION_CONFIG_PREFIX= ${VERSION_CONFIG_PREFIX}"
+	echo "   VERSION_CONFIG_NAME=   ${VERSION_CONFIG_NAME}"
+	echo "   VERSION_GIT_DIR=       ${VERSION_GIT_DIR}"
+	echo "   VERSION_HOOKS_DIR=     ${VERSION_HOOKS_DIR:-(not found)}"
 	echo ""
 
 	declare -A temp_plugin
@@ -2234,6 +2259,7 @@ if [ 0 -ne ${#STAMPER_FILL_ATTRIB[@]} ]; then
 	n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 		((n=n+1))
 		A="${STAMPER_FILL_ATTRIB[${f}]}"
+		__STDPATH_FUNCTION__ -v=f --base "${VERSION_CONFIG_DIR}" -- "${VERSION_ROOT_DIR}/${f}"
 		__AS_REGEX_IN__ r "${f}"
 		script="${script}
 /^\\s*#\\s*${r}\\s+/ {
@@ -2254,6 +2280,7 @@ END {"
 	n=0; for f in "${!STAMPER_FILL_ATTRIB[@]}"; do
 		((n=n+1))
 		A="${STAMPER_FILL_ATTRIB[${f}]}"
+		__STDPATH_FUNCTION__ -v=f --base "${VERSION_CONFIG_DIR}" -- "${VERSION_ROOT_DIR}/${f}"
 		script="${script}
     if ( F${n} == 0 ) print \"${f// /\\\\\\ }   ${A}\";"
 	done
@@ -2304,6 +2331,7 @@ if [ 0 != ${#STAMPER_FILL_IGNORE[@]} ]; then
 }"
 	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
 		f="${STAMPER_FILL_IGNORE[${n}]}"
+		__STDPATH_FUNCTION__ -v=f --base "${VERSION_CONFIG_DIR}" -- "${VERSION_ROOT_DIR}/${f}"
 		__AS_REGEX_IN__ r "${f}"
 		script="${script}
 /^\\s*#\\s*${r}\\s*\$/ {
@@ -2320,6 +2348,7 @@ if [ 0 != ${#STAMPER_FILL_IGNORE[@]} ]; then
 END {"
 	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
 		f="${STAMPER_FILL_IGNORE[${n}]}"
+		__STDPATH_FUNCTION__ -v=f --base "${VERSION_CONFIG_DIR}" -- "${VERSION_ROOT_DIR}/${f}"
 		script="${script}
     if ( F${n} == 0 ) print \"${f// /\\\\\\ }\";"
 	done
@@ -2727,7 +2756,7 @@ function __update_this_hook_async__
 		unalias __VERBOSE__
 		function __VERBOSE__
 		{
-			[ "off" != "${STAMPER_VERBOSE}" ] && __VERBOSE_${STAMPER_VERBOSE^^}__ "${STAMPER_EXECUTING_HOOK}: $*" 2>&1 | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
+			[ "off" != "${STAMPER_VERBOSE,,}" ] && __VERBOSE_${STAMPER_VERBOSE^^}__ "${STAMPER_EXECUTING_HOOK}: $*" 2>&1 | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
 		}
 	fi
 	ps="${ps:-ps}"
@@ -2929,31 +2958,35 @@ function __update_all_hooks__
 # check/update/setup git hooks
 #
 if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
-	if [ -z "${VERSION_HOOKS_DIR}" ]; then
-		__VERBOSE__ "Warning: cannot find '.git/hooks' folder to update git hooks"
+	if [ -n "${VERSION_CONFIG_PREFIX}" ]; then
+		echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	else
-		__VERBOSE__ "Update hooks now"
-		
-		if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
-			# for version stamper project itself executed plugin may change
-			# current version data, so reload version file before updating hooks.
-			__VERBOSE__ "Reload version information before check/create hooks"
-			source "${STAMPER_SCRIPT_PATH}-this"
-			unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
-		fi
-
-		STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
-		__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on PATH=\"${STAMPER_SCRIPT_CMD}\""
-		if [ "${STAMPER_SCRIPT_CMD}" == "${STAMPER_SCRIPT_PATH}" ]; then
-			# version-stamper is installed and is used from install location
-			STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
+		if [ -z "${VERSION_HOOKS_DIR}" ]; then
+			echo "Warning: cannot find '.git/hooks' folder to update git hooks" >&2
 		else
-			__STDPATH_FUNCTION__ --var STAMPER_SCRIPT_CMD --base "${VERSION_ROOT_DIR}" --mixed -- "${STAMPER_SCRIPT_PATH}"
-			[[ ${STAMPER_SCRIPT_CMD} =~ ^/ ]] || STAMPER_SCRIPT_CMD="./${STAMPER_SCRIPT_CMD}"
-		fi
-		__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
+			__VERBOSE__ "Update hooks now"
+			
+			if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
+				# for version stamper project itself executed plugin may change
+				# current version data, so reload version file before updating hooks.
+				__VERBOSE__ "Reload version information before check/create hooks"
+				source "${STAMPER_SCRIPT_PATH}-this"
+				unset STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]
+			fi
 
-		__update_all_hooks__
+			STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
+			__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on PATH=\"${STAMPER_SCRIPT_CMD}\""
+			if [ "${STAMPER_SCRIPT_CMD}" == "${STAMPER_SCRIPT_PATH}" ]; then
+				# version-stamper is installed and is used from install location
+				STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
+			else
+				__STDPATH_FUNCTION__ --var STAMPER_SCRIPT_CMD --base "${VERSION_ROOT_DIR}" --mixed -- "${STAMPER_SCRIPT_PATH}"
+				[[ ${STAMPER_SCRIPT_CMD} =~ ^/ ]] || STAMPER_SCRIPT_CMD="./${STAMPER_SCRIPT_CMD}"
+			fi
+			__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""
+
+			__update_all_hooks__
+		fi
 	fi
 fi
 EXIT 0

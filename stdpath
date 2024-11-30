@@ -23,7 +23,7 @@ if [ "function" != "$(type -t __STDPATH_FUNCTION__)" ]; then
 		local no_parse=0
 		local no_root=0
 		local base_path=""
-		local mode="unix"
+		local mode="auto"
 
 		for a in "${@}"; do
 			if [ 1 -eq ${no_parse} ]; then
@@ -104,7 +104,8 @@ no checks for symlinks and/or existing path, analyse text only.
 If no 'FILE' arguments then read path from stdin.
 
   -v=VAR, --var=VAR         assign result to variable var instead of
-                            printing to stdout
+                            printing to stdout; this is possible if
+                            __STDPATH_FUNCTION__ function is used.
   -cd=DIR, --directory=DIR  if 'FILE' path is relative then start with
                             given 'DIR', i.e. interpret input path as
                             'DIR/FILE'
@@ -138,6 +139,22 @@ This script may be included by other script and then used as function
 		fi
 		[ -n "${var_name}" ] && declare -gx ${var_name}
 
+		if [ "${mode}" == "auto" ]; then
+			for lib in /usr/bin/msys-[0-9]*.dll /usr/bin/cygwin[0-9]*.dll /bin/msys-[0-9]*.dll /bin/cygwin[0-9]*.dll; do
+				case "${lib}" in
+				*bin/msys-[0-9]*)
+					mode="msys"			# msys-2.0.dll
+					break
+					;;
+				*bin/cygwin[0-9]*)		# cygwin1.dll
+					mode="cygwin"
+					break
+					;;
+				esac
+			done
+			[ "${mode}" == "auto" ] && mode="unix"
+		fi
+
 		if [ -n "${__stdpath_start_dir__}" ]; then
 			# recursive call will reset '__stdpath_start_dir__' at first lines, on declaring variables
 			# so use 'temp_start_dir' to do not mix local and global declarations of __stdpath_start_dir__
@@ -163,12 +180,26 @@ This script may be included by other script and then used as function
 			__split_path__ "${__stdpath_start_dir__}"
 		}
 		function __parse_path__ {
-			local a n
+			local a="${1}"
+			local n
 			local path_filled=1
 			local -a C
 			declare -ag R
 
-			__split_path__ "${1//\\/\/}"
+			if [ "${OS}" == "Windows_NT" ]; then
+				case "${a}" in
+				/? | /?/*)
+					a="${a:1:1}:${a:2}"
+					;;
+				/dev/fs/? | /dev/fs/?/*)
+					a="${a:8:1}:${a:9}"
+					;;
+				/cygdrive/? | /cygdrive/?/*)
+					a="${a:10:1}:${a:11}"
+					;;
+				esac
+			fi
+			__split_path__ "${a//\\/\/}"
 			for n in ${!R[@]}; do
 				C[n]="${R[n]}"
 				unset R[n]
@@ -234,10 +265,10 @@ This script may be included by other script and then used as function
 
 			__parse_path__ "${p}"
 
+			r=""
 			if [ 0 -ne ${#B[@]} ]; then
 				# get relative path
 				local m
-				r=""
 				[ ${#R[@]} -le ${#B[@]} ] && m=${#R[@]} || m=${#B[@]}
 				for ((n=1;n<=m;n++)); do
 					if [ "${OS}" == "Windows_NT" ]; then
@@ -262,7 +293,6 @@ This script may be included by other script and then used as function
 				r="${r:-.}"
 			else
 				# get absolute path
-				r=""
 				for ((n=1;n<${#R[@]};n++)); do r="${r}${R[n]}/"; done
 				[ ${n} -le ${#R[@]} ] && r="${r}${R[${#R[@]}]}"
 				[ 0 -eq ${no_root} ] && r="${r:-/}"

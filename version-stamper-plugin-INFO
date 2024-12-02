@@ -34,7 +34,7 @@ function __PLUGIN_INFO_CREATE__
 	status="${VERSION_DIRTY:-clean}"
 	status="${status/+/dirty}"
 	__STORE_NATIVE_EOL__ "$1" <<-END_OF_TEXT
-		${VERSION_TEXT}  ${VERSION_DATE}  ${status}  ${VERSION_SHA_SHORT}  ${VERSION_COMMIT_AUTHOR} <${VERSION_COMMIT_EMAIL}>  "$([ "${VERSION_SHA_SHORT:0:2}" == "p:" ] && echo -n "(previous commit) " ; git log --pretty=format:%s -n 1 -- HEAD 2>/dev/null)"
+		${VERSION_TEXT}  ${VERSION_DATE}  ${status}  ${VERSION_SHA_SHORT}  ${VERSION_COMMIT_AUTHOR} <${VERSION_COMMIT_EMAIL}>  "$([ "${VERSION_SHA_SHORT:0:2}" == "p:" ] && echo -n "(previous commit) " ; git log --pretty=format:%s -n 1 HEAD 2>/dev/null)"
 END_OF_TEXT
 }
 

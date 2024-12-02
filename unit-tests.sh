@@ -10,6 +10,6 @@
 #
 #               Copyright (c) Andrey Makarov 2023
 
-ls -1 "$(dirname "$0")/"[0-9][0-9]-* | sort | while read T ; do
+ls -1 "$(dirname "$0")/"[0-9][0-9]-*.sh | sort | while read T ; do
 	./$T
 done

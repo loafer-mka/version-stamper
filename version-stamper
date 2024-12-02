@@ -1388,7 +1388,7 @@ unset ref
 unset an
 
 if [ -n "${VERSION_CONFIG_PREFIX}" ]; then
-	[ "false" != "${STAMPER_SETUP_HOOKS}" ] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
+	[ "false" != "${STAMPER_SETUP_HOOKS}" -a 0 -ne ${#STAMPER_HOOKS[@]} ] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	STAMPER_SETUP_HOOKS="false"
 else
 	if [ "false" == "${STAMPER_SETUP_HOOKS}" -a "true" == "${STAMPER_SETUP_CONFIG}" ]; then
@@ -2990,4 +2990,3 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 	fi
 fi
 EXIT 0
-

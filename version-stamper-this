@@ -7,15 +7,15 @@
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
 #               Copyright (c) Andrey Makarov 2023
-STAMPER_VERSION_ID=0x01000006
-STAMPER_VERSION_TEXT="v1.0-6.master"
-STAMPER_VERSION_DATE="2025-01-24 23:11:41"
-STAMPER_VERSION_SHORTDATE="250124231141"
+STAMPER_VERSION_ID=0x01000007
+STAMPER_VERSION_TEXT="v1.0-7.master"
+STAMPER_VERSION_DATE="2025-02-06 00:09:27"
+STAMPER_VERSION_SHORTDATE="250206000927"
 STAMPER_VERSION_BRANCH="master"
 STAMPER_VERSION_HOSTINFO="andrey@makarov.local openSUSE Leap 15.5"
 STAMPER_VERSION_AUTHORSHIP="Andrey Makarov"
 STAMPER_VERSION_DECLARATION="Copyright (c) Andrey Makarov 2022-2024"
 STAMPER_VERSION_COMMIT_AUTHOR="Andrey Makarov <mka-at-mailru@mail.ru>"
 # if information below is based on parent commit's hash then prefix 'p:' will be used
-STAMPER_VERSION_SHA_SHORT="p:7ad8caed"
-STAMPER_VERSION_SHA_LONG="p:7ad8caed35558ac2ef6df819608c10f2f882fb4e"
+STAMPER_VERSION_SHA_SHORT="p:18877b24"
+STAMPER_VERSION_SHA_LONG="p:18877b24156383f17fd3fe6f34b9962bdfa11bd0"

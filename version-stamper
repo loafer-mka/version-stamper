@@ -35,9 +35,9 @@ type -p which >/dev/null || DIE 100 "The 'which' must be installed and available
 type -p xargs >/dev/null || DIE 100 "The 'xargs' must be installed and available from script"
 STAMPER_DOS2UNIX="$(type -p dos2unix 2>/dev/null)"
 STAMPER_UNIX2DOS="$(type -p unix2dos 2>/dev/null)"
-if [ "Windows_NT" == "$OS" ]; then
-	[ -n "${STAMPER_DOS2UNIX}" ] || DIE 100 "The 'dos2unix' must be installed and available from script"
-	[ -n "${STAMPER_UNIX2DOS}" ] || DIE 100 "The 'unix2dos' must be installed and available from script"
+if [[ "Windows_NT" == ${OS} ]]; then
+	[[ -n ${STAMPER_DOS2UNIX} ]] || DIE 100 "The 'dos2unix' must be installed and available from script"
+	[[ -n ${STAMPER_UNIX2DOS} ]] || DIE 100 "The 'unix2dos' must be installed and available from script"
 	# posix utilities need in linux-style EOLs (lf), so we will transfer all files via dos2unix.
 	# under windows this is mandatry; under linux we will do same because some source files may have crlf EOLs
 else
@@ -60,12 +60,12 @@ shopt -s expand_aliases
 
 source ${STAMPER_SCRIPT_PATH%/*}/stdpath
 
-if [ "Windows_NT" == "${OS}" ]; then
+if [[ "Windows_NT" == ${OS} ]]; then
 	__STDPATH_FUNCTION__  --var STAMPER_SCRIPT_PATH  --mixed  "${STAMPER_SCRIPT_PATH}"
 fi
 
 # load stamper's version information
-if [ "0" -ne "$(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this")" ]; then
+if [[ "0" -ne $(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this") ]]; then
 	set -o allexport
 	source <(awk -v RS='[\r\n]+' '
 		BEGIN{ mode = 0; }
@@ -122,11 +122,11 @@ for a in "$@"; do
 			STAMPER_CURRENT_DIR=${a:4}
 			;;
 		-cd | --directory)
-			[ ${#@} -gt $an ] || DIE 2 "working directory must be given after $a"
+			[[ ${#@} -gt $an ]] || DIE 2 "working directory must be given after $a"
 			ref="STAMPER_CURRENT_DIR"
 			;;
 		-v | --verbose)
-			[ -z "${STAMPER_VERBOSE}" ] && STAMPER_VERBOSE="simple" || STAMPER_VERBOSE="extended"
+			[[ -z ${STAMPER_VERBOSE} ]] && STAMPER_VERBOSE="simple" || STAMPER_VERBOSE="extended"
 			;;
 		-q | --quit)
 			STAMPER_VERBOSE="off"
@@ -166,7 +166,7 @@ unset an
 #         the only twin (input_path -> windows_path -> unix_path convertion will
 #         normalize drive letter case.
 # so use own path-normalization script 'stdpath'
-if [ -n "${STAMPER_DOS2UNIX}" ]; then
+if [[ -n ${STAMPER_DOS2UNIX} ]]; then
 	function __git_filter_eols__
 	{
 		git --no-pager "${1}" 2>/dev/null | "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null
@@ -189,10 +189,10 @@ fi
 #
 # check for changed directory
 #
-if [ -n "${STAMPER_CURRENT_DIR}" ]; then
+if [[ -n ${STAMPER_CURRENT_DIR} ]]; then
 #	__normalize_path__  STAMPER_CURRENT_DIR  "${STAMPER_CURRENT_DIR}"
 	__STDPATH_FUNCTION__ --var STAMPER_CURRENT_DIR --mixed "${STAMPER_CURRENT_DIR}"
-	[ ! -d "${STAMPER_CURRENT_DIR}" ] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
+	[[ ! -d "${STAMPER_CURRENT_DIR}" ]] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
 	pushd "${STAMPER_CURRENT_DIR}" >/dev/null 2>&1
 fi
 # now we must be at wanted folder, so we may perform basic checks and load configuration file
@@ -203,7 +203,7 @@ fi
 #
 function EXIT
 {
-	if [ -n "${STAMPER_CURRENT_DIR}" ]; then popd >/dev/null 2>&1; fi
+	[[ -n "${STAMPER_CURRENT_DIR}" ]] && popd >/dev/null 2>&1
 	exit $1
 }
 
@@ -281,14 +281,13 @@ esac
 #
 # load stamper's configuration information
 #
-[ -f "${STAMPER_SCRIPT_PATH}-config" ] || cat >"${STAMPER_SCRIPT_PATH}-config" <<-END_OF_TEXT
-	#
+[[ -f "${STAMPER_SCRIPT_PATH}-config" ]] || echo "	#
 	# this file can be freely modified; it is not part of licensed code
 	#
 
 	# default copyright/copyleft to paste into newly created config files
-	STAMPER_DEFAULT_DECL="Copyright (c)"
-END_OF_TEXT
+	STAMPER_DEFAULT_DECL=\"Copyright (c)\"
+" >"${STAMPER_SCRIPT_PATH}-config"
 source "${STAMPER_SCRIPT_PATH}-config" 2>/dev/null
 
 #
@@ -299,12 +298,12 @@ git rev-parse --show-toplevel 2>/dev/null | __STDPATH_FUNCTION__ --var VERSION_R
 __VERBOSE__ "git rev-parse --show-toplevel\n.   VERSION_ROOT_DIR=\"${VERSION_ROOT_DIR}\""
 git rev-parse --absolute-git-dir 2>/dev/null | __STDPATH_FUNCTION__ --var VERSION_GIT_DIR --mixed
 __VERBOSE__ "git rev-parse --absolute-git-dir\n.   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
-[ -n "${VERSION_ROOT_DIR}" -a -n "${VERSION_GIT_DIR}" ] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
+[[ -n ${VERSION_ROOT_DIR} && -n ${VERSION_GIT_DIR} ]] || DIE 1 "Use this script in git working tree, do not apply outside of git repository."
 # if STAMPER_CURRENT_DIR was assigned by option, then folder was changed and VERSION_CURRENT_DIR becomes identical
 # NOTE: git reports --show-toplevel and --absolute-git-dir after resolving symlinks, so
 # we must use realpath to get resolved path too and then filter it manually to normal form
 VERSION_CURRENT_DIR="$(pwd 2>/dev/null)"
-if [ "${OS}" == "Windows_NT" ]; then
+if [[ ${OS} == "Windows_NT" ]]; then
 	case "${VERSION_CURRENT_DIR,,}" in
 	/cygdrive/?/*)
 		STAMPER_PATH_TYPE="cygwin"
@@ -328,7 +327,7 @@ if [ "${OS}" == "Windows_NT" ]; then
 				;;
 			esac
 		done
-		[ -z "${STAMPER_PATH_TYPE}" ] && STAMPER_PATH_TYPE="unix"
+		[[ -z ${STAMPER_PATH_TYPE} ]] && STAMPER_PATH_TYPE="unix"
 		;;
 	esac
 else
@@ -344,13 +343,13 @@ function __detect_hooks_dir__
 	# or to reduced .git directory of worktree with only HEAD, config, logs/ ...
 	# so hooks/ subfolder must be detected in main .git directory
 	VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
-	if [ -d "${VERSION_HOOKS_DIR}" ]; then
+	if [[ -d ${VERSION_HOOKS_DIR} ]]; then
 		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	else
 		git rev-parse --git-common-dir 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_HOOKS_DIR --mixed
 		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 	fi
-	[ -d "${VERSION_HOOKS_DIR}" ] || VERSION_HOOKS_DIR=""
+	[[ -d ${VERSION_HOOKS_DIR} ]] || VERSION_HOOKS_DIR=""
 }
 __detect_hooks_dir__ ""
 
@@ -358,10 +357,10 @@ VERSION_SUBMOD_NAME=""
 VERSION_SUBMOD_PATH=""
 git rev-parse --show-superproject-working-tree 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_SUPER_DIR --mixed
 __VERBOSE__ "git rev-parse --show-superproject-working-tree\n.   VERSION_SUPER_DIR=\"${VERSION_SUPER_DIR}\""
-if [ -z "${VERSION_SUPER_DIR}" ]; then
+if [[ -z ${VERSION_SUPER_DIR} ]]; then
 	# we are out of submodule  OR  we are inside not initialized submodule
 	# in second case VERSION_ROOT_DIR and VERSION_GIT_DIR both are pointing to superproject folders
-	if [ -e "${VERSION_ROOT_DIR}/.gitmodules" ]; then
+	if [[ -e ${VERSION_ROOT_DIR}/.gitmodules ]]; then
 		# submodules exists  AND  this submodule was not initialized
 		VERSION_SUPER_DIR="${VERSION_ROOT_DIR}"
 		VERSION_SUBMOD_OK="false"
@@ -376,7 +375,7 @@ else
 	VERSION_SUBMOD_OK="true"
 	__VERBOSE__ ".   = submodule used"
 fi
-if [ -n "${VERSION_SUPER_DIR}" ]; then
+if [[ -n ${VERSION_SUPER_DIR} ]]; then
 	# determine submodule name and path
 	__VERBOSE__ ".   Scan submodules\n.   git config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --null --get-regexp 'submodule\..*\.path'"
 	# note: under windows may exist few unix-like nvironment at once; you may run some cygwin shell for example and call
@@ -390,21 +389,21 @@ if [ -n "${VERSION_SUPER_DIR}" ]; then
 		modname="${modname%.path}"
 		modpath="${VERSION_SUPER_DIR}/${moddir}"
 		temp="${VERSION_CURRENT_DIR}"
-		if [ "${OS}" == "Windows_NT" ]; then
+		if [[ ${OS} == "Windows_NT" ]]; then
 			modpath="${modpath,,}"
 			temp="${temp,,}"
 		fi
 		__VERBOSE__ ".   .   '${modname}' at folder '${moddir}' full path '${modpath}'"
-		if [ "${modpath}" == "${temp}" -o "${modpath}/" == "${temp:0:${#modpath}+1}" ]; then
+		if [[ ${modpath} == ${temp} || ${modpath}/ == ${temp:0:${#modpath}+1} ]]; then
 			# current folder is submodule folder or nested in ...
 			VERSION_SUBMOD_NAME="${modname}"
 			VERSION_SUBMOD_PATH="${moddir}"
 			__VERBOSE__ ".   .   = yes, we are at submodule path\n.   .   VERSION_SUBMOD_NAME=\"${modname}\"\n.   .   VERSION_SUBMOD_PATH=\"${moddir}\""
 			# initialize+update it if not done; this will create .git/modules/... hierarchy, so VERSION_GIT_DIR may be set to actual location
-			if [ "false" == "${VERSION_SUBMOD_OK}" ]; then
+			if [[ "false" == ${VERSION_SUBMOD_OK} ]]; then
 				__VERBOSE__ ".   .   submodule was not updated yet, try do that\n.   .   git submodule update --init --force --recursive -- \"${modpath}\""
 				git submodule update --init --force --recursive -- "${moddir}" 1>&2
-				[ 0 -ne "$?" ] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
+				[[ 0 -ne $? ]] && DIE 4 "Cannot initialize submodule '${modname}' at '${moddir}'"
 				pushd "${modpath}" >/dev/null 2>&1
 				git  rev-parse --absolute-git-dir 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_GIT_DIR --mixed
 				__VERBOSE__ ".   .   git rev-parse --absolute-git-dir\n.   .   .   VERSION_GIT_DIR=\"${VERSION_GIT_DIR}\""
@@ -457,7 +456,7 @@ function __READ_LF__
 			__VERBOSE__ "$([ -n "${STAMPER_DOS2UNIX}" ] && echo "dos2unix" || echo "cat") \"$1\"\n.   ... (external file)"
 			;;
 		esac
-		[ -n "${STAMPER_DOS2UNIX}" ] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat -- "$1" 2>/dev/null
+		[[ -n ${STAMPER_DOS2UNIX} ]] && "${STAMPER_DOS2UNIX}" --quiet 2>/dev/null <"$1" || cat -- "$1" 2>/dev/null
 		;;
 	*)
 		file="$1"
@@ -499,7 +498,7 @@ function __READ_LF__
 				#
 				# 3) alternative way to build combined file with our/their preference for collisions
 				#	is to use merged with collisions file and filter wanted parts by our script
-			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+			if [[ -f ${VERSION_ROOT_DIR}/${file} ]]; then
 				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
 				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
 			else
@@ -526,7 +525,7 @@ function __READ_LF__
 		M?" "* | ?M" "*)
 			# on some commit hook (pre-commit, commit-msg, post-commit) conflicted files may become 'modified' after adding in stagged area
 			# in this case they may have '<<<...===...>>>' insertions
-			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+			if [[ -f ${VERSION_ROOT_DIR}/${file} ]]; then
 				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
 				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
 			else
@@ -535,7 +534,7 @@ function __READ_LF__
 			;;
 		*)
 			# empty or some other
-			if [ -f "${VERSION_ROOT_DIR}/${file}" ]; then
+			if [[ -f ${VERSION_ROOT_DIR}/${file} ]]; then
 				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\"\n.   ..."
 				__cat_filter_eols__ "${file}"
 			else
@@ -562,7 +561,7 @@ function __STORE_LF__
 		;&			# FALL THROUGH
 	*)
 		local dir="${path%/*}"
-		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
+		[[ -d ${dir} ]] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
 		cat >"${path}"
 		;;
@@ -583,13 +582,13 @@ function __STORE_CRLF__
 		;&			# FALL THROUGH
 	*)
 		local dir="${path%/*}"
-		[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
+		[[ -d ${dir} ]] || mkdir --parents -- "${dir}" 1>&2
 		# we assume LF-eols in text string
 		"$STAMPER_UNIX2DOS" --quiet >"${path}"
 		;;
 	esac
 }
-if [ "Windows_NT" == "$OS" ]; then
+if [[ "Windows_NT" == ${OS} ]]; then
 	# __STORE_NATIVE_EOL__  worktree_relative_filename   text
 	function __STORE_NATIVE_EOL__
 	{
@@ -605,7 +604,7 @@ if [ "Windows_NT" == "$OS" ]; then
 			;&			# FALL THROUGH
 		*)
 			local dir="${path%/*}"
-			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
+			[[ -d ${dir} ]] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
 			"$STAMPER_UNIX2DOS" --quiet >"${path}"
 			;;
@@ -617,7 +616,7 @@ if [ "Windows_NT" == "$OS" ]; then
 		case "${STAMPER_PATH_TYPE}" in
 		msys)
 			# assume unsupported operation, msys's chmod does nothing
-			[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
+			[[ "extended" == ${STAMPER_VERBOSE,,} ]] && __VERBOSE__ ".   skip 'chmod \"${1}\" \"${2}\"' -- assume unsupported operation"
 			;;
 		*)
 			# Cygwin or SFU/SUA: they support chmod but may store file
@@ -635,7 +634,7 @@ if [ "Windows_NT" == "$OS" ]; then
 				mode="ug${1:1}"
 				;;
 			esac
-			[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
+			[[ "extended" == ${STAMPER_VERBOSE,,} ]] && __VERBOSE__ ".   chmod \"${mode}\" -- \"${2}\""
 			chmod "${mode}" -- "${2}"
 			;;
 		esac
@@ -656,7 +655,7 @@ else
 			;&			# FALL THROUGH
 		*)
 			local dir="${path%/*}"
-			[ -d "${dir}" ] || mkdir --parents -- "${dir}" 1>&2
+			[[ -d ${dir} ]] || mkdir --parents -- "${dir}" 1>&2
 			# we assume LF-eols in text string
 			cat >"${path}"
 			;;
@@ -665,7 +664,7 @@ else
 	# __CHMOD__ mode path
 	function __CHMOD__
 	{
-		[ "extended" == "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ ".   chmod \"${1}\" -- \"${2}\""
+		[[ "extended" == ${STAMPER_VERBOSE,,} ]] && __VERBOSE__ ".   chmod \"${1}\" -- \"${2}\""
 		chmod "${1}" -- "${2}"
 	}
 fi
@@ -731,15 +730,15 @@ for plugin in "${STAMPER_SCRIPT_PATH}-plugin-"*; do
 	source "${plugin}"
 	temp="${plugin##*/${STAMPER_SCRIPT_NAME}-plugin-}"
 	__VERBOSE__ ".   $temp: $plugin"
-	if [ \
-	       "function" == "$(type -t "__PLUGIN_${temp}_NOTICE__")" \
-		-a "function" == "$(type -t "__PLUGIN_${temp}_SAMPLE__")" \
-		-a "function" == "$(type -t "__PLUGIN_${temp}_GETVER__")" \
-		-a "function" == "$(type -t "__PLUGIN_${temp}_CREATE__")" \
-		-a "function" == "$(type -t "__PLUGIN_${temp}_MODIFY__")" \
-		-a "function" == "$(type -t "__PLUGIN_${temp}_ATTRIB__")" \
-	]; then
-		STAMPER_PLUGINS["${temp}"]="${plugin}"
+	if [[ \
+	       "function" == $(type -t "__PLUGIN_${temp}_NOTICE__") \
+		&& "function" == $(type -t "__PLUGIN_${temp}_SAMPLE__") \
+		&& "function" == $(type -t "__PLUGIN_${temp}_GETVER__") \
+		&& "function" == $(type -t "__PLUGIN_${temp}_CREATE__") \
+		&& "function" == $(type -t "__PLUGIN_${temp}_MODIFY__") \
+		&& "function" == $(type -t "__PLUGIN_${temp}_ATTRIB__") \
+	]]; then
+		STAMPER_PLUGINS[${temp}]="${plugin}"
 	else
 		echo "Warning: bad plugin '${temp}' implementation" 1>&2
 	fi
@@ -777,7 +776,7 @@ VERSION_AUTHORSHIP=""
 VERSION_DECLARATION=""
 
 VERSION_CONFIG_NAME=".${STAMPER_SCRIPT_NAME}"
-if [ -n "${STAMPER_CURRENT_DIR}" ]; then
+if [[ -n ${STAMPER_CURRENT_DIR} ]]; then
 	# -cd / --directory option was given
 	#
 	# NOTE: r/w functions (READ_LF, STORE_LF etc) and git commands use
@@ -834,7 +833,7 @@ __VERBOSE__ "\nParsing configuration file \"${VERSION_CONFIG_PREFIX}${VERSION_CO
 .   VERSION_CONFIG_PREFIX=\"${VERSION_CONFIG_PREFIX}\"
 .   VERSION_CONFIG_NAME=\"${VERSION_CONFIG_NAME}\""
 
-if [ -r "${VERSION_CONFIG_PATH}" ]; then
+if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 	((cn=0))
 	VERSION_CONFIG_MISSING=""
 	__READ_LF__ "${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}" | while read -r param value; do
@@ -847,35 +846,23 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 		"" | "#"*)
 			;;
 		abbrev:)
-			if [ -z "${STAMPER_ABBREV_LEN}" ]; then
-				STAMPER_ABBREV_LEN="$value"
-			else
-				echo "Warning: Ignoring duplicate abbreviation length \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${STAMPER_ABBREV_LEN} ]] && STAMPER_ABBREV_LEN="$value" || echo "Warning: Ignoring duplicate abbreviation length \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		leader:)
-			if [ -z "${VERSION_LEADER}" ]; then
-				VERSION_LEADER="$value"
-			else
-				echo "Warning: Ignoring duplicate leader setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${VERSION_LEADER} ]] && VERSION_LEADER="$value" || echo "Warning: Ignoring duplicate leader setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		trailer:)
-			if [ -z "${VERSION_TRAILER}" ]; then
-				VERSION_TRAILER="$value"
-			else
-				echo "Warning: Ignoring duplicate trailer setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${VERSION_TRAILER} ]] && VERSION_TRAILER="$value" || echo "Warning: Ignoring duplicate trailer setting \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		hooks:)
-			if [ -z "${value}" ]; then
+			if [[ -z ${value} ]]; then
 				STAMPER_HOOKS["none"]="true"
 			else
 				for hook in ${value}; do
 					case "${hook}" in
 					pre-commit | post-commit | post-checkout | post-rewrite | post-merge | ${STAMPER_SCRIPT_NAME})
 						# ${STAMPER_SCRIPT_NAME} is a mark of self-server this stamper project
-						STAMPER_HOOKS["${hook,,}"]="true"
+						STAMPER_HOOKS[${hook,,}]="true"
 						;;
 					*)
 						echo "Warning: Ignoring wrong hook name \"${hook}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
@@ -885,7 +872,7 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			fi
 			;;
 		verbose:)
-			if [ -z "${STAMPER_VERBOSE}" ]; then 
+			if [[ -z ${STAMPER_VERBOSE} ]]; then 
 				case "${value,,}" in
 				verbose | true | t | yes | y | ok | set | on | simple | 1)
 					STAMPER_VERBOSE="simple"
@@ -904,12 +891,10 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				#
 				# Print suite header because configuraion file turns on verbose mode while command line does not touch it
 				alias __VERBOSE__=__VERBOSE_${STAMPER_VERBOSE^^}__
-				[ "off" != "${STAMPER_VERBOSE,,}" ] && __VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
+				[[ "off" != ${STAMPER_VERBOSE,,} ]] && __VERBOSE__ "${STAMPER_SUITE_TITLE}\n"
 			else
 				# use command-line assigned verbose mode; report this in verbose mode only
-				if [ "off" != "${STAMPER_VERBOSE,,}" ]; then
-					echo "Warning! ignoring default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
-				fi
+				[[ "off" != ${STAMPER_VERBOSE,,} ]] && echo "Warning! ignoring default verbose mode \"$value\" due command line --verbose option at ${VERSION_CONFIG_PATH}:$cn" >&2
 			fi
 			;;
 		plugin-*:)
@@ -961,10 +946,10 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 				esac
 				;;
 			esac
-			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ]; then
+			if [[ -n ${STAMPER_KNOWN_TARGETS[${temp_target}]} ]]; then
 				echo "Warning: Ignoring duplicate plugin-${temp_plugin} target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			else
-				if [ -z "${STAMPER_PLUGINS[${temp_plugin}]}" ]; then
+				if [[ -z ${STAMPER_PLUGINS[${temp_plugin}]} ]]; then
 					echo "Warning: Ignoring unknown plugin-${temp_plugin} with target file \"${temp_target}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 				else
 					index=${#STAMPER_CONF_PLUGIN[@]}
@@ -983,29 +968,17 @@ if [ -r "${VERSION_CONFIG_PATH}" ]; then
 			unset index
 			;;
 		authorship:)
-			if [ -z "${VERSION_AUTHORSHIP}" ]; then
-				VERSION_AUTHORSHIP="$value"
-			else
-				echo "Warning: Ignoring duplicate authorship \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${VERSION_AUTHORSHIP} ]] && VERSION_AUTHORSHIP="$value" || echo "Warning: Ignoring duplicate authorship \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		declaration:)
-			if [ -z "${VERSION_DECLARATION}" ]; then
-				VERSION_DECLARATION="$value"
-			else
-				echo "Warning: Ignoring duplicate copright/copyleft declration \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${VERSION_DECLARATION} ]] && VERSION_DECLARATION="$value" || echo "Warning: Ignoring duplicate copright/copyleft declration \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		default-cmd:)
-			if [ -z "$STAMPER_DEFAULT_CMD" ]; then
-				STAMPER_DEFAULT_CMD="$value"
-			else
-				echo "Warning: Ignoring duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
-			fi
+			[[ -z ${STAMPER_DEFAULT_CMD} ]] && STAMPER_DEFAULT_CMD="$value" || echo "Warning: Ignoring duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
 		textoize:)
-			if [ -z "$STAMPER_TEXTOIZE" ]; then
-				if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${value}" ]; then
+			if [[ -z ${STAMPER_TEXTOIZE} ]]; then
+				if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${value} ]]; then
 					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${value}"
 				else
 					echo "Warning: Ignoring non-existent textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
@@ -1050,9 +1023,9 @@ function __maxlen__
 {
 	a=${#1}
 	shift
-	while [ -n "$1" ]; do
+	while [[ -n $1 ]]; do
 		b=${#1}
-		if [ $b -gt $a ]; then a=$b; fi
+		[[ $b -gt $a ]] && a=$b
 		shift
 	done
 	echo $a
@@ -1063,7 +1036,7 @@ if [ 0 -lt ${#STAMPER_HOOKS[@]} ]; then
 	for hook in "${!STAMPER_HOOKS[@]}"; do
 		case "${hook}" in
 		none)
-			unset STAMPER_HOOKS["${hook}"]
+			unset STAMPER_HOOKS[${hook}]
 			# no hooks at all
 			;;
 		*)
@@ -1076,7 +1049,7 @@ fi
 #
 # apply default command if needs
 #
-[ "true" == "${STAMPER_USE_DEFAULT_CMD}" ] && set -- ${STAMPER_DEFAULT_CMD:---help}
+[[ "true" == ${STAMPER_USE_DEFAULT_CMD} ]] && set -- ${STAMPER_DEFAULT_CMD:---help}
 
 #
 # 2nd parse command line options (original or replaced with default command)
@@ -1100,16 +1073,16 @@ temp_attrib="false"
 ((an=0))
 for arg in "$@"; do
 	((an++))
-	if [ -n "${ref}" ]; then
+	if [[ -n ${ref} ]]; then
 		# assign *ref = 2nd_arg
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
 		case "${ref}" in
 		STAMPER_TEXTOIZE | \?STAMPER_TEXTOIZE)
-			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg}" ]; then
-				if [ "?" == "${ref:0:1}" ]; then
-					[ -z "${STAMPER_TEXTOIZE}" ] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg} ]]; then
+				if [[ "?" == ${ref:0:1} ]]; then
+					[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
 				else
-					[ -n "${STAMPER_TEXTOIZE}" ] && echo "Warning: Override textoize setting \"${arg}\"" >&2
+					[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg}\"" >&2
 					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
 				fi
 			else
@@ -1118,10 +1091,10 @@ for arg in "$@"; do
 			;;
 		\?*)
 			ref="${ref:1}"
-			[ -n "${ref}" -a -z "${!ref}" ] && printf -v "${ref}" '%s' "${arg}"
+			[[ -n ${ref} && -z ${!ref} ]] && printf -v "${ref}" '%s' "${arg}"
 			;;
 		*)
-			[ "${ref}" != "ref" -a -n "${!ref}" ] && echo "Warning: Override ${temp_plugin/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
+			[[ ${ref} != "ref" && -n ${!ref} ]] && echo "Warning: Override ${temp_plugin/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
 			printf -v "${ref}" '%s' "${arg}"
 			;;
 		esac
@@ -1129,7 +1102,7 @@ for arg in "$@"; do
 		# temp_plugin may be real plugin name and may be some option; there it is an option
 		temp_plugin=""
 		# note: temp_plugin is used also for syntax check - if it is non empty after parsing all args, then missing argument
-	elif [ -n "${temp_plugin}" ]; then
+	elif [[ -n ${temp_plugin} ]]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
 		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
 		case "${arg}" in
@@ -1155,7 +1128,7 @@ for arg in "$@"; do
 				__STDPATH_FUNCTION__ --var temp_target --base "${VERSION_CONFIG_DIR}" --mixed -- "${VERSION_CONFIG_DIR}/${arg/#+(.\/|\/)/}"
 				;;
 			esac
-			if [ -n "${STAMPER_KNOWN_TARGETS[${temp_target}]}" -a "//-" != "${temp_target}" -a "//--" != "${temp_target}" ]; then
+			if [[ -n ${STAMPER_KNOWN_TARGETS[${temp_target}]} && "//-" != ${temp_target} && "//--" != ${temp_target} ]]; then
 				echo "Warning: Ignore duplicate plugin-${temp_plugin} target file \"${temp_target}\" at argument #$an" >&2
 			else
 				index=${#STAMPER_EXEC_PLUGIN[@]}
@@ -1287,7 +1260,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			STAMPER_DO_PRINT_INFO="true"
 			;;
 		--leader=*)
-			[ -n "${VERSION_LEADER}" ] && echo "Warning: Override leader setting \"${arg:9}\"" >&2
+			[[ -n ${VERSION_LEADER} ]] && echo "Warning: Override leader setting \"${arg:9}\"" >&2
 			VERSION_LEADER="${arg:9}"
 			;;
 		--leader)
@@ -1295,7 +1268,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--trailer=*)
-			[ -n "${VERSION_TRAILER}" ] && echo "Warning: Override trailer setting \"${arg:10}\"" >&2
+			[[ -n ${VERSION_TRAILER} ]] && echo "Warning: Override trailer setting \"${arg:10}\"" >&2
 			VERSION_TRAILER="${arg:10}"
 			;;
 		--trailer)
@@ -1303,7 +1276,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--authorship=*)
-			[ -n "${VERSION_AUTHORSHIP}" ] && echo "Warning: Override authorship setting \"${arg:13}\"" >&2
+			[[ -n ${VERSION_AUTHORSHIP} ]] && echo "Warning: Override authorship setting \"${arg:13}\"" >&2
 			VERSION_AUTHORSHIP="${arg:13}"
 			;;
 		--authorship)
@@ -1311,7 +1284,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--declaration=*)
-			[ -n "${VERSION_DECLARATION}" ] && echo "Warning: Override declaration setting \"${arg:14}\"" >&2
+			[[ -n ${VERSION_DECLARATION} ]] && echo "Warning: Override declaration setting \"${arg:14}\"" >&2
 			VERSION_DECLARATION="${arg:14}"
 			;;
 		--declaration)
@@ -1319,36 +1292,36 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--leader\?=*)
-			[ -z "${VERSION_LEADER}" ] && VERSION_LEADER="${arg:10}"
+			[[ -z ${VERSION_LEADER} ]] && VERSION_LEADER="${arg:10}"
 			;;
 		--leader\?)
 			ref="?VERSION_LEADER"
 			temp_plugin="${arg}"
 			;;
 		--trailer\?=*)
-			[ -z "${VERSION_TRAILER}" ] && VERSION_TRAILER="${arg:11}"
+			[[ -z ${VERSION_TRAILER} ]] && VERSION_TRAILER="${arg:11}"
 			;;
 		--trailer\?)
 			ref="?VERSION_TRAILER"
 			temp_plugin="${arg}"
 			;;
 		--authorship\?=*)
-			[ -z "${VERSION_AUTHORSHIP}" ] && VERSION_AUTHORSHIP="${arg:14}"
+			[[ -z ${VERSION_AUTHORSHIP} ]] && VERSION_AUTHORSHIP="${arg:14}"
 			;;
 		--authorship\?)
 			ref="?VERSION_AUTHORSHIP"
 			temp_plugin="${arg}"
 			;;
 		--declaration\?=*)
-			[ -z "${VERSION_DECLARATION}" ] && VERSION_DECLARATION="${arg:15}"
+			[[ -z ${VERSION_DECLARATION} ]] && VERSION_DECLARATION="${arg:15}"
 			;;
 		--declaration\?)
 			ref="?VERSION_DECLARATION"
 			temp_plugin="${arg}"
 			;;
 		--textoize=*)
-			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg:11}" ]; then
-				[ -n "${STAMPER_TEXTOIZE}" ] && echo "Warning: Override textoize setting \"${arg:11}\"" >&2
+			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:11} ]]; then
+				[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg:11}\"" >&2
 				STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:11}"
 			else
 				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
@@ -1359,8 +1332,8 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		--textoize\?=*)
-			if [ -f "${STAMPER_SCRIPT_PATH}-textoize-${arg:12}" ]; then
-				[ -z "${STAMPER_TEXTOIZE}" ] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:12}"
+			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:12} ]]; then
+				[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:12}"
 			else
 				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:12}\"" >&2
 			fi
@@ -1370,7 +1343,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			temp_plugin="${arg}"
 			;;
 		*)
-			if [ -n "${STAMPER_PLUGINS[${arg}]}" ]; then
+			if [[ -n ${STAMPER_PLUGINS[${arg}]} ]]; then
 				temp_plugin="${arg}"
 			else
 				DIE 2 "Wrong argument(s): \"${arg}\""
@@ -1379,30 +1352,30 @@ if it is not set or empty then \"--help\" will be assumed."
 		esac
 	fi
 done
-[ -n "${ref}" ] && DIE 2 "Wrong argument(s): \"${temp_plugin}\" needs in argument after"
-[ -n "${temp_plugin}" ] && DIE 2 "Wrong plugin command: \"${temp_plugin}\" needs in argument after"
+[[ -n ${ref} ]] && DIE 2 "Wrong argument(s): \"${temp_plugin}\" needs in argument after"
+[[ -n ${temp_plugin} ]] && DIE 2 "Wrong plugin command: \"${temp_plugin}\" needs in argument after"
 unset temp_attrib
 unset temp_ignore
 unset temp_plugin
 unset ref
 unset an
 
-if [ -n "${VERSION_CONFIG_PREFIX}" ]; then
-	[ "false" != "${STAMPER_SETUP_HOOKS}" -a 0 -ne ${#STAMPER_HOOKS[@]} ] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
+if [[ -n ${VERSION_CONFIG_PREFIX} ]]; then
+	[[ "false" != ${STAMPER_SETUP_HOOKS} && 0 -ne ${#STAMPER_HOOKS[@]} ]] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	STAMPER_SETUP_HOOKS="false"
 else
-	if [ "false" == "${STAMPER_SETUP_HOOKS}" -a "true" == "${STAMPER_SETUP_CONFIG}" ]; then
+	if [[ "false" == ${STAMPER_SETUP_HOOKS} && "true" == ${STAMPER_SETUP_CONFIG} ]]; then
 		STAMPER_SETUP_HOOKS="update"
 	fi
 fi
-if [ "true" == "${STAMPER_GENERATE}" ]; then
+if [[ "true" == ${STAMPER_GENERATE} ]]; then
 	# if option -g / --generate was used then add configured plugins to the list of executed
 	for iconf in "${!STAMPER_CONF_PLUGIN[@]}"; do
 		found="false"
 		for iexec in "${!STAMPER_EXEC_PLUGIN[@]}"; do
-			if [ "${STAMPER_EXEC_TARGET[${iexec}]}" == "${STAMPER_CONF_TARGET[${iconf}]}" ]; then
+			if [[ ${STAMPER_EXEC_TARGET[${iexec}]} == ${STAMPER_CONF_TARGET[${iconf}]} ]]; then
 				found="true"
-				if [ "${STAMPER_EXEC_PLUGIN[${iexec}]}" != "${STAMPER_CONF_PLUGIN[${iconf}]}" ]; then
+				if [[ ${STAMPER_EXEC_PLUGIN[${iexec}]} != ${STAMPER_CONF_PLUGIN[${iconf}]} ]]; then
 					echo "Warning! use configured plugin \"${STAMPER_CONF_PLUGIN[${iconf}]}\" rather than given by command line \"${STAMPER_EXEC_PLUGIN[${iexec}]}\" for \"${STAMPER_EXEC_TARGET[${iexec}]}\"" 1>&2
 					STAMPER_EXEC_PLUGIN[${iexec}]="${STAMPER_CONF_PLUGIN[${iconf}]}"
 				fi
@@ -1412,7 +1385,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				break
 			fi
 		done
-		if [ "false" == "${found}" ]; then
+		if [[ "false" == ${found} ]]; then
 			iexec=${#STAMPER_EXEC_PLUGIN[@]}
 			STAMPER_EXEC_PLUGIN[${iexec}]="${STAMPER_CONF_PLUGIN[${iconf}]}"
 			STAMPER_EXEC_TARGET[${iexec}]="${STAMPER_CONF_TARGET[${iconf}]}"
@@ -1424,7 +1397,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	done
 	unset iconf
 else
-	[ 0 != ${#STAMPER_EXEC_PLUGIN[@]} ] && STAMPER_GENERATE="true"
+	[[ 0 != ${#STAMPER_EXEC_PLUGIN[@]} ]] && STAMPER_GENERATE="true"
 fi
 
 # get summary list of executed targets
@@ -1435,26 +1408,26 @@ for index in "${!STAMPER_CONF_TARGET[@]}"; do
 done
 for index in "${!STAMPER_EXEC_TARGET[@]}"; do
 	temp_target="${STAMPER_EXEC_TARGET[${index}]}"
-	[ -z "${STAMPER_KNOWN_TARGETS[${temp_target}]}" ] && STAMPER_KNOWN_TARGETS["${temp_target}"]="exec_${index}"
+	[[ -z ${STAMPER_KNOWN_TARGETS[${temp_target}]} ]] && STAMPER_KNOWN_TARGETS["${temp_target}"]="exec_${index}"
 done
 unset temp_target
 unset index
 
 VERSION_GIT_USER="$(git --no-pager config user.name 2>/dev/null)"
 VERSION_GIT_EMAIL="$(git --no-pager config user.email 2>/dev/null)"
-if [ -z "${VERSION_GIT_USER}" ]; then
-	if [ -n "${USER}" ]; then
+if [[ -z ${VERSION_GIT_USER} ]]; then
+	if [[ -n ${USER} ]]; then
 		# linux-style
 		VERSION_GIT_USER="${USER}"
-	elif [ -n "${USERNAME}" ]; then
+	elif [[ -n ${USERNAME} ]]; then
 		# windows-style
 		VERSION_GIT_USER="${USERNAME}"
 	else
 		VERSION_GIT_USER="Unknown User"
 	fi
 fi
-if [ -z "${VERSION_GIT_EMAIL}" ]; then
-	VERSION_GIT_EMAIL="${VERSION_GIT_USER//+([!A-Za-z0-9_])/_}@localhost"
+if [[ -z ${VERSION_GIT_EMAIL} ]]; then
+	VERSION_GIT_EMAIL="${VERSION_GIT_USER//+([!A-Za-z0-9_])/_}"
 	VERSION_GIT_EMAIL="${VERSION_GIT_EMAIL/#_/}"
 	VERSION_GIT_EMAIL="${VERSION_GIT_EMAIL/%_/}@localhost"
 fi
@@ -1462,17 +1435,17 @@ __VERBOSE__ "git config user.name and user.email\n.   VERSION_GIT_USER=${VERSION
 
 __VERBOSE__ "Check and update missing information (authorship and copyright/copyleft)"
 # authorship name must be determined once and then saved into config file
-if [ -z "${VERSION_AUTHORSHIP}" ]; then
+if [[ -z ${VERSION_AUTHORSHIP} ]]; then
 	__VERBOSE__ "Authorship is not set, try to detect it"
 	VERSION_AUTHORSHIP="${VERSION_GIT_USER}"
-	if [ -n "${VERSION_AUTHORSHIP}" ]; then
-		[ -n "${VERSION_GIT_EMAIL}" ] && VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP} <${VERSION_GIT_EMAIL}>"
+	if [[ -n ${VERSION_AUTHORSHIP} ]]; then
+		[[ -n ${VERSION_GIT_EMAIL} ]] && VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP} <${VERSION_GIT_EMAIL}>"
 		__VERBOSE__ "Authorship is based on git config\n.   VERSION_AUTHORSHIP=${VERSION_AUTHORSHIP}"
 	else
-		if [ "Windows_NT" == "$OS" ]; then
+		if [[ "Windows_NT" == ${OS} ]]; then
 			util="$(which reg.exe 2>/dev/null)"
-			if [ -n "$util" ]; then
-				VERSION_AUTHORSHIP=$(MSYS_NO_PATHCONV=1 "$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
+			if [[ -n ${util} ]]; then
+				VERSION_AUTHORSHIP=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
 						| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
 				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
 			fi
@@ -1487,7 +1460,7 @@ VERSION_AUTHORSHIP="${VERSION_AUTHORSHIP:-Unknown Author}"
 
 # copyright/copyleft text must be determined once and then saved into config file
 #    normally it must use personal or company name and initial date of project
-if [ -z "${VERSION_DECLARATION}" ]; then
+if [[ -z ${VERSION_DECLARATION} ]]; then
 	# get year of first commit
 	temp="$(git --no-pager log -n 1 --reverse --date="format:%Y" --pretty="format:%ad" 2>/dev/null)"
 	VERSION_DECLARATION="${STAMPER_DEFAULT_DECL:-Copyright (c)} ${VERSION_AUTHORSHIP} ${temp:-$(date "+%Y")}"
@@ -1514,7 +1487,7 @@ Config file${VERSION_CONFIG_MISSING}: \"${VERSION_CONFIG_PATH}\"
 for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 	plugin="${STAMPER_EXEC_PLUGIN[$index]}"
 	target="${STAMPER_EXEC_TARGET[$index]}"
-	if [ -n "${STAMPER_PLUGINS[$plugin]}" ]; then
+	if [[ -n ${STAMPER_PLUGINS[$plugin]} ]]; then
 		__VERBOSE__ ".   .   run plugin \"$plugin\" with file \"${target}\", gitignore=${STAMPER_EXEC_IGNORE[$index]}, gitattributes=${STAMPER_EXEC_ATTRIB[$index]}"
 	else
 		DIE 3 "Unknown plugin 'plugin-$plugin: $plugin'; not found '${STAMPER_SCRIPT_PATH}-plugin-$plugin'."
@@ -1531,10 +1504,10 @@ done
 # pattern '[A-Za-z][0-9]*.[0-9]*' match to v1.2 and v1.2.3 while v1, v1.2b and ab1.2 are not matching
 __VERBOSE__ "\nDetect version data"
 VERSION_TEXT="$(git --no-pager describe --long --tags --match="[A-Za-z][0-9]*.[0-9]*" HEAD 2>/dev/null)"
-if [ $? -ne 0 -o -z "${VERSION_TEXT}" ]; then
+if [[ $? -ne 0 || -z ${VERSION_TEXT} ]]; then
 	# simulate if no version tags found
 	temp="$(git --no-pager rev-list --count HEAD 2>/dev/null)"
-	if [ $? -ne 0 -o -z "$temp" -o "-1" == "$temp" ]; then
+	if [[ $? -ne 0 || -z ${temp} || -1 -eq ${temp} ]]; then
 		__VERBOSE__ ".   'git describe' and 'git rev-list --count' both are failed; assume\n.   VERSION_TEXT='v0.0-0'"
 		VERSION_TEXT="v0.0-0"
 	else
@@ -1560,7 +1533,7 @@ __VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERS
 # get SHA1
 VERSION_SHA_LONG="$(git --no-pager rev-parse HEAD 2>/dev/null)"
 __VERBOSE__ "git rev-parse HEAD\n.   VERSION_SHA_LONG=${VERSION_SHA_LONG}"
-if [ "HEAD" == "${VERSION_SHA_LONG}" ]; then
+if [[ "HEAD" == ${VERSION_SHA_LONG} ]]; then
 	VERSION_SHA_LONG="0000000000000000000000000000000000000000"
 	__VERBOSE__ ".   assume VERSION_SHA_LONG=0000000000000000000000000000000000000000"
 fi
@@ -1568,7 +1541,7 @@ fi
 # get branch name
 VERSION_BRANCH="$(git --no-pager rev-parse --abbrev-ref HEAD 2>/dev/null)"
 __VERBOSE__ "\nGet branch name\ngit rev-parse --abbrev-ref HEAD\n.   VERSION_BRANCH=${VERSION_BRANCH}"
-if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
+if [[ "HEAD" == ${VERSION_BRANCH} || -z ${VERSION_BRANCH} ]]; then
 	# detached head:
 	#
 	# 0) try to read content of HEAD
@@ -1577,11 +1550,11 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 	# note 3: fresh-created repo has HEAD equal to "ref: refs/heads/master" but head file ".git/refs/heads/master" is not exist
 	VERSION_BRANCH="$(awk -v RS='[\r\n]+' 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
 	__VERBOSE__ "awk -v RS='[\\\\r\\\\n]+' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
-	if [ -z "${VERSION_BRANCH}" ]; then
-		if [ -n "${VERSION_SUBMOD_NAME}" ]; then
+	if [[ -z ${VERSION_BRANCH} ]]; then
+		if [[ -n ${VERSION_SUBMOD_NAME} ]]; then
 			temp_branch="$(git -C "${VERSION_SUPER_DIR}" --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
 			__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
-			if [ -n "${temp_branch}" ]; then
+			if [[ -n ${temp_branch} ]]; then
 				# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
 				temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --contains=HEAD 2>/dev/null)"
 				# if temp non-empty then HEAD is somewhere on assigned branch
@@ -1591,7 +1564,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 					__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
 					;;
 				esac
-				if [ -z "${temp}" ]; then
+				if [[ -z ${temp} ]]; then
 					# may be branch heads are in past -- some commits were made on detached HEAD in we are in future?
 					# use git rev-list to read history of commits from HEAD down to initial commit
 					# and check if local or remote branch with '${temp_branch}' name if on way ...
@@ -1606,7 +1579,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 					# some like may be made by 'git log --ancestry-path OLD..NEW' ... but assigned branch may be as local as remote and we may have few SHAs matched same name
 					# so ... did few attempts for few kinds of branches or use grep to check few variants at once
 				fi
-				if [ -n "${temp}" ]; then
+				if [[ -n ${temp} ]]; then
 					# assigned head may be used for our submodule - HEAD is on branch history or vice versa - branch is on HEAD history
 					VERSION_BRANCH="${temp_branch}"
 					__VERBOSE__ ".   VERSION_BRANCH=\"${VERSION_BRANCH}\""
@@ -1614,11 +1587,11 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 			fi
 			unset temp_branch
 		fi
-		if [ -z "${VERSION_BRANCH}" ]; then
+		if [[ -z ${VERSION_BRANCH} ]]; then
 			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" --exclude="pipelines/*" ${VERSION_SHA_LONG} 2>/dev/null)"
 			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
 			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" --exclude=\"pipelines/*\" ${VERSION_SHA_LONG}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
-			if [ "undefined" == "${VERSION_BRANCH}" ]; then
+			if [[ "undefined" == ${VERSION_BRANCH} ]]; then
 				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
 				# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
 				# this is potential trouble - if real branch has name 'undefined' then it may be miss with really undefined reference.
@@ -1643,7 +1616,7 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 				__VERBOSE__ ".   b) look at history:\n.   git rev-list HEAD"
 				git --no-pager rev-list HEAD |while read temp_sha; do
 					__VERBOSE__ ".   .   ${temp_sha} is '${temp_heads[${temp_sha}]}'"
-					if [ -n "${temp_heads[${temp_sha}]}" ]; then
+					if [[ -n ${temp_heads[${temp_sha}]} ]]; then
 						VERSION_BRANCH="${temp_heads[${temp_sha}]}"
 						__VERBOSE__ ".   .   .   VERSION_BRANCH=\"${VERSION_BRANCH}\""
 						break
@@ -1654,8 +1627,50 @@ if [ "HEAD" == "${VERSION_BRANCH}" -o -z "${VERSION_BRANCH}" ]; then
 				unset temp_ref
 			fi
 		fi
+		if [[ -z ${VERSION_BRANCH} ]]; then
+			__VERBOSE__ ".   Branch remains unknown, try to look for heads in future"
+			temp_remote=""
+			git --no-pager for-each-ref "refs/remotes/" "refs/heads/" --format="%(refname:lstrip=1)" --contains=HEAD |while read temp_ref; do
+				__VERBOSE__ ".   .   '${temp_ref}'"
+				[[ "HEAD" == ${temp_ref##*/} ]] && continue
+				case "${temp_ref}" in
+				remotes/*)
+					case "${temp_remote}" in
+					"")
+						temp_remote="${temp_ref#*/}"
+						;;
+					":")
+						;;
+					*)
+						temp_remote=":"
+						;;
+					esac
+					;;
+				heads/*)
+					case "${temp}" in
+					"")
+						temp="${temp_ref#*/}"
+						;;
+					":")
+						;;
+					*)
+						temp=":"
+						;;
+					esac
+					;;
+				esac
+			done
+			unset temp_ref
+			if [[ -n "${temp}" && ":" != "${temp}" ]]; then
+				VERSION_BRANCH="${temp}"
+			elif [[ -n "${temp_remote}" && ":" != "${temp_remote}" ]]; then
+				VERSION_BRANCH="${temp_remote}"
+			fi
+            [[ -n ${VERSION_BRANCH} ]] && __VERBOSE__ ".   VERSION_BRANCH=\"${VERSION_BRANCH}\""
+			unset temp_remote
+		fi
 		unset temp
-		if [ -z "${VERSION_BRANCH}" ]; then
+		if [[ -z ${VERSION_BRANCH} ]]; then
 			VERSION_BRANCH="?UNKNOWN"
 			__VERBOSE__ ".   VERSION_BRANCH=${VERSION_BRANCH}  (assume unknown)"
 		fi
@@ -1670,7 +1685,7 @@ VERSION_DIRTY=""
 # 2) post-merge needs in configuration file check -- we must leve it in correct
 #    state (avoid syntax errors on next reading); the DIRTY deteted is same as (3)
 # 3) all other cases
-if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
+if [[ "pre-commit" == ${STAMPER_EXECUTING_HOOK} ]]; then
 	__VERBOSE__ "\nDetect DIRTY status for pre-commit hook"
 	# now ... commit may be used in many scenarios:
 	# - regular commit: VERSION_SHA_LONG is a SHA of current commit, so when actual commit will be created VERSION_SHA_LONG becomes 'SHA of parent commit'
@@ -1680,30 +1695,30 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 	#   but few commits will be removed, so we needs in actual parent
 	# - merge commit: ...
 	amend=""
-	if [ "Windows_NT" == "$OS" ]; then
+	if [[ "Windows_NT" == ${OS} ]]; then
 		# this is a trick - we get all git.exe instances and look for --amend text; this may be wrong due to
 		# mismatch instance of git.exe and placing text --amend somewhere inside text args...
 		# ... somewhere this may work :(
 		util="$(which WMIC.exe 2>/dev/null)"
-		if [ -n "$util" ]; then
-			amend="$(MSYS_NO_PATHCONV=1 "$util" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
+		if [[ -n ${util} ]]; then
+			amend="$(MSYS_NO_PATHCONV=1 "${util}" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
 		fi
 	else
 		# this may work under *nix... but windows :(
 		amend=""
 		temp="$(ps -f -p $PPID |awk -v RS='[\r\n]+' 'BEGIN{ N=-1; } -1 == N { for (i=1;i<=NF;i++) if ( $i == "PPID" ) { N=i; break; } next; } { print $N; }')"
-		if [ -n "$temp" ]; then
-			if [ -f "/proc/$temp/cmdline" ]; then
+		if [[ -n ${temp} ]]; then
+			if [[ -f /proc/${temp}/cmdline ]]; then
 				__VERBOSE__ ".    look at /proc/$temp/cmdline"
 				for arg in $(xargs -n1 --null </proc/$temp/cmdline); do
 					__VERBOSE__ ".    arg = $arg"
-					if [ "$arg" == "--amend" ]; then amend="true"; fi
+					[[ ${arg} == "--amend" ]] && amend="true"
 				done
 			fi
 		fi
 	fi
 	# apply detected options
-	if [ -z "$amend" ]; then
+	if [[ -z ${amend} ]]; then
 		((VERSION_BUILD++))
 		__VERBOSE__ "This is regular commit; increase VERSION_BUILD, now VERSION_BUILD=${VERSION_BUILD}"
 	else
@@ -1714,11 +1729,11 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		temp="$(git --no-pager rev-parse --sq ${VERSION_SHA_LONG}^@ 2>/dev/null)"
 		temp="${temp//\'/}"
 		__VERBOSE__ "git rev-parse --sq ${VERSION_SHA_LONG}^\n.   temp=$temp"
-		if [ -z "$temp" -o "$temp" == "${VERSION_SHA_LONG}" ]; then
+		if [[ -z ${temp} || ${temp} == ${VERSION_SHA_LONG} ]]; then
 			temp="0000000000000000000000000000000000000000"
 			__VERBOSE__ ".   assume temp=0000000000000000000000000000000000000000"
 		fi
-		VERSION_SHA_LONG="$temp"
+		VERSION_SHA_LONG="${temp}"
 	fi
 	# VERSION_SHA_LONG may be list of sha... add 'p:' prefix to all
 	declare -a sha_temp
@@ -1741,10 +1756,10 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 			;;
 		X)
 			# has changed in worktree
-			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
+			if [[ -z ${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]} ]]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "off" == "${STAMPER_VERBOSE,,}" ] && break
+				[[ "off" == ${STAMPER_VERBOSE,,} ]] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -1760,7 +1775,7 @@ if [ "pre-commit" == "${STAMPER_EXECUTING_HOOK}" ]; then
 	done
 fi
 
-if [ "post-merge" == "${STAMPER_EXECUTING_HOOK}" ]; then
+if [[ "post-merge" == ${STAMPER_EXECUTING_HOOK} ]]; then
 	git --no-pager status --porcelain --untracked-files=normal -- ":/:${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}"  2>/dev/null | while read status file; do
 		case "$status" in
 		AA | AU | UA | UU | DU | UD | DD)
@@ -1771,7 +1786,7 @@ if [ "post-merge" == "${STAMPER_EXECUTING_HOOK}" ]; then
 		esac
 	done
 fi
-if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
+if [[ "pre-commit" != ${STAMPER_EXECUTING_HOOK} ]]; then
 	# all other hooks except pre-commit
 	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
@@ -1787,10 +1802,10 @@ if [ "pre-commit" != "${STAMPER_EXECUTING_HOOK}" ]; then
 		X | C)
 			# X - has changes in worktree
 			# C - has indexed changes
-			if [ -z "${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]}" ]; then
+			if [[ -z ${STAMPER_KNOWN_TARGETS[${file#${VERSION_CONFIG_PREFIX}}]} ]]; then
 				__VERBOSE__ ".    \"${file}\" changed, worktree remains dirty"
 				VERSION_DIRTY="+"
-				[ "off" == "${STAMPER_VERBOSE,,}" ] && break
+				[[ "off" == ${STAMPER_VERBOSE,,} ]] && break
 			else
 				__VERBOSE__ ".    \"${file}\" is the target file, so changes to it are not taken into account"
 			fi
@@ -1816,10 +1831,8 @@ unset temp
 
 printf -v VERSION_ID "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
 VERSION_TEXT=""
-if [ -n "${STAMPER_TEXTOIZE}" ]; then
-	source "${STAMPER_TEXTOIZE}"
-fi
-[ -z "${VERSION_TEXT}" ] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
+[[ -n ${STAMPER_TEXTOIZE} ]] && source "${STAMPER_TEXTOIZE}"
+[[ -z ${VERSION_TEXT} ]] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)
@@ -1833,16 +1846,16 @@ post-commit | post-rewrite | post-merge)
 esac
 
 __VERBOSE__ "\nExecute wanted operations -- create config, generate version file, print info etc"
-if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
-	if [ -n "${VERSION_SUBMOD_NAME}" -a -z "${VERSION_LEADER}" ]; then
+if [[ ! -f ${VERSION_CONFIG_PATH} ]]; then
+	if [[ -n ${VERSION_SUBMOD_NAME} && -z ${VERSION_LEADER} ]]; then
 		VERSION_LEADER="${VERSION_SUBMOD_NAME//+([!A-Za-z0-9_])/_}"
 		VERSION_LEADER="${VERSION_LEADER/#+_/}"
 		VERSION_LEADER="${VERSION_LEADER/%+_/}"
 		VERSION_LEADER="${VERSION_LEADER^^}_"
 	fi
-	if [ "true" == "${STAMPER_SETUP_CONFIG}" ]; then
+	if [[ "true" == ${STAMPER_SETUP_CONFIG} ]]; then
 		# create initial config file
-		if [ 0 -eq ${#STAMPER_HOOKS[@]} ]; then
+		if [[ 0 -eq ${#STAMPER_HOOKS[@]} ]]; then
 			STAMPER_HOOKS["pre-commit"]="true"
 			# the STAMPER_HOOKS["post-commit"] is not used by default
 			STAMPER_HOOKS["post-checkout"]="true"
@@ -1921,7 +1934,7 @@ if [ ! -f "${VERSION_CONFIG_PATH}" ]; then
 	fi
 fi
 
-if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ]; then
+if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; then
 	#
 	# get build host and OS identification
 	#
@@ -1933,10 +1946,10 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 	__VERBOSE__ ".   host=\"$temp\""
 	VERSION_HOSTINFO="${VERSION_HOSTINFO}@${temp}"
 	temp=""
-	if [ "Windows_NT" == "$OS" ]; then
+	if [[ "Windows_NT" == ${OS} ]]; then
 		util="$(which reg.exe 2>/dev/null)"
-		if [ -n "$util" ]; then
-			temp=$(MSYS_NO_PATHCONV=1 "$util" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
+		if [[ -n ${util} ]]; then
+			temp=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
 					| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
 						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
 						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
@@ -1945,11 +1958,11 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 		fi
 	else
 		util="$(which lsb_release 2>/dev/null)"
-		if [ -n "$util" ]; then
-			temp=$("$util" -d -s |sed -r -e 's/"//g')
+		if [[ -n ${util} ]]; then
+			temp=$("${util}" -d -s |sed -r -e 's/"//g')
 			__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
 		fi
-		if [ -z "$temp" -a -f "/etc/os-release" ]; then
+		if [[ -z ${temp} && -f /etc/os-release ]]; then
 			temp="$(cat "/etc/os-release" \
 					| awk -v RS='[\r\n]+' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
 									$1 == "NAME" { n=$2; }
@@ -1957,42 +1970,42 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" -o "true" == "${STAMPER_GENERATE}"  ];
 									END{ print gensub( "\"", "", "G", pn == "" ? n " " v : pn ); }')"
 			__VERBOSE__ ".   this is *nix; try \"/etc/os-release\" to get os identification\n.      \"$temp\""
 		fi
-		if [ -z "$temp" ]; then
+		if [[ -z ${temp} ]]; then
 			util="$(which hostnamectl 2>/dev/null)"
-			if [ -n "$util" ]; then
+			if [[ -n ${util} ]]; then
 				temp="$(hostnamectl status |awk -v RS='[\r\n]+' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
 				__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
 			fi
 		fi
 	fi
-	if [ -z "$temp" ]; then
+	if [[ -z ${temp} ]]; then
 		util="$(which uname 2>/dev/null)"
-		if [ -n "$util" ]; then
-			temp="$("$util" -s)"
+		if [[ -n ${util} ]]; then
+			temp="$("${util}" -s)"
 			__VERBOSE__ ".   try \"$util\" to get os identification\n.      \"$temp\""
 		fi
 	fi
-	if [ -n "$temp" ]; then
+	if [[ -n ${temp} ]]; then
 		VERSION_HOSTINFO="${VERSION_HOSTINFO} ${temp}"
 		__VERBOSE__ ".   VERSION_HOSTINFO=\"${VERSION_HOSTINFO}\""
 	fi
 	unset temp
 	unset util
 	
-	if [ "0000000000000000000000000000000000000000" == "$VERSION_SHA_LONG" ]; then
+	if [[ "0000000000000000000000000000000000000000" == ${VERSION_SHA_LONG} ]]; then
 		VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
 		VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
 	else
 		eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
 		__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
-		if [ -z "${VERSION_COMMIT_AUTHOR}" ]; then
+		if [[ -z ${VERSION_COMMIT_AUTHOR} ]]; then
 			VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
 			VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
 		fi
 	fi
 fi
 
-if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
+if [[ "true" == ${STAMPER_DO_PRINT_INFO} ]]; then
 	echo "${VERSION_TEXT}  ${VERSION_DATE}  ${VERSION_HOSTINFO}"
 	echo "   VERSION_ID=            ${VERSION_ID}"
 	echo "   VERSION_TEXT=          ${VERSION_TEXT}"
@@ -2020,7 +2033,7 @@ if [ "true" == "${STAMPER_DO_PRINT_INFO}" ]; then
 	echo "   Note. The identifier names listed here are exposed in the plugin, not in the target file."
 fi
 
-if [ "true" == "${STAMPER_GENERATE}" ]; then
+if [[ "true" == ${STAMPER_GENERATE} ]]; then
 	NAME_VERSION_ID="${VERSION_LEADER}VERSION_ID${VERSION_TRAILER}"
 	NAME_VERSION_TEXT="${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}"
 	NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
@@ -2085,11 +2098,11 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 			indata="$(__READ_LF__ "${target}")"
 			;;
 		esac
-		if [ -n "${indata}" ]; then
+		if [[ -n ${indata} ]]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
 			existing_version="$(__PLUGIN_${plugin}_GETVER__ <<<"${indata}")"
 
-			if [ "${existing_version}" == "${VERSION_TEXT}" -a -z "${VERSION_DIRTY}" ]; then
+			if [[ ${existing_version} == ${VERSION_TEXT} && -z ${VERSION_DIRTY} ]]; then
 				__VERBOSE__ ".   NOW \"$existing_version\" is same as generated \"${VERSION_TEXT}\" REMAIN UNCHANGED \"${target}\""
 			else
 				# generate new file 1) if versions mismatch and/or 2) if dirty flag set because 'date of sources' will be changed every time
@@ -2104,7 +2117,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					outdata="$(__READ_LF__ "${target}")"
 					;;
 				esac
-				if [ "${indata}" == "${outdata}" ]; then
+				if [[ ${indata} == ${outdata} ]]; then
 					__VERBOSE__ "-------------------------------------------------"
 					echo "WARNING: Plugin \"$plugin\" did not modify \"${target}\"" 1>&2
 					echo "         This occurs if version script cannot lookup *VERSION_* data" 1>&2
@@ -2118,7 +2131,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 					*)
 						# detect .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 						__VERBOSE__ "git check-ignore -- \":/:${target}\""
-						if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
+						if [[ -z $(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null) ]]; then
 							__VERBOSE__ ".    NON-GITIGNORED file\ngit add \":/:${target}\""
 							git --no-pager add --force -- ":/:${target}" >/dev/null
 						else
@@ -2138,15 +2151,15 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 				;;
 			*)
 				# update .gitattributes on creation target file
-				[ "true" == "${STAMPER_EXEC_ATTRIB[${index}]}" ] && STAMPER_FILL_ATTRIB["${target}"]="$(__PLUGIN_${plugin}_ATTRIB__)"
+				[[ "true" == ${STAMPER_EXEC_ATTRIB[${index}]} ]] && STAMPER_FILL_ATTRIB[${target}]="$(__PLUGIN_${plugin}_ATTRIB__)"
 				# update .gitignore on creation target file
-				if [ "true" == "${STAMPER_EXEC_IGNORE[${index}]}" ]; then
+				if [[ "true" == ${STAMPER_EXEC_IGNORE[${index}]} ]]; then
 					# check .gitignore content later
 					STAMPER_FILL_IGNORE[${#STAMPER_FILL_IGNORE[@]}]="${target}"
 				else
 					# check .gitignore'd state by fact, do not rely on ${STAMPER_EXEC_IGNORE[${index}]} data (they may be changed or lost)
 					__VERBOSE__ "git check-ignore -- \":/:${target}\""
-					if [ -z "$(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null)" ]; then
+					if [[ -z $(git --no-pager check-ignore -- ":/:${target}" 2>/dev/null) ]]; then
 						__VERBOSE__ ".    NON-GITIGNORED file\ngit add \":/:${target}\""
 						git --no-pager add --force -- ":/:${target}" >/dev/null
 					else
@@ -2164,7 +2177,7 @@ if [ "true" == "${STAMPER_GENERATE}" ]; then
 	__VERBOSE__ "\n"
 fi
 
-if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
+if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 	# list after generation, file data may be changed
 	echo "Folders:"
 	echo "   VERSION_SUPER_DIR=     ${VERSION_SUPER_DIR}"
@@ -2182,22 +2195,18 @@ if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 	declare -A temp_source
 	for n in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		target="${STAMPER_EXEC_TARGET[${n}]}"
-		temp_plugin["${target}"]="${STAMPER_EXEC_PLUGIN[${n}]}"
-		temp_ignore["${target}"]="${STAMPER_EXEC_IGNORE[${n}]}"
-		temp_attrib["${target}"]="${STAMPER_EXEC_ATTRIB[${n}]}"
-		temp_source["${target}"]="cmd"
+		temp_plugin[${target}]="${STAMPER_EXEC_PLUGIN[${n}]}"
+		temp_ignore[${target}]="${STAMPER_EXEC_IGNORE[${n}]}"
+		temp_attrib[${target}]="${STAMPER_EXEC_ATTRIB[${n}]}"
+		temp_source[${target}]="cmd"
 	done
-	for n in "${!STAMPER_CONF_PLUGIN[@]}"; do
+	for n in ${!STAMPER_CONF_PLUGIN[@]}; do
 		target="${STAMPER_CONF_TARGET[${n}]}"
-		if [ -z "${temp_plugin[${target}]}" ]; then
-			temp_source["${target}"]="config"
-		else
-			temp_source["${target}"]="config, ${temp_source[${target}]}"
-		fi
+		[[ -z ${temp_plugin[${target}]} ]] && temp_source["${target}"]="config" || temp_source["${target}"]="config, ${temp_source[${target}]}"
 		# config has precedence over command line
-		temp_plugin["${target}"]="${STAMPER_CONF_PLUGIN[${n}]}"
-		temp_ignore["${target}"]="${STAMPER_CONF_IGNORE[${n}]}"
-		temp_attrib["${target}"]="${STAMPER_CONF_ATTRIB[${n}]}"
+		temp_plugin[${target}]="${STAMPER_CONF_PLUGIN[${n}]}"
+		temp_ignore[${target}]="${STAMPER_CONF_IGNORE[${n}]}"
+		temp_attrib[${target}]="${STAMPER_CONF_ATTRIB[${n}]}"
 	done
 
 	plen=$(__maxlen__ "Plugin" "${!STAMPER_PLUGINS[@]}")
@@ -2207,25 +2216,25 @@ if [ "true" == "${STAMPER_DO_LIST_PLUGINS}" ]; then
 	for plugin in "${!STAMPER_PLUGINS[@]}"; do
 		empty="true"
 		for target in "${!temp_plugin[@]}"; do
-			if [ "${plugin}" == "${temp_plugin[${target}]}" ]; then
-				if [ -n "${target}" ]; then
+			if [[ ${plugin} == ${temp_plugin[${target}]} ]]; then
+				if [[ -n ${target} ]]; then
 					empty="false"
-					if [ ! -f "${VERSION_CONFIG_DIR}/${target}" ]; then
+					if [[ ! -f ${VERSION_CONFIG_DIR}/${target} ]]; then
 						info="fs: NONE"
 					else
 						info="fs: len=$(ls -l --time-style="+%Y-%m-%d %H:%M:%S" "${VERSION_CONFIG_DIR}/${target}" |cut -d " " -f 5-7)"
 					fi
 
 					git_info="$(git --no-pager log -n 1 --date="format:%Y-%m-%d %H:%M:%S" --format="%ad @%h" -- "${VERSION_CONFIG_PREFIX}${target}" 2>/dev/null)"
-					[ -n "${git_info}" ] && info="git: ${git_info}, ${info}"
-					[ "true" == "${temp_ignore[${target}]}" ] && info=".gitignore, ${info}"
-					[ "true" == "${temp_attrib[${target}]}" ] && info="$(__PLUGIN_${temp_plugin[${target}]}_ATTRIB__), ${info}"
+					[[ -n ${git_info} ]] && info="git: ${git_info}, ${info}"
+					[[ "true" == ${temp_ignore[${target}]} ]] && info=".gitignore, ${info}"
+					[[ "true" == ${temp_attrib[${target}]} ]] && info="$(__PLUGIN_${temp_plugin[${target}]}_ATTRIB__), ${info}"
 					__triple_echo__ $plen "${plugin}" $flen "${target}" "${temp_source[${target}]}, ${info}"
 					unset git_info
 				fi
 			fi
 		done
-		if [ "true" == "${empty}" ]; then
+		if [[ "true" == ${empty} ]]; then
 			__triple_echo__ $plen "$plugin" $flen "-" "Not configured"
 		fi
 		unset target
@@ -2244,7 +2253,7 @@ fi
 #
 # check/update .gitignore and/or .gitattributes
 #
-if [ 0 -ne ${#STAMPER_FILL_ATTRIB[@]} ]; then
+if [[ 0 -ne ${#STAMPER_FILL_ATTRIB[@]} ]]; then
 	declare -i n
 	r=""
 
@@ -2290,7 +2299,7 @@ __VERBOSE__ "${script}"
 	unset r n f
 
 	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes")"
-	[ -z "${text_a}" ] && text_a="#
+	[[ -z ${text_a} ]] && text_a="#
 # text=true   text    assume tex file, allow CRLF translation (CRLF to LF on worktree->repo, LF to CRLF on repo->worktree)
 # text=false  -text   assume binary file, disable CRLF translation
 # text=auto           try to detect type of file and apply tetx/binary rules depend on its content
@@ -2308,7 +2317,7 @@ __VERBOSE__ "${script}"
 .gitattributes  text eol=lf
 .gitmodules     text eol=lf"
 	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
-	if [ "${text_a}" != "${text_b}" ]; then
+	if [[ ${text_a} != ${text_b} ]]; then
 		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitattributes"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes" <<<"${text_b}"
 		git --no-pager add --force -- "${VERSION_CONFIG_PREFIX}.gitattributes" >/dev/null
@@ -2320,7 +2329,7 @@ __VERBOSE__ "${script}"
 	unset script
 fi
 
-if [ 0 != ${#STAMPER_FILL_IGNORE[@]} ]; then
+if [[ 0 != ${#STAMPER_FILL_IGNORE[@]} ]]; then
 	r=""
 	script="BEGIN {"
 	for n in "${!STAMPER_FILL_IGNORE[@]}"; do
@@ -2358,7 +2367,7 @@ END {"
 __VERBOSE__ "${script}"
 
 	text_a="$(__READ_LF__ "${VERSION_CONFIG_PREFIX}.gitignore")"
-	if [ -z "${text_a}" ]; then
+	if [[ -z ${text_a} ]]; then
 			text_a="#
 # temporary, intermediate and target files
 *.meta
@@ -2395,7 +2404,7 @@ _[Bb][Ii][Nn]/
 
 # private files (are out of repo)
 _[Pp][Rr][Ii][Vv][Aa][Tt][Ee]/"
-		if [ "Windows_NT" == "$OS" ]; then
+		if [[ "Windows_NT" == ${OS} ]]; then
 			text_a="${text_a}
 
 # Ignore Visual Studio temporary files, build results, and
@@ -2545,7 +2554,7 @@ ehthumbs.db
 	fi
 
 	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
-	if [ "${text_a}" != "${text_b}" ]; then
+	if [[ ${text_a} != ${text_b} ]]; then
 		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitignore"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitignore" <<<"${text_b}"
 		git --no-pager add --force -- "${VERSION_CONFIG_PREFIX}.gitignore" >/dev/null
@@ -2591,7 +2600,7 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+if [[ -x \"${STAMPER_SCRIPT_CMD}\" ]]; then
 	\"${STAMPER_SCRIPT_CMD}\" --git-hook=pre-commit --generate
 	exit \$?
 fi
@@ -2617,8 +2626,8 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-if [ \"\$3\" == \"1\" -a -z \"\$GIT_REFLOG_ACTION\" ]; then
-	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+if [[ \$3 == \"1\" && -z \${GIT_REFLOG_ACTION} ]]; then
+	if [[ -x \"${STAMPER_SCRIPT_CMD}\" ]]; then
 		\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-checkout --generate
 		exit \$?
 	fi
@@ -2646,8 +2655,8 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-if [ -z \"\$GIT_REFLOG_ACTION\" ]; then
-	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+if [[ -z \${GIT_REFLOG_ACTION} ]]; then
+	if [[ -x \"${STAMPER_SCRIPT_CMD}\" ]]; then
 		VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-commit --generate)\"
 		RETVAL=\$?
 		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
@@ -2680,8 +2689,8 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-if [ \"\${1,,}\" == \"rebase\" ]; then
-	if [ -x \"${STAMPER_SCRIPT_CMD}\" ]; then
+if [[ \${1,,} == \"rebase\" ]]; then
+	if [[ -x \"${STAMPER_SCRIPT_CMD}\" ]]; then
 		VERSION_TEXT=\"\$(\"${STAMPER_SCRIPT_CMD}\" --git-hook=post-rewrite --generate)\"
 		RETVAL=\$?
 		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
@@ -2714,10 +2723,10 @@ export STAMPER_SUITE=\"Version suite ${STAMPER_VERSION_TEXT}\"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
 #
 
-VERSION_TEXT=\"\$([ -x \"${STAMPER_SCRIPT_CMD}\" ] && \"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate || exit 1)\"
+VERSION_TEXT=\"\$([[ -x \"${STAMPER_SCRIPT_CMD}\" ]] && \"${STAMPER_SCRIPT_CMD}\" --git-hook=post-merge --generate || exit 1)\"
 RETVAL=\$?
-if [ \"1\" != \"\$1\" ]; then
-	# '$1' == '1' means squash merge;
+if [[ \"1\" != \$1 ]]; then
+	# '\$1' == '1' means squash merge;
 	# do not make commit for squash - it will be made manually later
 	# (squash merge does not execute commit yet)
 	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
@@ -2748,7 +2757,7 @@ function __update_this_hook_async__
 	local	ps="$(which ps 2>/dev/null)"
 
 	# stdout and stderr both are redirected, so change __VERBOSE__ to use logger 
-	if [ "Windows_NT" == "$OS" ]; then
+	if [[ "Windows_NT" == ${OS} ]]; then
 		# if stdout and stderr are closed ... I do'nt known how to
 		# access windows syslog from msys2 bash script
 		alias __VERBOSE__=__VERBOSE_OFF__
@@ -2756,11 +2765,11 @@ function __update_this_hook_async__
 		unalias __VERBOSE__
 		function __VERBOSE__
 		{
-			[ "off" != "${STAMPER_VERBOSE,,}" ] && __VERBOSE_${STAMPER_VERBOSE^^}__ "${STAMPER_EXECUTING_HOOK}: $*" 2>&1 | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
+			[[ "off" != ${STAMPER_VERBOSE,,} ]] && __VERBOSE_${STAMPER_VERBOSE^^}__ "${STAMPER_EXECUTING_HOOK}: $*" 2>&1 | logger --id="${STAMPER_HOOK_PID}" --file /dev/stdin 1>/dev/null 2>&1
 		}
 	fi
 	ps="${ps:-ps}"
-	if [ "Windows_NT" == "$OS" ]; then
+	if [[ "Windows_NT" == ${OS} ]]; then
 		case "${STAMPER_VERBOSE,,}" in
 		simple | extended)
 			# avoid complex string expansion using subshell execution if result is unused
@@ -2769,7 +2778,7 @@ function __update_this_hook_async__
 		esac
 		while "${ps}" -p "${STAMPER_HOOK_PID}" >/dev/null 2>&1 && [ "0" == "${PIPESTATUS[0]}" ]; do
 			# sleep 1 ms
-			if [ -n "${usleep}" ]; then
+			if [[ -n ${usleep} ]]; then
 				"${usleep}" 1000
 			else
 				sleep 0.001s
@@ -2790,7 +2799,7 @@ function __update_this_hook_async__
 		esac
 		while "${ps}" --pid "${STAMPER_HOOK_PID}" >/dev/null 2>&1 ; do
 			# sleep 1 ms
-			if [ -n "${usleep}" ]; then
+			if [[ -n ${usleep} ]]; then
 				"${usleep}" 1000
 			else
 				sleep 0.001s
@@ -2811,7 +2820,7 @@ function __update_this_hook_async__
 #
 function __update_this_hook__
 {
-	if [ "$2" != "${STAMPER_EXECUTING_HOOK}" ]; then
+	if [[ $2 != ${STAMPER_EXECUTING_HOOK} ]]; then
 		__update_this_hook_really__ "$1" "$2" "$3" "$4"
 	else
 		STAMPER_HOOK_PID=${PPID}
@@ -2867,14 +2876,14 @@ function __update_all_hooks__
 		hook_path="${all_hooks[$hook]}"
 
 		# try to get suite version
-		if [ -f "${hook_path}" ]; then
+		if [[ -f ${hook_path} ]]; then
 			# today 'stamper-'
 			hook_version="$(head -n 128 "${hook_path}" \
 					|awk -v RS='[\r\n]+' '
 						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[:._+-][0-9]+[:._+-][0-9]+[:._+-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 						/export\s+STAMPER_SUITE=".*"/ { print "stamper-UNKNOWN"; exit(0); }
 					')"
-			if [ -n "${hook_version}" ]; then
+			if [[ -n ${hook_version} ]]; then
 				__VERBOSE__ "Suite version of \"${hook}\" is \"${hook_version}\" (our is \"stamper-${STAMPER_VERSION_TEXT}\") -- this is known hook"
 			else
 				# hook_version is an empty string
@@ -2892,8 +2901,8 @@ function __update_all_hooks__
 			case "${hook_version}" in
 			stamper-"${STAMPER_VERSION_TEXT}")
 				# our hook, version OK
-				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
-					if [ "true" == "${STAMPER_SETUP_HOOKS}" ]; then
+				if [[ "true" == ${STAMPER_HOOKS[${hook}]} ]]; then
+					if [[ "true" == ${STAMPER_SETUP_HOOKS} ]]; then
 						__update_this_hook__ "setup" "${hook}" "${hook_path}" "force setup \"${hook}\" ${STAMPER_VERSION_TEXT}"
 					else
 						__VERBOSE__ ".   version OK \"${hook}\""
@@ -2904,7 +2913,7 @@ function __update_all_hooks__
 				;;
 			stamper-*)
 				# our hook, version differs
-				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
+				if [[ "true" == ${STAMPER_HOOKS[${hook}]} ]]; then
 					__update_this_hook__ "setup" "${hook}" "${hook_path}" "change \"${hook}\" to ${STAMPER_VERSION_TEXT}"
 				else
 					__update_this_hook__ "remove" "${hook}" "${hook_path}" "unused \"${hook}\" ${hook_version}"
@@ -2912,7 +2921,7 @@ function __update_all_hooks__
 				;;
 			missing)
 				# missing file
-				if [ "true" == "${STAMPER_HOOKS[${hook}]}" ]; then
+				if [[ "true" == ${STAMPER_HOOKS[${hook}]} ]]; then
 					__update_this_hook__ "setup" "${hook}" "${hook_path}" "setup \"${hook}\" ${STAMPER_VERSION_TEXT}"
 				else
 					__VERBOSE__ ".   skip missing \"${hook}\""
@@ -2926,14 +2935,14 @@ function __update_all_hooks__
 			;;
 		prepare-commit-msg | commit-msg | applypatch-msg | pre-applypatch | post-applypatch | pre-rebase | pre-push | pre-auto-gc)
 			# "missing" cannot be here because we enumerate existing files; so empty string for foreign or version string for our older hook
-			if [ -n "${hook_version}" ]; then
+			if [[ -n ${hook_version} ]]; then
 				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			fi
 			;;
 		# server-side
 		pre-receive | update | post-receive)
 			# "missing" cannot be here because we enumerate existing files; so empty string for foreign or version string for our older hook
-			if [ -n "${hook_version}" ]; then
+			if [[ -n ${hook_version} ]]; then
 				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			else
 				__VERBOSE__ "#   touch \"${hook_path}\"    server-side hook"
@@ -2941,7 +2950,7 @@ function __update_all_hooks__
 			;;
 		# undocumented by 'pro git' book
 		fsmonitor-watchman | post-update)
-			if [ -n "${hook_version}" ]; then
+			if [[ -n ${hook_version} ]]; then
 				__update_this_hook__ "remove" "${hook}" "${hook_path}" "mismatch suite version"
 			else
 				__VERBOSE__ "#   touch \"${hook_path}\"    undocumented by 'pro git' book"
@@ -2957,16 +2966,16 @@ function __update_all_hooks__
 #
 # check/update/setup git hooks
 #
-if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
-	if [ -n "${VERSION_CONFIG_PREFIX}" ]; then
+if [[ "false" != ${STAMPER_SETUP_HOOKS} ]]; then
+	if [[ -n ${VERSION_CONFIG_PREFIX} ]]; then
 		echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	else
-		if [ -z "${VERSION_HOOKS_DIR}" ]; then
+		if [[ -z ${VERSION_HOOKS_DIR} ]]; then
 			echo "Warning: cannot find '.git/hooks' folder to update git hooks" >&2
 		else
 			__VERBOSE__ "Update hooks now"
 			
-			if [ -n "${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]}" ]; then
+			if [[ -n ${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]} ]]; then
 				# for version stamper project itself executed plugin may change
 				# current version data, so reload version file before updating hooks.
 				__VERBOSE__ "Reload version information before check/create hooks"
@@ -2976,7 +2985,7 @@ if [ "false" != "${STAMPER_SETUP_HOOKS}" ]; then
 
 			STAMPER_SCRIPT_CMD="$(which -- "${STAMPER_SCRIPT_NAME}" 2>/dev/null)"
 			__VERBOSE__ "Check path to script:\n.   running=\"${STAMPER_SCRIPT_PATH}\"\n.   on PATH=\"${STAMPER_SCRIPT_CMD}\""
-			if [ "${STAMPER_SCRIPT_CMD}" == "${STAMPER_SCRIPT_PATH}" ]; then
+			if [[ ${STAMPER_SCRIPT_CMD} == ${STAMPER_SCRIPT_PATH} ]]; then
 				# version-stamper is installed and is used from install location
 				STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
 			else

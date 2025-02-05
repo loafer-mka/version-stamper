@@ -40,9 +40,9 @@ function LEN
 	local 	b
 
 	shift
-	while [ 0 -lt "$#" ]; do
+	while [[ 0 -lt "$#" ]]; do
 		b=${#1}
-		if [ $b -gt $a ]; then a=$b; fi
+		if [[ $b -gt $a ]]; then a=$b; fi
 		shift
 	done
 	echo $a
@@ -73,7 +73,7 @@ function CLEAN_HOOKS
 		prepare-commit-msg commit-msg applypatch-msg pre-applypatch post-applypatch pre-rebase pre-push pre-auto-gc \
 		pre-receive update post-receive fsmonitor-watchman post-update ; \
 	do
-		[ -f "$1/hooks/$f" ] && rm -f "$1/hooks/$f"
+		[[ -f $1/hooks/$f ]] && rm -f "$1/hooks/$f"
 	done
 }
 function HOOKS_EXIST
@@ -81,13 +81,13 @@ function HOOKS_EXIST
 	local path="$1"
 	shift
 
-	if [ 0 -eq "$#" ]; then
+	if [[ 0 -eq "$#" ]]; then
 		HOOKS_EXIST "${path}" pre-commit post-checkout post-commit post-rewrite post-merge \
 			prepare-commit-msg commit-msg applypatch-msg pre-applypatch post-applypatch pre-rebase pre-push pre-auto-gc \
 			pre-receive update post-receive fsmonitor-watchman post-update
 	else
 		for h in "$@" ; do
-			if [ -f "${path}/hooks/${h}" ]; then
+			if [[ -f ${path}/hooks/${h} ]]; then
 				echo "true"
 				return
 			fi
@@ -99,7 +99,7 @@ function CLEAN_WORKTREE
 {
 	pushd "$1" >/dev/null 2>&1
 	BRANCH="$(git --no-pager rev-parse --abbrev-ref HEAD 2>/dev/null)"
-	[ "HEAD" == "${BRANCH}" ] && BRANCH=""
+	[[ "HEAD" == ${BRANCH} ]] && BRANCH=""
 
 	# echo "======== DO CLEAN WORKTREE"
 	git --no-pager status --porcelain --ignored | while read S N rest ; do
@@ -151,7 +151,7 @@ function GIT_INIT
 	popd >/dev/null 2>&1
 }
 
-if [ "Windows_NT" == "$OS" ]; then
+if [[ "Windows_NT" == ${OS} ]]; then
 	WIN_SED_EOL="-e s/$/\r/"
 	WIN_ECHO_EOL="$(echo -en "\r")"
 else
@@ -159,6 +159,6 @@ else
 	WIN_ECHO_EOL=""
 fi
 
-[ -d "$(dirname "$0")/repos" ] || mkdir "$(dirname "$0")/repos"
+[[ -d "$(dirname "$0")/repos" ]] || mkdir "$(dirname "$0")/repos"
 
 CLEANUP

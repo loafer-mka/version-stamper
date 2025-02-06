@@ -67,7 +67,7 @@ fi
 # load stamper's version information
 if [[ "0" -ne $(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this") ]]; then
 	set -o allexport
-	source <(awk -v RS='[\r\n]+' '
+	source <(awk -v RS='(\r\n|\n\r|\r|\n)' '
 		BEGIN{ mode = 0; }
 		mode == 0 && /^\s*<<<<<<*\s/   { mode = 1; next; }
 		mode == 1 && ( /^\s*======*\s*$/ || /^\s*\|\|\|\|\|\|*\s*$/) { mode = 2; next; }
@@ -500,12 +500,12 @@ function __READ_LF__
 				#	is to use merged with collisions file and filter wanted parts by our script
 			if [[ -f ${VERSION_ROOT_DIR}/${file} ]]; then
 				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
+				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='(\r\n|\n\r|\r|\n)' "$awk_script"
 			else
 				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found"
 				# unmerged, deleted by them
 				__VERBOSE__ "__git_filter_eols__ show -- \":1:${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
+				__git_filter_eols__ show -- ":1:${file}" |awk -v F=3 -v RS='(\r\n|\n\r|\r|\n)' "$awk_script"
 			fi
 			;;
 		"UD "*)
@@ -527,7 +527,7 @@ function __READ_LF__
 			# in this case they may have '<<<...===...>>>' insertions
 			if [[ -f ${VERSION_ROOT_DIR}/${file} ]]; then
 				__VERBOSE__ "__cat_filter_eols__ -- \"${VERSION_ROOT_DIR}/${file}\" |awk -v F=3 \"...\"\n.   ..."
-				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='[\r\n]+' "$awk_script"
+				__cat_filter_eols__ "${file}" |awk -v F=3 -v RS='(\r\n|\n\r|\r|\n)' "$awk_script"
 			else
 				__VERBOSE__ "The \"${VERSION_ROOT_DIR}/${file}\" is not found in worktree"
 			fi
@@ -1446,7 +1446,7 @@ if [[ -z ${VERSION_AUTHORSHIP} ]]; then
 			util="$(which reg.exe 2>/dev/null)"
 			if [[ -n ${util} ]]; then
 				VERSION_AUTHORSHIP=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ /v RegisteredOrganization 2>/dev/null \
-						| awk -v RS='[\r\n]+' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
+						| awk -v RS='(\r\n|\n\r|\r|\n)' '/^\s*RegisteredOrganization/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; print gensub( "\\s+$", "", 1, w ); }')
 				__VERBOSE__ ".   this is windows; try \"$util\" to get authorship\n.      \"${VERSION_AUTHORSHIP}\""
 			fi
 		else
@@ -1548,8 +1548,8 @@ if [[ "HEAD" == ${VERSION_BRANCH} || -z ${VERSION_BRANCH} ]]; then
 	# note 1: HEAD may contain text "SHA1"  or  "ref: refs/heads/branchname"
 	# note 2: this looks strange ("ref: ... syntax" means attached head, so git rev-parse ... must be OK) but ...
 	# note 3: fresh-created repo has HEAD equal to "ref: refs/heads/master" but head file ".git/refs/heads/master" is not exist
-	VERSION_BRANCH="$(awk -v RS='[\r\n]+' 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
-	__VERBOSE__ "awk -v RS='[\\\\r\\\\n]+' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
+	VERSION_BRANCH="$(awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
+	__VERBOSE__ "awk -v RS='(\\\\r\\\\n|\\\\n\\\\r|\\\\r|\\\\n)' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
 	if [[ -z ${VERSION_BRANCH} ]]; then
 		if [[ -n ${VERSION_SUBMOD_NAME} ]]; then
 			temp_branch="$(git -C "${VERSION_SUPER_DIR}" --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
@@ -1701,12 +1701,12 @@ if [[ "pre-commit" == ${STAMPER_EXECUTING_HOOK} ]]; then
 		# ... somewhere this may work :(
 		util="$(which WMIC.exe 2>/dev/null)"
 		if [[ -n ${util} ]]; then
-			amend="$(MSYS_NO_PATHCONV=1 "${util}" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='[\r\n]+' '/--amend/ { print "true"; }')"
+			amend="$(MSYS_NO_PATHCONV=1 "${util}" path win32_process where "Caption='git.exe'" get Commandline| awk -v RS='(\r\n|\n\r|\r|\n)' '/--amend/ { print "true"; }')"
 		fi
 	else
 		# this may work under *nix... but windows :(
 		amend=""
-		temp="$(ps -f -p $PPID |awk -v RS='[\r\n]+' 'BEGIN{ N=-1; } -1 == N { for (i=1;i<=NF;i++) if ( $i == "PPID" ) { N=i; break; } next; } { print $N; }')"
+		temp="$(ps -f -p $PPID |awk -v RS='(\r\n|\n\r|\r|\n)' 'BEGIN{ N=-1; } -1 == N { for (i=1;i<=NF;i++) if ( $i == "PPID" ) { N=i; break; } next; } { print $N; }')"
 		if [[ -n ${temp} ]]; then
 			if [[ -f /proc/${temp}/cmdline ]]; then
 				__VERBOSE__ ".    look at /proc/$temp/cmdline"
@@ -1745,7 +1745,7 @@ if [[ "pre-commit" == ${STAMPER_EXECUTING_HOOK} ]]; then
 	# and detect changed in worktree non-target files - if ones exist then mark repo as dirty
 	__VERBOSE__ "git status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
-	awk -v RS='[\r\n]+' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
+	awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
          match( $0, /^..\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "C " ( A[2] == "" ? A[3] : A[2] ); next; }' | \
 	while read changed file; do
@@ -1790,7 +1790,7 @@ if [[ "pre-commit" != ${STAMPER_EXECUTING_HOOK} ]]; then
 	# all other hooks except pre-commit
 	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
-	awk -v RS='[\r\n]+' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
+	awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
          match( $0, /^.[MTADRCU]\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "X " ( A[2] == "" ? A[3] : A[2] ); next; }
          match( $0, /^..\s+((.*)\s+->\s+.*|(.*))$/, A ) { print "C " ( A[2] == "" ? A[3] : A[2] ); next; }' | \
 	while read changed file; do
@@ -1950,7 +1950,7 @@ if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; th
 		util="$(which reg.exe 2>/dev/null)"
 		if [[ -n ${util} ]]; then
 			temp=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
-					| awk -v RS='[\r\n]+' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+					| awk -v RS='(\r\n|\n\r|\r|\n)' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
 						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
 						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
 						   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
@@ -1964,7 +1964,7 @@ if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; th
 		fi
 		if [[ -z ${temp} && -f /etc/os-release ]]; then
 			temp="$(cat "/etc/os-release" \
-					| awk -v RS='[\r\n]+' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
+					| awk -v RS='(\r\n|\n\r|\r|\n)' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
 									$1 == "NAME" { n=$2; }
 									$1 == "VERSION" { v=$2; }
 									END{ print gensub( "\"", "", "G", pn == "" ? n " " v : pn ); }')"
@@ -1973,7 +1973,7 @@ if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; th
 		if [[ -z ${temp} ]]; then
 			util="$(which hostnamectl 2>/dev/null)"
 			if [[ -n ${util} ]]; then
-				temp="$(hostnamectl status |awk -v RS='[\r\n]+' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
+				temp="$(hostnamectl status |awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
 				__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
 			fi
 		fi
@@ -2316,7 +2316,7 @@ __VERBOSE__ "${script}"
 .gitignore      text eol=lf
 .gitattributes  text eol=lf
 .gitmodules     text eol=lf"
-	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
+	text_b="$(awk -v RS='(\r\n|\n\r|\r|\n)' -e "${script}" <<<"${text_a}")"
 	if [[ ${text_a} != ${text_b} ]]; then
 		__VERBOSE__ ".   update .gitattributes\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitattributes"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitattributes" <<<"${text_b}"
@@ -2553,7 +2553,7 @@ ehthumbs.db
 		fi
 	fi
 
-	text_b="$(awk -v RS='[\r\n]+' -e "${script}" <<<"${text_a}")"
+	text_b="$(awk -v RS='(\r\n|\n\r|\r|\n)' -e "${script}" <<<"${text_a}")"
 	if [[ ${text_a} != ${text_b} ]]; then
 		__VERBOSE__ ".   update .gitignore\n.   git add --force ${VERSION_CONFIG_PREFIX}.gitignore"
 		__STORE_LF__ "${VERSION_CONFIG_PREFIX}.gitignore" <<<"${text_b}"
@@ -2879,7 +2879,7 @@ function __update_all_hooks__
 		if [[ -f ${hook_path} ]]; then
 			# today 'stamper-'
 			hook_version="$(head -n 128 "${hook_path}" \
-					|awk -v RS='[\r\n]+' '
+					|awk -v RS='(\r\n|\n\r|\r|\n)' '
 						match( $0, /^\s*export\s+STAMPER_SUITE=.*\s([A-Za-z][0-9]+[:._+-][0-9]+[:._+-][0-9]+[:._+-][[:graph:]]+)(\s|"|$)/, A ) { print "stamper-" A[1]; exit(0); }
 						/export\s+STAMPER_SUITE=".*"/ { print "stamper-UNKNOWN"; exit(0); }
 					')"

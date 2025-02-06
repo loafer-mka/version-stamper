@@ -44,7 +44,7 @@ sed -i -r \
 	${WIN_SED_EOL} \
 	foo/bar/.version-stamper
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort)"
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
 [ "${text}" == ".
@@ -72,7 +72,7 @@ git --no-pager add . >/dev/null 2>&1
 git commit -am "Initial commit" >/dev/null 2>&1
 # no installed hooks here
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort)"
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
 [ "${text}" == ".
@@ -107,7 +107,7 @@ text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/obj
 ../../../version-stamper -cd foo/bar --generate
 [ -f foo/bar/ver.sh ] && source foo/bar/ver.sh
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort)"
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
 [ "${text}" == ".

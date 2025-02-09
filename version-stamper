@@ -764,6 +764,8 @@ declare -a STAMPER_CONF_PLUGIN
 declare -a STAMPER_CONF_TARGET
 declare -a STAMPER_CONF_IGNORE
 declare -a STAMPER_CONF_ATTRIB
+declare -a STAMPER_CONF_LEADER
+declare -a STAMPER_CONF_TRAILER
 # fill .gitignore and .gitattributes
 declare -A STAMPER_FILL_ATTRIB
 declare -a STAMPER_FILL_IGNORE
@@ -902,24 +904,50 @@ if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 			temp_plugin="${temp_plugin%:}"
 			temp_ignore="false"
 			temp_attrib="false"
+			temp_leader=""
+			temp_trailer=""
 			while true; do
 				# note: below " ", "	" holds space or tab while [ 	] holds space and tab
 				case "${value}" in
 				-i" "* | -i"	"*)
-					value="${value##-i+([	 ])}"
+					value="${value##-i+([[:space:]])}"
 					temp_ignore="true"
 					;;
 				--gitignore" "* | --gitignore"	"*)
-					value="${value##--gitignore+([	 ])}"
+					value="${value##--gitignore+([[:space:]])}"
 					temp_ignore="true"
 					;;
 				-a" "* | -a"	"*)
-					value="${value##-a+([	 ])}"
+					value="${value##-a+([[:space:]])}"
 					temp_attrib="true"
 					;;
 				--gitattributes" "* | --gitattributes"	"*)
-					value="${value##--gitattributes+([	 ])}"
+					value="${value##--gitattributes+([[:space:]])}"
 					temp_attrib="true"
+					;;
+				--leader=*)
+					value="${value#--leader=}"
+					temp_leader="${value%%+([[:space:]])*}"
+					value="${value:${#temp_leader}}"
+					value="${value##+([[:space:]])}"
+					;;
+				--leader" "* | --leader"	"*)
+					value="${value##--leader+([[:space:]])}"
+					temp_leader="${value%%+([[:space:]])*}"
+					value="${value:${#temp_leader}}"
+					value="${value##+([[:space:]])}"
+					;;
+				--trailer=*)
+					value="${value#--trailer=}"
+					temp_trailer="${value%%+([[:space:]])*}"
+					value="${value:${#temp_trailer}}"
+					value="${value##+([[:space:]])}"
+					;;
+				--trailer" "* | --trailer"	"*)
+					value="${value##--trailer+([[:space:]])}"
+					temp_trailer="${value%%+([[:space:]])*}"
+					value="${value:${#temp_trailer}}"
+					value="${value##+([[:space:]])}"
 					;;
 				*)
 					break
@@ -958,9 +986,13 @@ if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 					STAMPER_CONF_IGNORE[${index}]="${temp_ignore}"
 					STAMPER_CONF_ATTRIB[${index}]="${temp_attrib}"
 					STAMPER_CONF_TARGET[${index}]="${temp_target}"
+					STAMPER_CONF_LEADER[${index}]="${temp_leader}"
+					STAMPER_CONF_TRAILER[${index}]="${temp_trailer}"
 					# target has VERSION_CONFIG_DIR-relative path
 				fi
 			fi
+			unset temp_leader
+			unset temp_trailer
 			unset temp_ignore
 			unset temp_attrib
 			unset temp_plugin
@@ -1062,14 +1094,20 @@ declare -a STAMPER_EXEC_PLUGIN
 declare -a STAMPER_EXEC_TARGET
 declare -a STAMPER_EXEC_IGNORE
 declare -a STAMPER_EXEC_ATTRIB
+declare -a STAMPER_EXEC_LEADER
+declare -a STAMPER_EXEC_TRAILER
 # clean known targets - we check duplicates in conf and in args separatelly
 # then we will intellectually combine these lists if both '--generate' option and plugins given in command line
 unset STAMPER_KNOWN_TARGETS
 declare -A STAMPER_KNOWN_TARGETS
 ref=""
+ref_opt=""
 temp_plugin=""
+# note: temp_plugin is used also for syntax check - if it is non empty after parsing all args, then missing argument
 temp_ignore="false"
 temp_attrib="false"
+temp_leader=""
+temp_trailer=""
 ((an=0))
 for arg in "$@"; do
 	((an++))
@@ -1094,14 +1132,11 @@ for arg in "$@"; do
 			[[ -n ${ref} && -z ${!ref} ]] && printf -v "${ref}" '%s' "${arg}"
 			;;
 		*)
-			[[ ${ref} != "ref" && -n ${!ref} ]] && echo "Warning: Override ${temp_plugin/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
+			[[ ${ref} != "ref" && -n ${!ref} ]] && echo "Warning: Override ${ref_opt/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
 			printf -v "${ref}" '%s' "${arg}"
 			;;
 		esac
 		ref=""
-		# temp_plugin may be real plugin name and may be some option; there it is an option
-		temp_plugin=""
-		# note: temp_plugin is used also for syntax check - if it is non empty after parsing all args, then missing argument
 	elif [[ -n ${temp_plugin} ]]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
 		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
@@ -1111,6 +1146,20 @@ for arg in "$@"; do
 			;;
 		-a | --gitattributes)
 			temp_attrib="true"
+			;;
+		--leader=*)
+			temp_leader="${arg:9}"
+			;;
+		--leader)
+			ref="temp_leader"
+			ref_opt="${arg}"
+			;;
+		--trailer=*)
+			temp_trailer="${arg:10}"
+			;;
+		--trailer)
+			ref="temp_trailer"
+			ref_opt="${arg}"
 			;;
 		*)
 			case "${arg}" in
@@ -1137,7 +1186,11 @@ for arg in "$@"; do
 				STAMPER_EXEC_IGNORE[${index}]="${temp_ignore}"
 				STAMPER_EXEC_ATTRIB[${index}]="${temp_attrib}"
 				STAMPER_EXEC_TARGET[${index}]="${temp_target}"
+				STAMPER_EXEC_LEADER[${index}]="${temp_leader}"
+				STAMPER_EXEC_TRAILER[${index}]="${temp_trailer}"
 			fi
+			temp_trailer=""
+			temp_leader=""
 			temp_ignore="false"
 			temp_attrib="false"
 			temp_plugin=""
@@ -1151,7 +1204,7 @@ for arg in "$@"; do
 			;;				# proceed above, ignore it here
 		-cd | --directory)
 			ref="ref"		# proceed above, ignore it here
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		-V | --version)
 			echo "${STAMPER_VERSION_TEXT}"
@@ -1215,6 +1268,10 @@ Available plugin_options are:
               Add generated file (on creation) into .gitignore file
 -a       --gitattributes
               Add generated file (on creation) into .gitattributes file
+--leader string
+              Assign plugin-specific leader string, overrides configuration and common --leader setting.
+--trailer string
+              Assign plugin-specific trailer string, overrides configuration and common --trailer setting.
 
 Available plugins 'PLUGIN' are:
 $(for plugin in "${!STAMPER_PLUGINS[@]}"; do __PLUGIN_${plugin}_NOTICE__; done)
@@ -1237,7 +1294,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--git-hook)
 			ref="STAMPER_EXECUTING_HOOK"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		-c | --config)
 			# create configuration here
@@ -1265,7 +1322,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--leader)
 			ref="VERSION_LEADER"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--trailer=*)
 			[[ -n ${VERSION_TRAILER} ]] && echo "Warning: Override trailer setting \"${arg:10}\"" >&2
@@ -1273,7 +1330,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--trailer)
 			ref="VERSION_TRAILER"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--authorship=*)
 			[[ -n ${VERSION_AUTHORSHIP} ]] && echo "Warning: Override authorship setting \"${arg:13}\"" >&2
@@ -1281,7 +1338,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--authorship)
 			ref="VERSION_AUTHORSHIP"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--declaration=*)
 			[[ -n ${VERSION_DECLARATION} ]] && echo "Warning: Override declaration setting \"${arg:14}\"" >&2
@@ -1289,35 +1346,35 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--declaration)
 			ref="VERSION_DECLARATION"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--leader\?=*)
 			[[ -z ${VERSION_LEADER} ]] && VERSION_LEADER="${arg:10}"
 			;;
 		--leader\?)
 			ref="?VERSION_LEADER"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--trailer\?=*)
 			[[ -z ${VERSION_TRAILER} ]] && VERSION_TRAILER="${arg:11}"
 			;;
 		--trailer\?)
 			ref="?VERSION_TRAILER"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--authorship\?=*)
 			[[ -z ${VERSION_AUTHORSHIP} ]] && VERSION_AUTHORSHIP="${arg:14}"
 			;;
 		--authorship\?)
 			ref="?VERSION_AUTHORSHIP"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--declaration\?=*)
 			[[ -z ${VERSION_DECLARATION} ]] && VERSION_DECLARATION="${arg:15}"
 			;;
 		--declaration\?)
 			ref="?VERSION_DECLARATION"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--textoize=*)
 			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:11} ]]; then
@@ -1329,7 +1386,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--textoize)
 			ref="STAMPER_TEXTOIZE"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		--textoize\?=*)
 			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:12} ]]; then
@@ -1340,7 +1397,7 @@ if it is not set or empty then \"--help\" will be assumed."
 			;;
 		--textoize\?)
 			ref="?STAMPER_TEXTOIZE"
-			temp_plugin="${arg}"
+			ref_opt="${arg}"
 			;;
 		*)
 			if [[ -n ${STAMPER_PLUGINS[${arg}]} ]]; then
@@ -1352,11 +1409,14 @@ if it is not set or empty then \"--help\" will be assumed."
 		esac
 	fi
 done
-[[ -n ${ref} ]] && DIE 2 "Wrong argument(s): \"${temp_plugin}\" needs in argument after"
+[[ -n ${ref} ]] && DIE 2 "Wrong argument(s): \"${ref_opt}\" needs in argument after"
 [[ -n ${temp_plugin} ]] && DIE 2 "Wrong plugin command: \"${temp_plugin}\" needs in argument after"
+unset temp_leader
+unset temp_trailer
 unset temp_attrib
 unset temp_ignore
 unset temp_plugin
+unset ref_opt
 unset ref
 unset an
 
@@ -1374,14 +1434,17 @@ if [[ "true" == ${STAMPER_GENERATE} ]]; then
 		found="false"
 		for iexec in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 			if [[ ${STAMPER_EXEC_TARGET[${iexec}]} == ${STAMPER_CONF_TARGET[${iconf}]} ]]; then
+				# assume conf has priority over command line
 				found="true"
 				if [[ ${STAMPER_EXEC_PLUGIN[${iexec}]} != ${STAMPER_CONF_PLUGIN[${iconf}]} ]]; then
 					echo "Warning! use configured plugin \"${STAMPER_CONF_PLUGIN[${iconf}]}\" rather than given by command line \"${STAMPER_EXEC_PLUGIN[${iexec}]}\" for \"${STAMPER_EXEC_TARGET[${iexec}]}\"" 1>&2
 					STAMPER_EXEC_PLUGIN[${iexec}]="${STAMPER_CONF_PLUGIN[${iconf}]}"
 				fi
-				# use -i|--gitignore and -a|--gitattributes from config
+				# use options from config
 				STAMPER_EXEC_IGNORE[${iexec}]="${STAMPER_CONF_IGNORE[${iconf}]}"
 				STAMPER_EXEC_ATTRIB[${iexec}]="${STAMPER_CONF_ATTRIB[${iconf}]}"
+				STAMPER_EXEC_LEADER[${iexec}]="${STAMPER_CONF_LEADER[${iconf}]}"
+				STAMPER_EXEC_TRAILER[${iexec}]="${STAMPER_CONF_TRAILER[${iconf}]}"
 				break
 			fi
 		done
@@ -1391,6 +1454,8 @@ if [[ "true" == ${STAMPER_GENERATE} ]]; then
 			STAMPER_EXEC_TARGET[${iexec}]="${STAMPER_CONF_TARGET[${iconf}]}"
 			STAMPER_EXEC_IGNORE[${iexec}]="${STAMPER_CONF_IGNORE[${iconf}]}"
 			STAMPER_EXEC_ATTRIB[${iexec}]="${STAMPER_CONF_ATTRIB[${iconf}]}"
+			STAMPER_EXEC_LEADER[${iexec}]="${STAMPER_CONF_LEADER[${iconf}]}"
+			STAMPER_EXEC_TRAILER[${iexec}]="${STAMPER_CONF_TRAILER[${iconf}]}"
 		fi
 		unset found
 		unset iexec
@@ -1476,7 +1541,7 @@ Config file${VERSION_CONFIG_MISSING}: \"${VERSION_CONFIG_PATH}\"
 .   verbose= \"${STAMPER_VERBOSE,,}\"
 .   abbreviation length= \"${STAMPER_ABBREV_LEN}\"
 .   leader= \"${VERSION_LEADER}\"
-.   leader= \"${VERSION_TRAILER}\"
+.   trailer= \"${VERSION_TRAILER}\"
 .   authorship= \"${VERSION_AUTHORSHIP}\"
 .   authorship declaration= \"${VERSION_DECLARATION}\"
 .   default command= \"${STAMPER_DEFAULT_CMD}\"
@@ -1922,6 +1987,8 @@ if [[ ! -f ${VERSION_CONFIG_PATH} ]]; then
 			#        -i    --gitignore        add version file into .gitignore
 			#        -a    --gitattributes    add version file into .gitattributes (useless if version file is gitignored)
 			#                                 --gitignore and --gitattributes are used when creating a new file.
+			#        --leader string          assign specific leader string
+			#        --trailer string         assign specific trailer string
 			#
 			$(for plugin in "${!STAMPER_PLUGINS[@]}"; do __PLUGIN_${plugin}_SAMPLE__; done)
 
@@ -2034,28 +2101,6 @@ if [[ "true" == ${STAMPER_DO_PRINT_INFO} ]]; then
 fi
 
 if [[ "true" == ${STAMPER_GENERATE} ]]; then
-	NAME_VERSION_ID="${VERSION_LEADER}VERSION_ID${VERSION_TRAILER}"
-	NAME_VERSION_TEXT="${VERSION_LEADER}VERSION_TEXT${VERSION_TRAILER}"
-	NAME_VERSION_PREFIX="${VERSION_LEADER}VERSION_PREFIX${VERSION_TRAILER}"
-	NAME_VERSION_MAJOR="${VERSION_LEADER}VERSION_MAJOR${VERSION_TRAILER}"
-	NAME_VERSION_MINOR="${VERSION_LEADER}VERSION_MINOR${VERSION_TRAILER}"
-	NAME_VERSION_SUFFIX="${VERSION_LEADER}VERSION_SUFFIX${VERSION_TRAILER}"
-	NAME_VERSION_BUILD="${VERSION_LEADER}VERSION_BUILD${VERSION_TRAILER}"
-	NAME_VERSION_BRANCH="${VERSION_LEADER}VERSION_BRANCH${VERSION_TRAILER}"
-	NAME_VERSION_DIRTY="${VERSION_LEADER}VERSION_DIRTY${VERSION_TRAILER}"
-	NAME_VERSION_DATE="${VERSION_LEADER}VERSION_DATE${VERSION_TRAILER}"
-	NAME_VERSION_SHORTDATE="${VERSION_LEADER}VERSION_SHORTDATE${VERSION_TRAILER}"
-	NAME_VERSION_UNIXTIME="${VERSION_LEADER}VERSION_UNIXTIME${VERSION_TRAILER}"
-	NAME_VERSION_SHA_LONG="${VERSION_LEADER}VERSION_SHA_LONG${VERSION_TRAILER}"
-	NAME_VERSION_SHA_SHORT="${VERSION_LEADER}VERSION_SHA_SHORT${VERSION_TRAILER}"
-	NAME_VERSION_HOSTINFO="${VERSION_LEADER}VERSION_HOSTINFO${VERSION_TRAILER}"
-	NAME_VERSION_AUTHORSHIP="${VERSION_LEADER}VERSION_AUTHORSHIP${VERSION_TRAILER}"
-	NAME_VERSION_DECLARATION="${VERSION_LEADER}VERSION_DECLARATION${VERSION_TRAILER}"
-	NAME_VERSION_SUBMOD_NAME="${VERSION_LEADER}VERSION_SUBMOD_NAME${VERSION_TRAILER}"
-	NAME_VERSION_SUBMOD_PATH="${VERSION_LEADER}VERSION_SUBMOD_PATH${VERSION_TRAILER}"
-	NAME_VERSION_COMMIT_AUTHOR="${VERSION_LEADER}VERSION_COMMIT_AUTHOR${VERSION_TRAILER}"
-	NAME_VERSION_COMMIT_EMAIL="${VERSION_LEADER}VERSION_COMMIT_EMAIL${VERSION_TRAILER}"
-
 	__AS_PREPARED_VALUES__ VERSION_TEXT "${VERSION_TEXT}"
 	__AS_PREPARED_VALUES__ VERSION_BRANCH "${VERSION_BRANCH}"
 	__AS_PREPARED_VALUES__ VERSION_DIRTY "${VERSION_DIRTY}"
@@ -2072,6 +2117,30 @@ if [[ "true" == ${STAMPER_GENERATE} ]]; then
 	for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		plugin="${STAMPER_EXEC_PLUGIN[${index}]}"
 		target="${STAMPER_EXEC_TARGET[${index}]}"
+
+		NAME_VERSION_LEADER="${STAMPER_EXEC_LEADER[${index}]:-${VERSION_LEADER}}"
+		NAME_VERSION_TRAILER="${STAMPER_EXEC_TRAILER[${index}]:-${VERSION_TRAILER}}"
+		NAME_VERSION_ID="${NAME_VERSION_LEADER}VERSION_ID${NAME_VERSION_TRAILER}"
+		NAME_VERSION_TEXT="${NAME_VERSION_LEADER}VERSION_TEXT${NAME_VERSION_TRAILER}"
+		NAME_VERSION_PREFIX="${NAME_VERSION_LEADER}VERSION_PREFIX${NAME_VERSION_TRAILER}"
+		NAME_VERSION_MAJOR="${NAME_VERSION_LEADER}VERSION_MAJOR${NAME_VERSION_TRAILER}"
+		NAME_VERSION_MINOR="${NAME_VERSION_LEADER}VERSION_MINOR${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SUFFIX="${NAME_VERSION_LEADER}VERSION_SUFFIX${NAME_VERSION_TRAILER}"
+		NAME_VERSION_BUILD="${NAME_VERSION_LEADER}VERSION_BUILD${NAME_VERSION_TRAILER}"
+		NAME_VERSION_BRANCH="${NAME_VERSION_LEADER}VERSION_BRANCH${NAME_VERSION_TRAILER}"
+		NAME_VERSION_DIRTY="${NAME_VERSION_LEADER}VERSION_DIRTY${NAME_VERSION_TRAILER}"
+		NAME_VERSION_DATE="${NAME_VERSION_LEADER}VERSION_DATE${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SHORTDATE="${NAME_VERSION_LEADER}VERSION_SHORTDATE${NAME_VERSION_TRAILER}"
+		NAME_VERSION_UNIXTIME="${NAME_VERSION_LEADER}VERSION_UNIXTIME${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SHA_LONG="${NAME_VERSION_LEADER}VERSION_SHA_LONG${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SHA_SHORT="${NAME_VERSION_LEADER}VERSION_SHA_SHORT${NAME_VERSION_TRAILER}"
+		NAME_VERSION_HOSTINFO="${NAME_VERSION_LEADER}VERSION_HOSTINFO${NAME_VERSION_TRAILER}"
+		NAME_VERSION_AUTHORSHIP="${NAME_VERSION_LEADER}VERSION_AUTHORSHIP${NAME_VERSION_TRAILER}"
+		NAME_VERSION_DECLARATION="${NAME_VERSION_LEADER}VERSION_DECLARATION${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SUBMOD_NAME="${NAME_VERSION_LEADER}VERSION_SUBMOD_NAME${NAME_VERSION_TRAILER}"
+		NAME_VERSION_SUBMOD_PATH="${NAME_VERSION_LEADER}VERSION_SUBMOD_PATH${NAME_VERSION_TRAILER}"
+		NAME_VERSION_COMMIT_AUTHOR="${NAME_VERSION_LEADER}VERSION_COMMIT_AUTHOR${NAME_VERSION_TRAILER}"
+		NAME_VERSION_COMMIT_EMAIL="${NAME_VERSION_LEADER}VERSION_COMMIT_EMAIL${NAME_VERSION_TRAILER}"
 
 		case "${target}" in
 		//- | //-- | /* | ?:/*)
@@ -2193,13 +2262,19 @@ if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 	declare -A temp_ignore
 	declare -A temp_attrib
 	declare -A temp_source
+	declare -A temp_leader
+	declare -A temp_trailer
 	for n in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 		target="${STAMPER_EXEC_TARGET[${n}]}"
 		temp_plugin[${target}]="${STAMPER_EXEC_PLUGIN[${n}]}"
 		temp_ignore[${target}]="${STAMPER_EXEC_IGNORE[${n}]}"
 		temp_attrib[${target}]="${STAMPER_EXEC_ATTRIB[${n}]}"
+		temp_leader[${target}]="${STAMPER_EXEC_LEADER[${n}]}"
+		temp_trailer[${target}]="${STAMPER_EXEC_TRAILER[${n}]}"
 		temp_source[${target}]="cmd"
 	done
+	# STAMPER_EXEC_* and STAMPER_CONF_* are combined into STAMPER_EXEC_* only if stamps generation is done;
+	# so check here for runs without generation.
 	for n in ${!STAMPER_CONF_PLUGIN[@]}; do
 		target="${STAMPER_CONF_TARGET[${n}]}"
 		[[ -z ${temp_plugin[${target}]} ]] && temp_source["${target}"]="config" || temp_source["${target}"]="config, ${temp_source[${target}]}"
@@ -2207,6 +2282,8 @@ if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 		temp_plugin[${target}]="${STAMPER_CONF_PLUGIN[${n}]}"
 		temp_ignore[${target}]="${STAMPER_CONF_IGNORE[${n}]}"
 		temp_attrib[${target}]="${STAMPER_CONF_ATTRIB[${n}]}"
+		temp_leader[${target}]="${STAMPER_CONF_LEADER[${n}]}"
+		temp_trailer[${target}]="${STAMPER_CONF_TRAILER[${n}]}"
 	done
 
 	plen=$(__maxlen__ "Plugin" "${!STAMPER_PLUGINS[@]}")
@@ -2229,6 +2306,8 @@ if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 					[[ -n ${git_info} ]] && info="git: ${git_info}, ${info}"
 					[[ "true" == ${temp_ignore[${target}]} ]] && info=".gitignore, ${info}"
 					[[ "true" == ${temp_attrib[${target}]} ]] && info="$(__PLUGIN_${temp_plugin[${target}]}_ATTRIB__), ${info}"
+					[[ -n ${temp_trailer[${target}]} ]] && infp="--temp_trailer=\"${temp_temp_trailer[${target}]}\", ${info}"
+					[[ -n ${temp_leader[${target}]} ]] && infp="--leader=\"${temp_leader[${target}]}\", ${info}"
 					__triple_echo__ $plen "${plugin}" $flen "${target}" "${temp_source[${target}]}, ${info}"
 					unset git_info
 				fi
@@ -2248,6 +2327,8 @@ if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 	unset temp_ignore
 	unset temp_attrib
 	unset temp_source
+	unset temp_leader
+	unset temp_trailer
 fi
 
 #
@@ -2990,6 +3071,7 @@ if [[ "false" != ${STAMPER_SETUP_HOOKS} ]]; then
 				STAMPER_SCRIPT_CMD="${STAMPER_SCRIPT_NAME}"
 			else
 				__STDPATH_FUNCTION__ --var STAMPER_SCRIPT_CMD --base "${VERSION_ROOT_DIR}" --mixed -- "${STAMPER_SCRIPT_PATH}"
+				# relative path is in form 'folder/file' so we must change it to './folder/file' to execute it
 				[[ ${STAMPER_SCRIPT_CMD} =~ ^/ ]] || STAMPER_SCRIPT_CMD="./${STAMPER_SCRIPT_CMD}"
 			fi
 			__VERBOSE__ "Use path to script=\"$STAMPER_SCRIPT_CMD\""

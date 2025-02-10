@@ -45,7 +45,7 @@ sed -i -r -e 's/^\s*#\s*plugin-C:.*$/plugin-C: --gitignore ver.h/' \
 	 ${WIN_SED_EOL} \
 	.version-stamper
 
-../../../version-stamper -g 2>/dev/null
+../../../version-stamper -s -g 2>/dev/null
 
 source ver.sh
 
@@ -117,7 +117,7 @@ source ver.sh
   -a ! -f .git/hooks/pre-auto-gc        -a ! -f .git/hooks/pre-receive \
   -a ! -f .git/hooks/update             -a ! -f .git/hooks/post-receive \
   -a ! -f .git/hooks/fsmonitor-watchman -a ! -f .git/hooks/post-update \
-] || DIE 1 "[FAIL]     $0   WANTED HOOKS SET"
+] || DIE 1 "[FAIL]     $0   MISMATCH HOOKS SET 1"
 
 echo "[ OK ]  $0     Version data for repo with commit"
 unset ${!VERSION_@}
@@ -152,7 +152,7 @@ source ver.sh
   -a ! -f .git/hooks/pre-auto-gc        -a ! -f .git/hooks/pre-receive \
   -a ! -f .git/hooks/update             -a ! -f .git/hooks/post-receive \
   -a ! -f .git/hooks/fsmonitor-watchman -a ! -f .git/hooks/post-update \
-] || DIE 1 "[FAIL]     $0   WANTED HOOKS SET"
+] || DIE 1 "[FAIL]     $0   MISMATCH HOOKS SET 2"
 
 echo "[ OK ]  $0     Version data for repo with few commits"
 

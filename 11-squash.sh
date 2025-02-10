@@ -91,7 +91,7 @@ LOAD_CHANGES C0
 
 
 # ------ stage 1: create configuration ------
-../../../version-stamper -c
+../../../version-stamper -c -s
 
 # post-commit will be stored in config but not installed now
 sed -i -r -e 's/^\s*(#\s*)?plugin-SH:.*$/plugin-SH: -a ver.sh/' \
@@ -107,7 +107,7 @@ LOAD_CHANGES C1
 
 
 # ------ stage 2: create initial version ------
-../../../version-stamper -g  2>/dev/null
+../../../version-stamper -s -g  2>/dev/null
 
 LOAD_FILES F2 . .git/hooks
 LOAD_CHANGES C2

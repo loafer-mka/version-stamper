@@ -70,7 +70,7 @@ CLEAN_WORKTREE .
     -a "text eol=lf" == "${C[A:.gitmodules]}" -a "text" == "${C[A:.version-stamper]}" \
 ] || DIE 1 "[FAIL]  $0     Mandatory parameters were not set"
 
-[ "true" != "$(HOOKS_EXIST .git)" ] && DIE 1 "[FAIL]  $0     WANTED HOOKS ARE FOUND FOR fresh"
+[ "true" == "$(HOOKS_EXIST .git)" ] && DIE 1 "[FAIL]  $0     HOOKS ARE FOUND FOR fresh"
 
 echo "[ OK ]  $0     Add default configuration into empty project"
 

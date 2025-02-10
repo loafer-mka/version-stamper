@@ -65,7 +65,7 @@ sed -i -r -e 's/^\s*#\s*plugin-C:.*$/plugin-C: --gitignore ver.h/' \
 	 ${WIN_SED_EOL} \
 	.version-stamper
 
-../../../version-stamper -g M -i ver.m >/dev/null 2>&1
+../../../version-stamper -s -g M -i ver.m >/dev/null 2>&1
 
 for f in .* * ; do [ -f "$f" ] && C["2:$f"]="found" ; done
 

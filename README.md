@@ -477,19 +477,21 @@ Available options:
 - `-c` or `--config`<br/>
   Create a .version-stamper configuration file if it is missing and
   install the standard set of git hooks. The list of installed hooks is
-  specified in the .version-stamper configuration file; if you change
-  it, the subsequent stamp generation command will update the hooks in
-  accordance with the new configuration. Hooks will also be updated when
-  the version-stamper utility is updated.
+  specified in the .version-stamper configuration file. If you change it,
+  you will need to run the `-s` or `--setup` command to change the set of
+  specified hooks. Updating installed hooks to the current version is
+  performed not only by the `-s` or `--setup` command, but also by the
+  `-g` (`--generate`) command.
 
 - `-s` or `--setup`<br/>
-  Install the hooks specified in the configuration file. Running the
-  --generate or --config commands also installs hooks. This command is
+  Install the hooks specified in the configuration file. This command is
   used to force hooks to update.
 
 - `-g` or `--generate`<br/>
   Execute all configured plugins. This only applies to configured
-  plugins in .version-stamper.
+  plugins in .version-stamper. This command also causes hooks to be updated
+  if the versions differ, but neither new hooks are installed nor existing
+  hooks are removed without the `-s` or `--setup` option.
 
 - `--git-hook GITHOOK`<br/>
   Use this option when version-stamper is running from git hook. It passes
@@ -508,7 +510,7 @@ allow you to set basic parameters that would normally be obtained from the
 configuration file.
 
 *Note:* do not use the `--generate`, `--config` or `--setup` options in
-such cases, as they will create a configuration file and install interceptors,
+such cases, as they will create a configuration file and install hooks,
 whereas without these options you can create the desired version stamp
 files or reports without any changes in the project working tree.
 
@@ -539,9 +541,8 @@ files or reports without any changes in the project working tree.
 Along with the parameters listed above, the command line may contain
 commands for launching plugins. If a stamp created by a plugin specified
 on the command line is also created by a plugin configured in the
-configuration file, then whether that stamp is included in `.gitignore`
-or `.gitattributes` is determined by the configuration, not the command
-line.
+configuration file, then stamp parameters are determined by the
+configuration, not the command line.
 
 The command to execute the plugin looks like:
 
@@ -563,6 +564,12 @@ they are mutually exclusive:
 - `-a` or `--gitattributes`<br/>
    Add stamp parameters (usually the type of line ending used is eol=lf
    or eol=crlf) to the `.gitattributes` file.
+
+- `--leader TEXT`<br/>
+- `--trailer TEXT`<br/>
+  Assigns a stamp-specific prefix and/or suffix for symbol names, i.e.
+  overrides the common `VERSION_LEADER` and `VERSION_TRAILER` values ​​(see
+  above) for a specific version stamp.
 
 Currently supported plugins and line terminator used:
 
@@ -1402,7 +1409,7 @@ folder  .   ./.git              << a .git subdirectory containing the superproje
  file   .   .   description     << usually not used, repository description.
  file   .   .   packed-refs     << list of references to commits in packed sets.
 folder  .   .   ./branches      << usually an empty folder.
-folder  .   .   ./hooks         << a set of repository interceptors (this repository and associated
+folder  .   .   ./hooks         << a set of repository hooks (this repository and associated
         .   .   .                  work trees, but not submodules).
 folder  .   .   ./info          << usually not used.
 folder  .   .   ./logs          << a directory with files containing the history of branch head

@@ -754,6 +754,7 @@ STAMPER_DEFAULT_CMD=""
 STAMPER_TEXTOIZE=""
 # operations
 STAMPER_SETUP_CONFIG="false"
+STAMPER_SETUP_HOOKS="false"
 STAMPER_GENERATE="false"
 STAMPER_DO_LIST_PLUGINS="false"
 STAMPER_DO_PRINT_INFO="false"
@@ -1088,7 +1089,6 @@ fi
 #
 __VERBOSE__ "\nSecond arg parsing: <$*>"
 STAMPER_EXECUTING_HOOK=""
-STAMPER_SETUP_HOOKS="false"
 # plugins to execute (given by the command line and/or config)
 declare -a STAMPER_EXEC_PLUGIN
 declare -a STAMPER_EXEC_TARGET
@@ -1307,7 +1307,7 @@ if it is not set or empty then \"--help\" will be assumed."
 		-g | --generate)
 			# if we will generate version file(s) using missing config file then create it
 			STAMPER_SETUP_CONFIG="true"
-			STAMPER_SETUP_HOOKS="update"
+			[[ "false" == ${STAMPER_SETUP_HOOKS} ]] && STAMPER_SETUP_HOOKS="update"
 			STAMPER_GENERATE="true"
 			;;
 		-l | --list)
@@ -1423,10 +1423,6 @@ unset an
 if [[ -n ${VERSION_CONFIG_PREFIX} ]]; then
 	[[ "false" != ${STAMPER_SETUP_HOOKS} && 0 -ne ${#STAMPER_HOOKS[@]} ]] && echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	STAMPER_SETUP_HOOKS="false"
-else
-	if [[ "false" == ${STAMPER_SETUP_HOOKS} && "true" == ${STAMPER_SETUP_CONFIG} ]]; then
-		STAMPER_SETUP_HOOKS="update"
-	fi
 fi
 if [[ "true" == ${STAMPER_GENERATE} ]]; then
 	# if option -g / --generate was used then add configured plugins to the list of executed
@@ -2306,7 +2302,7 @@ if [[ "true" == ${STAMPER_DO_LIST_PLUGINS} ]]; then
 					[[ -n ${git_info} ]] && info="git: ${git_info}, ${info}"
 					[[ "true" == ${temp_ignore[${target}]} ]] && info=".gitignore, ${info}"
 					[[ "true" == ${temp_attrib[${target}]} ]] && info="$(__PLUGIN_${temp_plugin[${target}]}_ATTRIB__), ${info}"
-					[[ -n ${temp_trailer[${target}]} ]] && infp="--temp_trailer=\"${temp_temp_trailer[${target}]}\", ${info}"
+					[[ -n ${temp_trailer[${target}]} ]] && infp="--temp_trailer=\"${temp_trailer[${target}]}\", ${info}"
 					[[ -n ${temp_leader[${target}]} ]] && infp="--leader=\"${temp_leader[${target}]}\", ${info}"
 					__triple_echo__ $plen "${plugin}" $flen "${target}" "${temp_source[${target}]}, ${info}"
 					unset git_info
@@ -2989,7 +2985,11 @@ function __update_all_hooks__
 						__VERBOSE__ ".   version OK \"${hook}\""
 					fi
 				else
-					__update_this_hook__ "remove" "${hook}" "${hook_path}" "unused \"${hook}\" ${STAMPER_VERSION_TEXT}"
+					if [[ "true" == ${STAMPER_SETUP_HOOKS} ]]; then
+						__update_this_hook__ "remove" "${hook}" "${hook_path}" "unused \"${hook}\" ${STAMPER_VERSION_TEXT}"
+					else
+						echo -e "Warning: do not remove version-stamper hook \"${hook}\" without --setup option" >&2
+					fi
 				fi
 				;;
 			stamper-*)
@@ -3002,7 +3002,7 @@ function __update_all_hooks__
 				;;
 			missing)
 				# missing file
-				if [[ "true" == ${STAMPER_HOOKS[${hook}]} ]]; then
+				if [[ "true" == ${STAMPER_HOOKS[${hook}]} && "true" == ${STAMPER_SETUP_HOOKS} ]]; then
 					__update_this_hook__ "setup" "${hook}" "${hook_path}" "setup \"${hook}\" ${STAMPER_VERSION_TEXT}"
 				else
 					__VERBOSE__ ".   skip missing \"${hook}\""

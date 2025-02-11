@@ -36,13 +36,13 @@ popd >/dev/null 2>&1
 # PRINT_A_B
 
 [ \
-	   "X1.2.4-F" == "${A[VERSION_TEXT]}" \
-	-a "X1.2.13-F" == "${B[VERSION_TEXT]}" \
+	   "X1.2.4-F?" == "${A[VERSION_TEXT]}" \
+	-a "X1.2.13-F?" == "${B[VERSION_TEXT]}" \
 	-a "X" == "${A[VERSION_PREFIX]}"      -a "X" == "${B[VERSION_PREFIX]}" \
 	-a "1" == "${A[VERSION_MAJOR]}"       -a "1" == "${B[VERSION_MAJOR]}" \
 	-a "2" == "${A[VERSION_MINOR]}"       -a "2" == "${B[VERSION_MINOR]}" \
 	-a "4" == "${A[VERSION_BUILD]}"       -a "13" == "${B[VERSION_BUILD]}" \
-	-a "F" == "${A[VERSION_BRANCH]}"      -a "F" == "${B[VERSION_BRANCH]}" \
+	-a "F?" == "${A[VERSION_BRANCH]}"     -a "F?" == "${B[VERSION_BRANCH]}" \
 	-a "01020004" == "${A[VERSION_ID]}"   -a "0102000D" == "${B[VERSION_ID]}" \
 	-a "" == "${A[VERSION_DIRTY]}"        -a "" == "${B[VERSION_DIRTY]}" \
 	-a "" == "${A[VERSION_LEADER]}"       -a "" == "${B[VERSION_LEADER]}" \

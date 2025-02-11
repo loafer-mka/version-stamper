@@ -409,11 +409,11 @@ Available options:
   string, except complex tag name used (for example if tag name is
   'v1.22.333' then `VERSION_SUFFIX` becomes '.333').
   
-  The name of the current branch `branchname` is either the name of the
-  attached branch, or calculated if HEAD is detached (which is often the
-  case for submodules). Computation cannot guarantee the correctness of
-  the calculation or selection if there may be more than one matching
-  branch for a given commit.
+  The name of the current branch `VERSION_BRANCH` is either the name of
+  the attached branch, or calculated if HEAD is detached (which is often
+  the case for submodules). Computation cannot guarantee the correctness
+  of the calculation or selection if there may be more than one matching
+  branch for a given commit, in this case `?` is added after branch name.
 
   `VERSION_DIRTY` - flag of the changed working tree (not taking into
   account changes in version stamps). Indicated by the `+` symbol if there

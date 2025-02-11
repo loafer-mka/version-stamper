@@ -1611,135 +1611,120 @@ if [[ "HEAD" == ${VERSION_BRANCH} || -z ${VERSION_BRANCH} ]]; then
 	# note 3: fresh-created repo has HEAD equal to "ref: refs/heads/master" but head file ".git/refs/heads/master" is not exist
 	VERSION_BRANCH="$(awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print ""; }' "${VERSION_GIT_DIR}/HEAD")"
 	__VERBOSE__ "awk -v RS='(\\\\r\\\\n|\\\\n\\\\r|\\\\r|\\\\n)' 'match( \$0, /^(ref:\s+refs\/heads\/)(.*)/, A ) { print A[2]; next; } { print \"\"; }' \"\${VERSION_GIT_DIR}/HEAD\"\n.   VERSION_BRANCH='${VERSION_BRANCH}'  (by reading HEAD file)"
-	if [[ -z ${VERSION_BRANCH} ]]; then
-		if [[ -n ${VERSION_SUBMOD_NAME} ]]; then
-			temp_branch="$(git -C "${VERSION_SUPER_DIR}" --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
-			__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
-			if [[ -n ${temp_branch} ]]; then
-				# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
-				temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --contains=HEAD 2>/dev/null)"
-				# if temp non-empty then HEAD is somewhere on assigned branch
+	if [[ -z ${VERSION_BRANCH} && -n ${VERSION_SUBMOD_NAME} ]]; then
+		temp_branch="$(git -C "${VERSION_SUPER_DIR}" --no-pager config --file="./.gitmodules" --get "submodule.${VERSION_SUBMOD_NAME}.branch" 2>/dev/null)"
+		__VERBOSE__ "Check submodule-assigned branch name\ngit config --file=\"${VERSION_SUPER_DIR}/.gitmodules\" --get \"submodule.${VERSION_SUBMOD_NAME}.branch\"\n.   branch='${temp_branch}'"
+		if [[ -n ${temp_branch} ]]; then
+			# submodule has assigned branch (git will use detached head regardless of branch assignment ... only manual intervention may checkout branch)
+			temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --contains=${VERSION_SHA_LONG} 2>/dev/null)"
+			# if temp non-empty then HEAD is somewhere on assigned branch
+			case "${STAMPER_VERBOSE,,}" in
+			simple | extended)
+				# avoid complex string expansion using subshell execution if result is unused
+				__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --contains=${VERSION_SHA_LONG:0:9}\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
+				;;
+			esac
+			if [[ -z ${temp} ]]; then
+				# may be branch heads are in past -- some commits were made on detached HEAD in we are in future?
+				# use git rev-list to read history of commits from HEAD down to initial commit
+				# and check if local or remote branch with '${temp_branch}' name if on way ...
+				# git for-each-ref prints all SHAs of matched branches, grep filters history
+				temp="$(git --no-pager rev-list HEAD | grep $(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null))"
 				case "${STAMPER_VERBOSE,,}" in
 				simple | extended)
 					# avoid complex string expansion using subshell execution if result is unused
-					__VERBOSE__ ".   Branch is assigned, HEAD is on given branch history?\n.   git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\"\n$(echo "${temp}" | sed -e 's/^.*$/.   .   &/' )"
+					__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git rev-list HEAD | grep \$(git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
 					;;
 				esac
-				if [[ -z ${temp} ]]; then
-					# may be branch heads are in past -- some commits were made on detached HEAD in we are in future?
-					# use git rev-list to read history of commits from HEAD down to initial commit
-					# and check if local or remote branch with '${temp_branch}' name if on way ...
-					# git for-each-ref prints all SHAs of matched branches, grep filters history
-					temp="$(git --no-pager rev-list HEAD | grep $(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null))"
-					case "${STAMPER_VERBOSE,,}" in
-					simple | extended)
-						# avoid complex string expansion using subshell execution if result is unused
-						__VERBOSE__ ".   .   may be this branch is on HEAD history?\n.   .   git rev-list HEAD | grep \$(git for-each-ref \"refs/remotes/*/${temp_branch}\" \"refs/heads/${temp_branch}\" --format=\"-e %(objectname)\")\n\n$(echo "${temp}" | sed -e 's/^.*$/.   .   .   &/' )"
-						;;
-					esac
-					# some like may be made by 'git log --ancestry-path OLD..NEW' ... but assigned branch may be as local as remote and we may have few SHAs matched same name
-					# so ... did few attempts for few kinds of branches or use grep to check few variants at once
-				fi
-				if [[ -n ${temp} ]]; then
-					# assigned head may be used for our submodule - HEAD is on branch history or vice versa - branch is on HEAD history
-					VERSION_BRANCH="${temp_branch}"
-					__VERBOSE__ ".   VERSION_BRANCH=\"${VERSION_BRANCH}\""
-				fi
+				# some like may be made by 'git log --ancestry-path OLD..NEW' ... but assigned branch may be as local as remote and we may have few SHAs matched same name
+				# so ... did few attempts for few kinds of branches or use grep to check few variants at once
 			fi
-			unset temp_branch
+			if [[ -n ${temp} ]]; then
+				# assigned head may be used for our submodule - HEAD is on branch history or vice versa - branch is on HEAD history
+				VERSION_BRANCH="${temp_branch}"
+			fi
+			unset temp
 		fi
-		if [[ -z ${VERSION_BRANCH} ]]; then
-			VERSION_BRANCH="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" --exclude="pipelines/*" ${VERSION_SHA_LONG} 2>/dev/null)"
-			VERSION_BRANCH="${VERSION_BRANCH%~[0-9]*}"
-			__VERBOSE__ "Is there local or remote head matching our head?\ngit name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" --exclude=\"pipelines/*\" ${VERSION_SHA_LONG}\n.   VERSION_BRANCH=${VERSION_BRANCH}"
-			if [[ "undefined" == ${VERSION_BRANCH} ]]; then
-				# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
-				# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
-				# this is potential trouble - if real branch has name 'undefined' then it may be miss with really undefined reference.
-				# (exit codes of 'git name-rev' in all observed cases were 0)
-				__VERBOSE__ ".   Try to look for heads in past instead of \"undefined\" branch"
-				__VERBOSE__ ".   a) scan local and remote heads:\n.   git for-each-ref \"refs/remotes\" \"refs/heads\" --format=\"%(objectname) %(refname:lstrip=1)\""
-				declare -A temp_heads
-				git --no-pager for-each-ref "refs/remotes" "refs/heads" --format="%(objectname) %(refname:lstrip=1)" | while read temp_sha temp_ref; do
-					case "${temp_ref%%/*}" in
-					heads)
-						temp_heads["${temp_sha}"]="${temp_ref#*/}"
-						;;
-					remotes)
-						temp_heads["${temp_sha}"]="${temp_ref#remotes/*/}"
-						;;
-					*)
-						temp_heads["${temp_sha}"]="${temp_ref##*/}"
-						;;
-					esac
-					__VERBOSE__ ".   .   ${temp_sha} := ${temp_heads[${temp_sha}]} (${temp_ref})"
-				done
-				__VERBOSE__ ".   b) look at history:\n.   git rev-list HEAD"
-				git --no-pager rev-list HEAD |while read temp_sha; do
-					__VERBOSE__ ".   .   ${temp_sha} is '${temp_heads[${temp_sha}]}'"
-					if [[ -n ${temp_heads[${temp_sha}]} ]]; then
-						VERSION_BRANCH="${temp_heads[${temp_sha}]}"
-						__VERBOSE__ ".   .   .   VERSION_BRANCH=\"${VERSION_BRANCH}\""
-						break
-					fi
-				done
-				unset temp_heads
-				unset temp_sha
-				unset temp_ref
-			fi
-		fi
-		if [[ -z ${VERSION_BRANCH} ]]; then
-			__VERBOSE__ ".   Branch remains unknown, try to look for heads in future"
-			temp_remote=""
-			git --no-pager for-each-ref "refs/remotes/" "refs/heads/" --format="%(refname:lstrip=1)" --contains=HEAD |while read temp_ref; do
-				__VERBOSE__ ".   .   '${temp_ref}'"
-				[[ "HEAD" == ${temp_ref##*/} ]] && continue
-				case "${temp_ref}" in
-				remotes/*)
-					case "${temp_remote}" in
-					"")
-						temp_remote="${temp_ref#*/}"
-						;;
-					":")
-						;;
-					*)
-						temp_remote=":"
-						;;
-					esac
-					;;
-				heads/*)
-					case "${temp}" in
-					"")
-						temp="${temp_ref#*/}"
-						;;
-					":")
-						;;
-					*)
-						temp=":"
-						;;
-					esac
-					;;
-				esac
-			done
-			unset temp_ref
-			if [[ -n "${temp}" && ":" != "${temp}" ]]; then
-				VERSION_BRANCH="${temp}"
-			elif [[ -n "${temp_remote}" && ":" != "${temp_remote}" ]]; then
-				VERSION_BRANCH="${temp_remote}"
-			fi
-            [[ -n ${VERSION_BRANCH} ]] && __VERBOSE__ ".   VERSION_BRANCH=\"${VERSION_BRANCH}\""
-			unset temp_remote
+		unset temp_branch
+	fi
+	if [[ -z ${VERSION_BRANCH} ]]; then
+		__VERBOSE__ "Is there local or remote head matching our head?
+git name-rev --name-only --exclude=\"tags/*\" --exclude=\"remotes/*\" --exclude=\"pipelines/*\" ${VERSION_SHA_LONG:0:9}"
+		temp="$(git --no-pager name-rev --name-only --exclude="tags/*" --exclude="remotes/*" --exclude="pipelines/*" ${VERSION_SHA_LONG} 2>/dev/null)"
+		if [[ "undefined" == ${temp} ]]; then
+			# note: git name-rev may return empty string (if reference does not match any commits, for example sha=0000...0000)
+			# or 'undefined' if sha is OK and no names found (in tests: where all names are in past, i.e. detached head has few commits after branch head)
+			# this is potential trouble - if real branch has name 'undefined' then it may be miss with really undefined reference.
+			# (exit codes of 'git name-rev' in all observed cases were 0)
+			VERSION_BRANCH=""
+		else
+			VERSION_BRANCH="${temp%~[0-9]*}"
+			[[ ${VERSION_BRANCH} != ${temp} ]] && VERSION_BRANCH="${VERSION_BRANCH}?"
+			# if branch head is not on same commit as HEAD then use '?' to mark supposed branchname
 		fi
 		unset temp
-		if [[ -z ${VERSION_BRANCH} ]]; then
-			VERSION_BRANCH="?UNKNOWN"
-			__VERBOSE__ ".   VERSION_BRANCH=${VERSION_BRANCH}  (assume unknown)"
-		fi
 	fi
+	if [[ -z ${VERSION_BRANCH} ]]; then
+		__VERBOSE__ ".   Try to look for heads in past instead of of \"undefined\" branch"
+		__VERBOSE__ ".   a) scan local and remote heads:\n.   git for-each-ref \"refs/remotes\" \"refs/heads\" --format=\"%(objectname) %(refname:lstrip=1)\""
+		declare -A temp_heads
+		git --no-pager for-each-ref "refs/remotes" "refs/heads" --format="%(objectname) %(refname:lstrip=1)" | while read temp_sha temp_ref; do
+			[[ "HEAD" == ${temp_ref##*/} ]] && continue		# no remotes/*/HEAD ... and heads/HEAD too ;)
+			case "${temp_ref%%/*}" in
+			heads)
+				# prefix 'local:' must have same length as 'heads/' to compare by length
+				# choose shortest local refname
+				[[ "local:" != ${temp_heads[${temp_sha}]:0:6} || ${#temp_ref} -lt ${#temp_heads[${temp_sha}]} ]] && temp_heads[${temp_sha}]="local:${temp_ref#heads/}"
+				;;
+			remotes)
+				# --tag: and __rem: prefixes must have same length as local:
+				[[ -z ${temp_heads[${temp_sha}]} || "__tag:" == ${temp_heads[${temp_sha}]:0:6} ]] && temp_heads[${temp_sha}]="__rem:${temp_ref#remotes/*/}"
+				;;
+			*)
+				[[ -z ${temp_heads[${temp_sha}]} ]] && temp_heads[${temp_sha}]="__tag:${temp_ref##*/}"
+				;;
+			esac
+			__VERBOSE__ ".   .   ${temp_sha} := ${temp_heads[${temp_sha}]:6} (${temp_ref})"
+		done
+		__VERBOSE__ ".   b) look at history:\n.   git rev-list ${VERSION_SHA_LONG:0:9}"
+		git --no-pager rev-list ${VERSION_SHA_LONG} |while read temp_sha; do
+			__VERBOSE__ ".   .   ${temp_sha} is '${temp_heads[${temp_sha}]:-(unknown)}'"
+			if [[ -n ${temp_heads[${temp_sha}]} ]]; then
+				VERSION_BRANCH="${temp_heads[${temp_sha}]:6}?"
+				break
+			fi
+		done
+		unset temp_heads temp_sha temp_ref
+	fi
+	if [[ -z ${VERSION_BRANCH} ]]; then
+		# is this block analogue of 'git name-rev' above? can we successfully pass it ?
+		__VERBOSE__ ".   Branch remains unknown, try to look for nearest head in future
+.   git --no-pager for-each-ref \"refs/remotes/\" \"refs/heads/\" --sort=committerdate --format=\"%(refname:lstrip=1)\" --contains=${VERSION_SHA_LONG:0:9}"
+		git --no-pager for-each-ref "refs/remotes/" "refs/heads/" \
+			--sort=committerdate --format="%(refname:lstrip=1)" \
+			--contains=${VERSION_SHA_LONG} \
+		| while read temp_ref; do
+			__VERBOSE__ ".   .   '${temp_ref}'"
+			[[ "HEAD" == ${temp_ref##*/} ]] && continue		# no remotes/*/HEAD ... and heads/HEAD too ;)
+			case "${temp_ref}" in
+			remotes/*)
+				VERSION_BRANCH="${temp_ref#remotes/*/}?"
+				break
+				;;
+			heads/*)
+				VERSION_BRANCH="${temp_ref#heads/}?"
+				break
+				;;
+			esac
+		done
+		unset temp_ref
+	fi
+	[[ -z ${VERSION_BRANCH} ]] && VERSION_BRANCH="unknown"
+	__VERBOSE__ ".   VERSION_BRANCH=${VERSION_BRANCH}"
 fi
 
 #
-# note: VERSION_SHA_LONG may be changed depnded on situation (executing hook).
+# note: VERSION_SHA_LONG may be changed depended on situation (executing hook).
 #
 VERSION_DIRTY=""
 # 1) pre-commit needs in special logic to detect DIRTY state and parent commit (amend!)

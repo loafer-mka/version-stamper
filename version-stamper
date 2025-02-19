@@ -1587,10 +1587,6 @@ VERSION_MAJOR="${VERSION_SUFFIX%%.*}"; VERSION_SUFFIX="${VERSION_SUFFIX#*.}"
 VERSION_MINOR="${VERSION_SUFFIX%%.*}"; VERSION_SUFFIX="${VERSION_SUFFIX:${#VERSION_MINOR}}"
 __VERBOSE__ "parsed data:\n.   VERSION_PREFIX=${VERSION_PREFIX}\n.   VERSION_MAJOR=${VERSION_MAJOR}\n.   VERSION_MINOR=${VERSION_MINOR}\n.   VERSION_SUFFIX=${VERSION_SUFFIX}\n.   VERSION_BUILD=${VERSION_BUILD}"
 
-# get date
-eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
-__VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
-
 # get SHA1
 VERSION_SHA_LONG="$(git --no-pager rev-parse HEAD 2>/dev/null)"
 __VERBOSE__ "git rev-parse HEAD\n.   VERSION_SHA_LONG=${VERSION_SHA_LONG}"
@@ -1833,7 +1829,7 @@ if [[ "post-merge" == ${STAMPER_EXECUTING_HOOK} ]]; then
 	done
 fi
 if [[ "pre-commit" != ${STAMPER_EXECUTING_HOOK} ]]; then
-	# all other hooks except pre-commit
+	# all other hooks except pre-commit  or  outside of any hook
 	__VERBOSE__ "\nDetect DIRTY status for common case (manual or any hook except pre-commit)\ngit status --porcelain --untracked-files=normal"
 	git --no-pager status --porcelain --untracked-files=normal 2>/dev/null | \
 	awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^[!?][!?]\s+(.*)$/, A ) { print "o " A[1]; next; }
@@ -1861,6 +1857,15 @@ if [[ "pre-commit" != ${STAMPER_EXECUTING_HOOK} ]]; then
 			;;
 		esac
 	done
+	if [[ -z ${VERSION_DIRTY} && ! ${VERSION_SHA_LONG} =~ ^0+$ ]]; then
+		# commit date
+		eval $(git show --no-patch --no-notes --date="format:%Y-%m-%d %H:%M:%S" --pretty="VERSION_UNIXTIME=%ct; VERSION_DATE='%cd'; VERSION_COMMIT_AUTHOR='%aN'; VERSION_COMMIT_EMAIL='%ae';" HEAD)
+		if [[ -n ${VERSION_DATE} ]]; then
+			VERSION_SHORTDATE="${VERSION_DATE:2:2}${VERSION_DATE:5:2}${VERSION_DATE:8:2}${VERSION_DATE:11:2}${VERSION_DATE:14:2}${VERSION_DATE:17:2}"
+			__VERBOSE__ "commit author, date and time:\ngit show --no-patch --no-notes --date='format:%Y-%m-%d %H:%M:%S' --pretty=\"VERSION_UNIXTIME=%ct; VERSION_DATE='%cd'; VERSION_COMMIT_AUTHOR='%aN'; VERSION_COMMIT_EMAIL='%ae';\" HEAD"
+			__VERBOSE__ ".   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
+		fi
+	fi
 fi
 
 #
@@ -2040,20 +2045,29 @@ if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; th
 	unset temp
 	unset util
 	
-	if [[ "0000000000000000000000000000000000000000" == ${VERSION_SHA_LONG} ]]; then
-		VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
-		VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
-	else
-		eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
-		__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
-		if [[ -z ${VERSION_COMMIT_AUTHOR} ]]; then
+	if [[ -z ${VERSION_COMMIT_AUTHOR} || -z ${VERSION_COMMIT_EMAIL} ]]; then
+		if [[ "0000000000000000000000000000000000000000" == ${VERSION_SHA_LONG} ]]; then
 			VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
 			VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+		else
+			eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
+			__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
+			if [[ -z ${VERSION_COMMIT_AUTHOR} ]]; then
+				VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
+				VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+			fi
 		fi
 	fi
 fi
 
+if [[ -z ${VERSION_DATE} ]]; then
+	# get date
+	eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
+	__VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
+fi
+
 if [[ "true" == ${STAMPER_DO_PRINT_INFO} ]]; then
+	__VERBOSE__ ""
 	echo "${VERSION_TEXT}  ${VERSION_DATE}  ${VERSION_HOSTINFO}"
 	echo "   VERSION_ID=            ${VERSION_ID}"
 	echo "   VERSION_TEXT=          ${VERSION_TEXT}"

@@ -2737,7 +2737,8 @@ if [[ -z \${GIT_REFLOG_ACTION} ]]; then
 		RETVAL=\$?
 		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
 			# there are some indexed changes, create new commit now
-			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+			[[ -n \${GIT_DIR} ]] || GIT_DIR=\"\$(git rev-parse --absolute-git-dir)\"
+			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat \"\${GIT_DIR}/COMMIT_EDITMSG\" 2>/dev/null |sed -e '/^\\s*#/d')\"
 		fi
 		exit \$RETVAL
 	fi
@@ -2771,7 +2772,8 @@ if [[ \${1,,} == \"rebase\" ]]; then
 		RETVAL=\$?
 		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
 			# there are some indexed changes, create new commit now
-			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/COMMIT_EDITMSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+			[[ -n \${GIT_DIR} ]] || GIT_DIR=\"\$(git rev-parse --absolute-git-dir)\"
+			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat \"\${GIT_DIR}/COMMIT_EDITMSG\" 2>/dev/null |sed -e '/^\\s*#/d')\"
 		fi
 		exit \$RETVAL
 	fi
@@ -2805,9 +2807,13 @@ if [[ \"1\" != \$1 ]]; then
 	# '\$1' == '1' means squash merge;
 	# do not make commit for squash - it will be made manually later
 	# (squash merge does not execute commit yet)
-	if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
-		# there are some indexed changes, create new commit now
-		git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat .git/MERGE_MSG 2>/dev/null |sed -e '/^\\s*#/d')\"
+	[[ -n \${GIT_DIR} ]] || GIT_DIR=\"\$(git rev-parse --absolute-git-dir)\"
+	[[ -f \"\${GIT_DIR}/MERGE_MODE\" ]] && echo \"Merge mode: '\$(cat \"\${GIT_DIR}/MERGE_MODE\")'\" >&2
+	if [[ -f \"\${GIT_DIR}/MERGE_MSG\" ]]; then
+		if ! git --no-pager diff --cached --quiet >/dev/null 2>&1 ; then
+			# there are some indexed changes, create new commit now
+			git --no-pager -c core.hookspath=/dev/null commit --no-verify --amend --message \"\${VERSION_TEXT} \$(cat \"\${GIT_DIR}/MERGE_MSG\" 2>/dev/null |sed -e '/^\\s*#/d')\"
+		fi
 	fi
 fi
 exit \$RETVAL

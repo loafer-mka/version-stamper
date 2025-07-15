@@ -106,11 +106,15 @@ ref=""
 ((an=0))
 for a in "$@"; do
 	((an++))
-	if [ -n "$ref" ]; then
-		printf -v "$ref" '%s' "$a"
-		ref=""
+	if [[ -n $ref ]]; then
+		if [[ -n $a ]]; then
+			printf -v "$ref" '%s' "$a"
+			ref=""
+		fi
 	else
 		case "$a" in
+		"")
+			;;
 		-V | --version)
 			echo "${STAMPER_VERSION_TEXT}"
 			exit 0
@@ -1116,31 +1120,49 @@ for arg in "$@"; do
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
 		case "${ref}" in
 		STAMPER_TEXTOIZE | \?STAMPER_TEXTOIZE)
-			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg} ]]; then
-				if [[ "?" == ${ref:0:1} ]]; then
-					[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+			if [[ -n ${arg} ]]; then
+				if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg} ]]; then
+					if [[ "?" == ${ref:0:1} ]]; then
+						[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+					else
+						[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg}\"" >&2
+						STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+					fi
 				else
-					[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg}\"" >&2
-					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
+					echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
 				fi
-			else
-				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
+				ref=""
 			fi
 			;;
 		\?*)
+			# ?VERSION_LEADER ?VERSION_TRAILER ?VERSION_AUTHORSHIP ?VERSION_DECLARATION
+			# empty arg allowed
 			ref="${ref:1}"
 			[[ -n ${ref} && -z ${!ref} ]] && printf -v "${ref}" '%s' "${arg}"
+			ref=""
 			;;
-		*)
+		VERSION_LEADER | VERSION_TRAILER | VERSION_AUTHORSHIP | VERSION_DECLARATION)
+			# empty arg allowed
 			[[ ${ref} != "ref" && -n ${!ref} ]] && echo "Warning: Override ${ref_opt/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
 			printf -v "${ref}" '%s' "${arg}"
+			ref=""
+			;;
+		*)
+			# temp_leader  temp_trailer  ref (--directory)  STAMPER_EXECUTING_HOOK
+			# empty arg must be ignored
+			if [[ -n ${arg} ]]; then
+				[[ ${ref} != "ref" && -n ${!ref} ]] && echo "Warning: Override ${ref_opt/#+(-)/} ref=\"${ref}\" val=\"${!ref}\" setting \"${arg}\"" >&2
+				printf -v "${ref}" '%s' "${arg}"
+				ref=""
+			fi
 			;;
 		esac
-		ref=""
 	elif [[ -n ${temp_plugin} ]]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
 		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
 		case "${arg}" in
+		"")
+			;;				# skip empty arg
 		-i | --gitignore)
 			temp_ignore="true"
 			;;
@@ -1200,6 +1222,8 @@ for arg in "$@"; do
 	else
 		__VERBOSE__ ".    arg ${an}: \"${arg}\""
 		case "${arg}" in
+		"")
+			;;				# skip empty arg
 		-cd=* | --directory=*)
 			;;				# proceed above, ignore it here
 		-cd | --directory)

@@ -46,13 +46,13 @@ function __PLUGIN_CS_CREATE__
 	if type -p xxd >/dev/null; then
 		cguid="$(dd if=/dev/random bs=15 count=1 2>/dev/null \
 			|xxd -p \
-			|awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand($0); printf "%08X-%04X-4%03X-%04X-%06X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
+			|awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand($0); printf "%08X-%04X-4%03X-%04X-%012X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
 	elif type -p hexdump >/dev/null; then
 		cguid="$(dd if=/dev/random bs=15 count=1 2>/dev/null \
 			|hexdump --format '15/1 "%02x"' \
-			|awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand($0); printf "%08X-%04X-4%03X-%04X-%06X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
+			|awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand($0); printf "%08X-%04X-4%03X-%04X-%012X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
 	else
-		cguid="$(awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand(); printf "%08X-%04X-4%03X-%04X-%06X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
+		cguid="$(awk -v RS='(\r\n|\n\r|\r|\n)' '{ srand(); printf "%08X-%04X-4%03X-%04X-%012X\n", 0xFFFFFFFF*rand(), 0xFFFF*rand(), 0xFFF*rand(), 0xFFFF*rand(), 0xFFFFFFFFFFFF*rand(); }')"
 	fi
 
 	__STORE_CRLF__ "$1" <<-END_OF_TEXT

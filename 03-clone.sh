@@ -42,7 +42,7 @@ CLEAN_HOOKS clone-m/.git
 	-a "00000012" == "${A[VERSION_ID]}"   -a "00000012" == "${B[VERSION_ID]}" \
 	-a "" == "${A[VERSION_DIRTY]}"        -a "" == "${B[VERSION_DIRTY]}" \
 	-a "" == "${A[VERSION_LEADER]}"       -a "" == "${B[VERSION_LEADER]}" \
-	-a "" == "${A[VERSION_TRAILER]}"      -a "" == "${A[VERSION_TRAILER]}"\
+	-a "" == "${A[VERSION_TRAILER]}"      -a "" == "${B[VERSION_TRAILER]}"\
 	-a "0000000000000000000000000000000000000000" != "${A[VERSION_SHA_LONG]}" \
 	-a "0000000000000000000000000000000000000000" != "${B[VERSION_SHA_LONG]}" \
 	-a "${A[VERSION_SHA_LONG]}" == "${B[VERSION_SHA_LONG]}" \

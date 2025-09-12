@@ -1649,7 +1649,8 @@ if [[ "HEAD" == ${VERSION_BRANCH} || -z ${VERSION_BRANCH} ]]; then
 				# use git rev-list to read history of commits from HEAD down to initial commit
 				# and check if local or remote branch with '${temp_branch}' name if on way ...
 				# git for-each-ref prints all SHAs of matched branches, grep filters history
-				temp="$(git --no-pager rev-list HEAD | grep $(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null))"
+				temp="$(git --no-pager for-each-ref "refs/remotes/*/${temp_branch}" "refs/heads/${temp_branch}" --format="-e %(objectname)" 2>/dev/null)"
+				[[ -n ${temp} ]] && temp="$(git --no-pager rev-list HEAD | grep ${temp})"
 				case "${STAMPER_VERBOSE,,}" in
 				simple | extended)
 					# avoid complex string expansion using subshell execution if result is unused

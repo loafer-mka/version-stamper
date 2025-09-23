@@ -347,13 +347,13 @@ function __detect_hooks_dir__
 	# or to reduced .git directory of worktree with only HEAD, config, logs/ ...
 	# so hooks/ subfolder must be detected in main .git directory
 	VERSION_HOOKS_DIR="${VERSION_GIT_DIR}/hooks"
-	if [[ -d ${VERSION_HOOKS_DIR} ]]; then
-		__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
-	else
+	if [[ ! -d ${VERSION_HOOKS_DIR} ]]; then
 		git rev-parse --git-common-dir 2>/dev/null |__STDPATH_FUNCTION__ --var VERSION_HOOKS_DIR --mixed
-		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
+		__VERBOSE__ "$1git rev-parse --git-common-dir\n$1.   git common dir=\"${VERSION_HOOKS_DIR}\""
+		[[ -n "${VERSION_HOOKS_DIR}" && -d "${VERSION_HOOKS_DIR}" ]] && VERSION_HOOKS_DIR="${VERSION_HOOKS_DIR}/hooks"
 	fi
 	[[ -d ${VERSION_HOOKS_DIR} ]] || VERSION_HOOKS_DIR=""
+	__VERBOSE__ "$1.   VERSION_HOOKS_DIR=\"${VERSION_HOOKS_DIR}\""
 }
 __detect_hooks_dir__ ""
 

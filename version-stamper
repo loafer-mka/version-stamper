@@ -8,7 +8,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2022-2026
 #
 # check presence of utilities
 #
@@ -60,24 +60,20 @@ shopt -s expand_aliases
 
 source ${STAMPER_SCRIPT_PATH%/*}/stdpath
 
-if [[ "Windows_NT" == ${OS} ]]; then
-	__STDPATH_FUNCTION__  --var STAMPER_SCRIPT_PATH  --mixed  "${STAMPER_SCRIPT_PATH}"
+if [[ ${OS} == "Windows_NT" ]]; then
+	__STDPATH_FUNCTION__  --var STAMPER_SCRIPT_PATH  --mixed -- "${STAMPER_SCRIPT_PATH}"
 fi
 
 # load stamper's version information
-if [[ "0" -ne $(grep --count "<<<<<<" "${STAMPER_SCRIPT_PATH}-this") ]]; then
-	set -o allexport
-	source <(awk -v RS='(\r\n|\n\r|\r|\n)' '
-		BEGIN{ mode = 0; }
-		mode == 0 && /^\s*<<<<<<*\s/   { mode = 1; next; }
-		mode == 1 && ( /^\s*======*\s*$/ || /^\s*\|\|\|\|\|\|*\s*$/) { mode = 2; next; }
-		mode == 2 && /^\s*>>>>>>*\s/   { mode = 0; next; }
-		mode <= 1 { print; }
-	' "${STAMPER_SCRIPT_PATH}-this")
-	set +o allexport
-else
-	source "${STAMPER_SCRIPT_PATH}-this"
-fi
+set -o allexport
+source <(awk -v RS='(\r\n|\n\r|\r|\n)' '
+	BEGIN{ mode = 0; }
+	mode == 0 && /^\s*<<<<<<*\s/   { mode = 1; next; }
+	mode == 1 && ( /^\s*======*\s*$/ || /^\s*\|\|\|\|\|\|*\s*$/) { mode = 2; next; }
+	mode == 2 && /^\s*>>>>>>*\s/   { mode = 0; next; }
+	mode <= 1 { print; }
+' "${STAMPER_SCRIPT_PATH}-this")
+set +o allexport
 
 export STAMPER_SUITE="Version stamper suite ${STAMPER_VERSION_TEXT}"
 # note: the STAMPER_SUITE is a signature of script; setup will detect it as part of version suite using given text
@@ -195,7 +191,7 @@ fi
 #
 if [[ -n ${STAMPER_CURRENT_DIR} ]]; then
 #	__normalize_path__  STAMPER_CURRENT_DIR  "${STAMPER_CURRENT_DIR}"
-	__STDPATH_FUNCTION__ --var STAMPER_CURRENT_DIR --mixed "${STAMPER_CURRENT_DIR}"
+	__STDPATH_FUNCTION__ --var STAMPER_CURRENT_DIR --mixed -- "${STAMPER_CURRENT_DIR}"
 	[[ ! -d "${STAMPER_CURRENT_DIR}" ]] && DIE 1 "Cannot change directory to \"${STAMPER_CURRENT_DIR}\""
 	pushd "${STAMPER_CURRENT_DIR}" >/dev/null 2>&1
 fi
@@ -729,32 +725,36 @@ __VERBOSE__ "\n${STAMPER_SUITE_TITLE}\n"
 # load available plugins
 #
 declare -A STAMPER_PLUGINS
-__VERBOSE__ "Load available plugins:"
-for plugin in "${STAMPER_SCRIPT_PATH}-plugin-"*; do
-	source "${plugin}"
-	temp="${plugin##*/${STAMPER_SCRIPT_NAME}-plugin-}"
-	__VERBOSE__ ".   $temp: $plugin"
-	if [[ \
-	       "function" == $(type -t "__PLUGIN_${temp}_NOTICE__") \
-		&& "function" == $(type -t "__PLUGIN_${temp}_SAMPLE__") \
-		&& "function" == $(type -t "__PLUGIN_${temp}_GETVER__") \
-		&& "function" == $(type -t "__PLUGIN_${temp}_CREATE__") \
-		&& "function" == $(type -t "__PLUGIN_${temp}_MODIFY__") \
-		&& "function" == $(type -t "__PLUGIN_${temp}_ATTRIB__") \
-	]]; then
-		STAMPER_PLUGINS[${temp}]="${plugin}"
-	else
-		echo "Warning: bad plugin '${temp}' implementation" 1>&2
-	fi
-	unset temp
-done
-
+function __load_plugins__
+{
+	for plugin in "$@"; do
+		source "${plugin}"
+		temp="${plugin##*/${STAMPER_SCRIPT_NAME}-plugin-}"
+		__VERBOSE__ ".   $temp: $plugin"
+		if [[ \
+			   "function" == $(type -t "__PLUGIN_${temp}_NOTICE__") \
+			&& "function" == $(type -t "__PLUGIN_${temp}_SAMPLE__") \
+			&& "function" == $(type -t "__PLUGIN_${temp}_GETVER__") \
+			&& "function" == $(type -t "__PLUGIN_${temp}_CREATE__") \
+			&& "function" == $(type -t "__PLUGIN_${temp}_MODIFY__") \
+			&& "function" == $(type -t "__PLUGIN_${temp}_ATTRIB__") \
+		]]; then
+			STAMPER_PLUGINS[${temp}]="${plugin}"
+		else
+			echo "Warning: bad plugin '${temp}' implementation" 1>&2
+		fi
+		unset temp
+	done
+}
+__VERBOSE__ "Load available standard plugins:"
+__load_plugins__ "${STAMPER_SCRIPT_PATH}-plugin-"*
 
 #
 # parse config file
 #
 STAMPER_ABBREV_LEN=""
 STAMPER_DEFAULT_CMD=""
+STAMPER_CUSTOM_DIR=""
 STAMPER_TEXTOIZE=""
 # operations
 STAMPER_SETUP_CONFIG="false"
@@ -848,6 +848,9 @@ if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 		param="${param//+([[:space:]])/}"
 		value="${value/#+([[:space:]])/}"
 		value="${value/%+([[:space:]])/}"
+		value="${value//\"/\\\"}"
+		value="${value//\(/\\(}"
+		value="${value//\)/\\)}"
 		eval "printf -v 'value' '%s' \"${value}\""
 		case "${param,,}" in
 		"" | "#"*)
@@ -1013,9 +1016,30 @@ if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 		default-cmd:)
 			[[ -z ${STAMPER_DEFAULT_CMD} ]] && STAMPER_DEFAULT_CMD="$value" || echo "Warning: Ignoring duplicate default command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
 			;;
+		custom-dir:)
+			if [[ -z ${STAMPER_CUSTOM_DIR} ]]; then
+				__STDPATH_FUNCTION__ --var STAMPER_CUSTOM_DIR --directory "${VERSION_CONFIG_DIR}" --mixed -- "$value"
+				if [[ ${STAMPER_CUSTOM_DIR} == ${STAMPER_SCRIPT_PATH%/*} ]]; then
+					echo "Warning: Ignoring custom dir command \"${value}\" matching to ${STAMPER_SCRIPT_NAME} path at ${VERSION_CONFIG_PATH}:$cn" >&2
+					STAMPER_CUSTOM_DIR=""
+				else
+					if [[ -d ${STAMPER_CUSTOM_DIR} ]]; then
+						__VERBOSE__ "Load available custom plugins:"
+						__load_plugins__ "${STAMPER_CUSTOM_DIR}/${STAMPER_SCRIPT_NAME}-plugin-"*
+					else
+						STAMPER_CUSTOM_DIR=""
+						echo "Warning: Ignoring custom dir command -- directory \"${value}\" is not exist at ${VERSION_CONFIG_PATH}:$cn" >&2
+					fi
+				fi
+			else
+				echo "Warning: Ignoring duplicate custom dir command \"${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
+			fi
+			;;
 		textoize:)
 			if [[ -z ${STAMPER_TEXTOIZE} ]]; then
-				if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${value} ]]; then
+				if [[ -f ${STAMPER_CUSTOM_DIR}/${STAMPER_SCRIPT_NAME}-textoize-${value} ]]; then
+					STAMPER_TEXTOIZE="${STAMPER_CUSTOM_DIR}/${STAMPER_SCRIPT_NAME}-textoize-${value}"
+				elif [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${value} ]]; then
 					STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${value}"
 				else
 					echo "Warning: Ignoring non-existent textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${value}\" at ${VERSION_CONFIG_PATH}:$cn" >&2
@@ -1112,6 +1136,7 @@ temp_ignore="false"
 temp_attrib="false"
 temp_leader=""
 temp_trailer=""
+temp_textoize=""
 ((an=0))
 for arg in "$@"; do
 	((an++))
@@ -1119,18 +1144,15 @@ for arg in "$@"; do
 		# assign *ref = 2nd_arg
 		__VERBOSE__ ".        next arg ${an}: \"${arg}\""
 		case "${ref}" in
-		STAMPER_TEXTOIZE | \?STAMPER_TEXTOIZE)
+		\?temp_textoize)
 			if [[ -n ${arg} ]]; then
-				if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg} ]]; then
-					if [[ "?" == ${ref:0:1} ]]; then
-						[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
-					else
-						[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg}\"" >&2
-						STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg}"
-					fi
-				else
-					echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
-				fi
+				[[ -z ${STAMPER_TEXTOIZE} ]] && temp_textoize="${arg}"
+				ref=""
+			fi
+			;;
+		temp_textoize)
+			if [[ -n ${arg} ]]; then
+				temp_textoize="${arg}"
 				ref=""
 			fi
 			;;
@@ -1401,26 +1423,17 @@ if it is not set or empty then \"--help\" will be assumed."
 			ref_opt="${arg}"
 			;;
 		--textoize=*)
-			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:11} ]]; then
-				[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${arg:11}\"" >&2
-				STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:11}"
-			else
-				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:11}\"" >&2
-			fi
+			temp_textoize="${arg:11}"
 			;;
 		--textoize)
-			ref="STAMPER_TEXTOIZE"
+			ref="temp_textoize"
 			ref_opt="${arg}"
 			;;
 		--textoize\?=*)
-			if [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${arg:12} ]]; then
-				[[ -z ${STAMPER_TEXTOIZE} ]] && STAMPER_TEXTOIZE="${STAMPER_SCRIPT_PATH}-textoize-${arg:12}"
-			else
-				echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_PATH}-textoize-${arg:12}\"" >&2
-			fi
+			[[ -z ${STAMPER_TEXTOIZE} ]] && temp_textoize="${arg:12}"
 			;;
 		--textoize\?)
-			ref="?STAMPER_TEXTOIZE"
+			ref="?temp_textoize"
 			ref_opt="${arg}"
 			;;
 		*)
@@ -1435,6 +1448,21 @@ if it is not set or empty then \"--help\" will be assumed."
 done
 [[ -n ${ref} ]] && DIE 2 "Wrong argument(s): \"${ref_opt}\" needs in argument after"
 [[ -n ${temp_plugin} ]] && DIE 2 "Wrong plugin command: \"${temp_plugin}\" needs in argument after"
+if [[ -n ${temp_textoize} ]]; then
+	if [[ -f ${STAMPER_CUSTOM_DIR}/${STAMPER_SCRIPT_NAME}-textoize-${temp_textoize} ]]; then
+		temp_textoize="${STAMPER_CUSTOM_DIR}/${STAMPER_SCRIPT_NAME}-textoize-${temp_textoize}"
+	elif [[ -f ${STAMPER_SCRIPT_PATH}-textoize-${temp_textoize} ]]; then
+		temp_textoize="${STAMPER_SCRIPT_PATH}-textoize-${temp_textoize}"
+	else
+		echo "Warning: Ignoring non-existent --textoize script \"${STAMPER_SCRIPT_NAME}-textoize-${temp_textoize}\"" >&2
+		temp_textoize=""
+	fi
+	if [[ -n ${temp_textoize} ]]; then
+		[[ -n ${STAMPER_TEXTOIZE} ]] && echo "Warning: Override textoize setting \"${temp_textoize##*/}\"" >&2
+		STAMPER_TEXTOIZE="${temp_textoize}"
+	fi
+fi
+unset temp_textoize
 unset temp_leader
 unset temp_trailer
 unset temp_attrib
@@ -1567,7 +1595,9 @@ Config file${VERSION_CONFIG_MISSING}: \"${VERSION_CONFIG_PATH}\"
 .   default command= \"${STAMPER_DEFAULT_CMD}\"
 .   check/create config=\"${STAMPER_SETUP_CONFIG}\"
 .   setup hooks=\"${STAMPER_SETUP_HOOKS}\"
-.   Hooks to update=[${!STAMPER_HOOKS[@]}]
+.   hooks to update=[${!STAMPER_HOOKS[@]}]
+.   custom directory=\"${STAMPER_CUSTOM_DIR}\"
+.   textoize script=\"${STAMPER_TEXTOIZE}\"
 .   generate stamps=\"${STAMPER_GENERATE}\" [${STAMPER_EXEC_PLUGIN[@]}]"
 for index in "${!STAMPER_EXEC_PLUGIN[@]}"; do
 	plugin="${STAMPER_EXEC_PLUGIN[$index]}"
@@ -1905,10 +1935,92 @@ VERSION_SHA_SHORT="${sha_temp[@]}"
 unset sha_temp
 unset temp
 
+if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; then
+	#
+	# get build host and OS identification
+	#
+	VERSION_HOSTINFO="${USER:-$USERNAME}"
+	VERSION_HOSTINFO="${VERSION_HOSTINFO//\\//}"
+	__VERBOSE__ "Build VERSION_HOSTINFO description\n.   user=\"${VERSION_HOSTINFO}\""
+	temp="${HOSTNAME:-$(hostname 2>/dev/null)}"
+	temp="${temp:-localhost}"
+	__VERBOSE__ ".   host=\"$temp\""
+	VERSION_HOSTINFO="${VERSION_HOSTINFO}@${temp}"
+	temp=""
+	if [[ "Windows_NT" == ${OS} ]]; then
+		util="$(which reg.exe 2>/dev/null)"
+		if [[ -n ${util} ]]; then
+			temp=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
+					| awk -v RS='(\r\n|\n\r|\r|\n)' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
+						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
+						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
+						   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
+			__VERBOSE__ ".   this is windows; try \"$util\" to get os identification\n.      \"$temp\""
+		fi
+	else
+		util="$(which lsb_release 2>/dev/null)"
+		if [[ -n ${util} ]]; then
+			temp=$("${util}" -d -s |sed -r -e 's/"//g')
+			__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
+		fi
+		if [[ -z ${temp} && -f /etc/os-release ]]; then
+			temp="$(cat "/etc/os-release" \
+					| awk -v RS='(\r\n|\n\r|\r|\n)' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
+									$1 == "NAME" { n=$2; }
+									$1 == "VERSION" { v=$2; }
+									END{ print gensub( "\"", "", "G", pn == "" ? n " " v : pn ); }')"
+			__VERBOSE__ ".   this is *nix; try \"/etc/os-release\" to get os identification\n.      \"$temp\""
+		fi
+		if [[ -z ${temp} ]]; then
+			util="$(which hostnamectl 2>/dev/null)"
+			if [[ -n ${util} ]]; then
+				temp="$(hostnamectl status |awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
+				__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
+			fi
+		fi
+	fi
+	if [[ -z ${temp} ]]; then
+		util="$(which uname 2>/dev/null)"
+		if [[ -n ${util} ]]; then
+			temp="$("${util}" -s)"
+			__VERBOSE__ ".   try \"$util\" to get os identification\n.      \"$temp\""
+		fi
+	fi
+	if [[ -n ${temp} ]]; then
+		VERSION_HOSTINFO="${VERSION_HOSTINFO} ${temp}"
+		__VERBOSE__ ".   VERSION_HOSTINFO=\"${VERSION_HOSTINFO}\""
+	fi
+	unset temp
+	unset util
+fi
+
 printf -v VERSION_ID "%02X%02X%04X" "${VERSION_MAJOR}" "${VERSION_MINOR}" "${VERSION_BUILD}"
-VERSION_TEXT=""
+
+if [[ -z ${VERSION_COMMIT_AUTHOR} || -z ${VERSION_COMMIT_EMAIL} ]]; then
+	if [[ "0000000000000000000000000000000000000000" == ${VERSION_SHA_LONG} ]]; then
+		VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
+		VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+	else
+		eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
+		__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
+		if [[ -z ${VERSION_COMMIT_AUTHOR} ]]; then
+			VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
+			VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
+		fi
+	fi
+fi
+
+if [[ -z ${VERSION_DATE} ]]; then
+	# get default date
+	eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
+	__VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
+fi
+
+# build default VERSION_TEXT string
+VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
+
+# use stamper to modify version strings
 [[ -n ${STAMPER_TEXTOIZE} ]] && source "${STAMPER_TEXTOIZE}"
-[[ -z ${VERSION_TEXT} ]] && VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
 
 #
 # print specific reply for some hooks (all VERSION_* vars must be calculated at this point)
@@ -2010,85 +2122,6 @@ if [[ ! -f ${VERSION_CONFIG_PATH} ]]; then
 		# add config into .gitattributes
 		STAMPER_FILL_ATTRIB["${VERSION_CONFIG_PREFIX}${VERSION_CONFIG_NAME}"]="text"
 	fi
-fi
-
-if [[ "true" == ${STAMPER_DO_PRINT_INFO} || "true" == ${STAMPER_GENERATE} ]]; then
-	#
-	# get build host and OS identification
-	#
-	VERSION_HOSTINFO="${USER:-$USERNAME}"
-	VERSION_HOSTINFO="${VERSION_HOSTINFO//\\//}"
-	__VERBOSE__ "Build VERSION_HOSTINFO description\n.   user=\"${VERSION_HOSTINFO}\""
-	temp="${HOSTNAME:-$(hostname 2>/dev/null)}"
-	temp="${temp:-localhost}"
-	__VERBOSE__ ".   host=\"$temp\""
-	VERSION_HOSTINFO="${VERSION_HOSTINFO}@${temp}"
-	temp=""
-	if [[ "Windows_NT" == ${OS} ]]; then
-		util="$(which reg.exe 2>/dev/null)"
-		if [[ -n ${util} ]]; then
-			temp=$(MSYS_NO_PATHCONV=1 "${util}" query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /t REG_SZ 2>/dev/null \
-					| awk -v RS='(\r\n|\n\r|\r|\n)' '/^\s*ProductName/ { w=""; for ( i=3; i<=NF; i++ ) w = w $i " "; }
-						   /^\s*CSDVersion/ { s=""; for ( i=3; i<=NF; i++ ) s = s $i " "; }
-						   /^\s*CurrentBuildx\s/ { b=""; for ( i=3; i<=NF; i++ ) b=b $i " "; }
-						   END{ print gensub( "\\s+$", "", 1, b != "" ? w s "Build " b : w s ); }')
-			__VERBOSE__ ".   this is windows; try \"$util\" to get os identification\n.      \"$temp\""
-		fi
-	else
-		util="$(which lsb_release 2>/dev/null)"
-		if [[ -n ${util} ]]; then
-			temp=$("${util}" -d -s |sed -r -e 's/"//g')
-			__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
-		fi
-		if [[ -z ${temp} && -f /etc/os-release ]]; then
-			temp="$(cat "/etc/os-release" \
-					| awk -v RS='(\r\n|\n\r|\r|\n)' -v FS==  '$1 == "PRETTY_NAME" { pn=$2; }
-									$1 == "NAME" { n=$2; }
-									$1 == "VERSION" { v=$2; }
-									END{ print gensub( "\"", "", "G", pn == "" ? n " " v : pn ); }')"
-			__VERBOSE__ ".   this is *nix; try \"/etc/os-release\" to get os identification\n.      \"$temp\""
-		fi
-		if [[ -z ${temp} ]]; then
-			util="$(which hostnamectl 2>/dev/null)"
-			if [[ -n ${util} ]]; then
-				temp="$(hostnamectl status |awk -v RS='(\r\n|\n\r|\r|\n)' 'match( $0, /^\s*Operating\s+System:\s+(.*)$/, A ) { print A[1]; }')"
-				__VERBOSE__ ".   this is *nix; try \"$util\" to get os identification\n.      \"$temp\""
-			fi
-		fi
-	fi
-	if [[ -z ${temp} ]]; then
-		util="$(which uname 2>/dev/null)"
-		if [[ -n ${util} ]]; then
-			temp="$("${util}" -s)"
-			__VERBOSE__ ".   try \"$util\" to get os identification\n.      \"$temp\""
-		fi
-	fi
-	if [[ -n ${temp} ]]; then
-		VERSION_HOSTINFO="${VERSION_HOSTINFO} ${temp}"
-		__VERBOSE__ ".   VERSION_HOSTINFO=\"${VERSION_HOSTINFO}\""
-	fi
-	unset temp
-	unset util
-	
-	if [[ -z ${VERSION_COMMIT_AUTHOR} || -z ${VERSION_COMMIT_EMAIL} ]]; then
-		if [[ "0000000000000000000000000000000000000000" == ${VERSION_SHA_LONG} ]]; then
-			VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
-			VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
-		else
-			eval $(git show --no-notes --no-patch --pretty=format:"VERSION_COMMIT_AUTHOR='%aN'%nVERSION_COMMIT_EMAIL='%ae'%n")
-			__VERBOSE__ "git show --no-notes --no-patch --pretty=format:\"...\"\n.   VERSION_COMMIT_AUTHOR=${VERSION_COMMIT_AUTHOR}\n.   VERSION_COMMIT_EMAIL=${VERSION_COMMIT_EMAIL}"
-			if [[ -z ${VERSION_COMMIT_AUTHOR} ]]; then
-				VERSION_COMMIT_AUTHOR="${VERSION_GIT_USER}"
-				VERSION_COMMIT_EMAIL="${VERSION_GIT_EMAIL}"
-			fi
-		fi
-	fi
-fi
-
-if [[ -z ${VERSION_DATE} ]]; then
-	# get date
-	eval $(date +"VERSION_DATE=\"%Y-%m-%d %H:%M:%S\"; VERSION_SHORTDATE=\"%y%m%d%H%M%S\"; VERSION_UNIXTIME=%s;")
-	__VERBOSE__ "now\n.   VERSION_DATE=${VERSION_DATE}\n.   VERSION_SHORTDATE=${VERSION_SHORTDATE}\n.   VERSION_UNIXTIME=${VERSION_UNIXTIME}"
 fi
 
 if [[ "true" == ${STAMPER_DO_PRINT_INFO} ]]; then

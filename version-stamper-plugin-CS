@@ -6,7 +6,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2023-2026
 
 function __PLUGIN_CS_NOTICE__
 {

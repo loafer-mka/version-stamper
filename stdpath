@@ -7,7 +7,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2024
+#               Copyright (c) Andrey Makarov 2024-2026
 
 if [ "function" != "$(type -t __STDPATH_FUNCTION__)" ]; then
 	unset __STDPATH_FUNCTION__

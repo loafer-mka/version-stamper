@@ -6,10 +6,10 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2024
+#               Copyright (c) Andrey Makarov 2024-2026
 
 #
-# this script does not touch VERSION_TEXT variable, so
-# hardcoded form 'v0.0.0-branch' will be used.
-# The 'none' textoize setting is same as 'not assigned'.
+# this script forces default VERSION_TEXT value;
+# the hardcoded form 'v0.0.0-branch' will be used.
+# The 'none' textoize setting is same as 'hardcoded'.
 #

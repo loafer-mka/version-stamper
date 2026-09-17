@@ -8,7 +8,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2023-2026
 
 if [ -z "${DELIM_ROW}" ]; then
     source "$(dirname "$0")/lib.sh"
@@ -30,6 +30,7 @@ pushd "$(dirname "$0")" >/dev/null
 [ -d "./repos/clone-x" ] && rm -rf "./repos/clone-x"
 [ -d "./repos/clone-x.git" ] && rm -rf "./repos/clone-x.git"
 [ -d "./repos/worktree" ] && rm -rf "./repos/worktree"
+[ -d "./repos/customdir" ] && rm -rf "./repos/customdir"
 
 #
 # create two bare repo:
@@ -362,5 +363,189 @@ git --no-pager tag X1.2 HEAD^^^^
 echo "> popd"
 popd >/dev/null
 
+# --- with custom plugins and textoize scripts ---
+echo "> git clone --branch F ./repos/bare1.git ./repos/customdir"
+git --no-pager clone --filter=tree:0 --single-branch --branch F ./repos/bare1.git ./repos/customdir
+echo "> pushd ./repos/customdir"
+pushd ./repos/customdir >/dev/null
+echo "> git tag x1.1 HEAD^^"
+git --no-pager tag x1.1 HEAD^^
+echo "> git tag v0.5 HEAD^^^^^"
+git --no-pager tag v0.5 HEAD^^^^^
+echo "> git tag v0.0 F^^^^^^^^^"
+git --no-pager tag v0.0 F^^^^^^^^^
+echo "> git checkout \$(git --no-pager rev-parse F^^)"
+echo "create .version-stamper"
+echo "
+#
+#   o p t i o n s
+#
+# verbose mode
+#verbose:         false
+#
+# abbreviation length
+# if not set, assumes 8 characters
+#abbrev:          8
+#
+# leading text before version identifier; for example VERSION_TEXT becomes LEADER_VERSION_TEXT
+leader:          CUSTOM_
+#
+# trailing text after version identifier; for example VERSION_TEXT becomes VERSION_TEXT_TRAILER
+trailer:         _DIR
+#
+# the company/person title
+# if not set, then used:
+# a) under Windows - 'HKLM\Software\Microsoft\WIndows NT\registered organization';
+# b) under Linux - username;
+# c) otherwise 'Unknown Author' will be assumed.
+authorship:       Andrey Makarov
+#
+# the copyright/copyleft declaration
+# if not set, then used \"\${DEFAULT_DECL} (c) AUTHORSHIP YEAR\" were:
+#    DEFAULT_DECL is set by the 'STAMPER_DEFAULT_DECL' parameter of the file ./version-stamper-config;
+#    AUTHORSHIP is specified by the 'authorship:' parameter above;
+#    YEAR is the current year or year of initial commit.
+declaration: Copyright (c) Andrey Makarov 2022-2026
+#
+# activate hooks
+# available hooks are:  pre-commit  post-commit  post-checkout  post-rewrite  post-merge
+# if not set, then will be used:  pre-commit  post-checkout  post-rewrite  post-merge  (all but post-commit)
+#hooks:           pre-commit post-commit post-checkout post-rewrite post-merge
+hooks:          version-stamper pre-commit post-checkout post-rewrite post-merge
+# note 1: if pre-commit is used then post-commit is useless
+# note 2: the 'version-stamper' hook is very special, for given self-containig repo only
+#         this affects on reloading version data after hooks upgrade
+#
+# the default command
+# it will be used if stamper is running without argumentss (if not set, --help is ssumed)
+default-cmd:     --list
+#
+# custom folder
+# additional folder to search plugins and textoize scripts
+# absolute or .version-stamper - relative path; this option must be before
+# 'textoize' and 'plugin-...' options.
+custom-dir: CUSTOM
+#
+# the version textoize script
+# it will be used to build VERSION_TEXT using other VERSION_* variables
+# if not set, then use hardcoded v0.0.0-branch+ form, otherwise you may choose
+# one of 'default' 'alt'
+textoize:        XXX
+
+#   p l u g i n s
+#
+# path to version target file which will created or updated by given plugin
+#plugin-BAT:      ./samples/sample-BAT.bat
+#plugin-C:        ./samples/sample-C.h
+#plugin-CMAKE:    ./samples/sample-CMAKE.cmake
+#plugin-CS:       ./samples/sample-AssemblyInfo.cs
+#plugin-INFO:     ./samples/sample-INFO.txt
+#plugin-M:        ./samples/sample-M.m
+#plugin-MAKEFILE: ./samples/sample-MAKEFILE.mk
+#plugin-MARKDOWN: ./samples/sample-MARKDOWN.md
+#plugin-SH:       ./samples/sample-SH.sh
+#plugin-SH:       ./version-stamper-this
+plugin-XXX:       ./version.XXX
+
+#   t h e   e n d
+" >.version-stamper
+echo "mkdir -- CUSTOM"
+mkdir -- CUSTOM
+echo "create version-stamper-textoize-XXX"
+echo "
+   printf -v VERSION_ID '0x%08X' \$((0x\$VERSION_ID+0x11100))
+   VERSION_TEXT=\"_\${VERSION_TEXT}_\"
+   VERSION_PREFIX=_\${VERSION_PREFIX}_
+   VERSION_MAJOR=\$((\$VERSION_MAJOR+0))
+   VERSION_MINOR=\$((\$VERSION_MINOR+1))
+   VERSION_SUFFIX=\"#\$VERSION_SUFFIX\"
+   VERSION_BUILD=\$((\$VERSION_BUILD+0x1100))
+   VERSION_BRANCH=\"_\${VERSION_BRANCH}_\"
+   VERSION_DIRTY=\"\${VERSION_DIRTY:--}\"
+   VERSION_DATE=\"1024-01-01 00:00:00\"
+   VERSION_SHORTDATE=240101000000
+   VERSION_UNIXTIME=-29852937017
+   VERSION_SHA_LONG=1111111111111111111111111111111111111111
+   VERSION_SHA_SHORT=11111111
+   VERSION_HOSTINFO=\"xxx@yyy.zzz test system\"
+   VERSION_AUTHORSHIP=\"XXX YYY\"
+   VERSION_DECLARATION=\"Copyright (c) XXX YYY 2022\"
+   VERSION_SUBMOD_NAME=unknown
+   VERSION_SUBMOD_PATH=unknown
+   VERSION_COMMIT_AUTHOR=\"XXX YYY\"
+   VERSION_COMMIT_EMAIL=xxx@yyy.zzz
+" >CUSTOM/version-stamper-textoize-XXX
+echo "create version-stamper-plugin-XXX"
+echo "
+function __PLUGIN_XXX_NOTICE__
+{
+	echo \"   plugin-XXX        Shell script; eol=CR+LF\"
+}
+
+function __PLUGIN_XXX_SAMPLE__
+{
+	echo \"#plugin-XXX:      --gitignore  version.xxx\"
+}
+
+function __PLUGIN_XXX_ATTRIB__
+{
+	echo \"text eol=lf\"
+}
+
+function __PLUGIN_XXX_GETVER__
+{
+	# note: use strong name compare (${NAME_VERSION_TEXT} rather than \w*VERSION_TEXT\w*)
+	# so changing version or changing leader/trailer must lead to rewrite target file.
+	sed --binary --regexp-extended --silent \\
+		-e \"s/^\\s*\${NAME_VERSION_TEXT}\\s+\\\"(.*)\\\".*\$/\\\\1/p\"
+}
+
+function __PLUGIN_XXX_CREATE__
+{
+	__STORE_LF__ \"\$1\" <<-END_OF_TEXT
+	\${NAME_VERSION_ID}              \"\${VERSION_ID}\"
+	\${NAME_VERSION_TEXT}            \"\${VERSION_TEXT_QUOTED}\"
+	\${NAME_VERSION_DATE}            \"\${VERSION_DATE_QUOTED}\"
+	\${NAME_VERSION_SHORTDATE}       \"\${VERSION_SHORTDATE}\"
+	\${NAME_VERSION_UNIXTIME}        \"\${VERSION_UNIXTIME}\"
+	\${NAME_VERSION_BRANCH}          \"\${VERSION_BRANCH_QUOTED}\"
+	\${NAME_VERSION_DIRTY}           \"\${VERSION_DIRTY}\"
+	\${NAME_VERSION_HOSTINFO}        \"\${VERSION_HOSTINFO_QUOTED}\"
+	\${NAME_VERSION_AUTHORSHIP}      \"\${VERSION_AUTHORSHIP_QUOTED}\"
+	\${NAME_VERSION_DECLARATION}     \"\${VERSION_DECLARATION_QUOTED}\"
+	\${NAME_VERSION_COMMIT_AUTHOR}   \"\${VERSION_COMMIT_AUTHOR_QUOTED}\"
+	\${NAME_VERSION_COMMIT_EMAIL}    \"\${VERSION_COMMIT_EMAIL_QUOTED}\"
+	\${NAME_VERSION_SHA_SHORT}       \"\${VERSION_SHA_SHORT}\"
+	\${NAME_VERSION_SHA_LONG}        \"\${VERSION_SHA_LONG}\"
+END_OF_TEXT
+}
+
+function __PLUGIN_XXX_MODIFY__
+{
+	sed --binary --regexp-extended \\
+		-e \"s/^(\\s*)(\\w*VERSION_ID\\w*)(\\s+)(\\\".*\\\")(.*)\$/\\\\1\${NAME_VERSION_ID}\\\\3\${VERSION_ID}\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_TEXT\\w*)(\\s+)(\\\".*\\\")(.*)\$/\\\\1\${NAME_VERSION_TEXT}\\\\3\\\"\${VERSION_TEXT_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_DATE\\w*)(\\s+)(\\\".*\\\")(.*)\$/\\1\${NAME_VERSION_DATE}\\\\3\\\"\${VERSION_DATE_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_SHORTDATE\\w*)(\\s+)(\\\".*\\\")(.*)\$/\\1\${NAME_VERSION_SHORTDATE}\\\\3\\\"\${VERSION_SHORTDATE}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_UNIXTIME\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_UNIXTIME}\\\\3\\\"\${VERSION_UNIXTIME}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_BRANCH\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_BRANCH}\\\\3\\\"\${VERSION_BRANCH_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_DIRTY\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_DIRTY}\\\\3\\\"\${VERSION_DIRTY}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_HOSTINFO\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_HOSTINFO}\\\\3\\\"\${VERSION_HOSTINFO_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_AUTHORSHIP\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_AUTHORSHIP}\\\\3\\\"\${VERSION_AUTHORSHIP_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_DECLARATION\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_DECLARATION}\\\\3\\\"\${VERSION_DECLARATION_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_COMMIT_AUTHOR\\w*)(\\s*)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_COMMIT_AUTHOR}\\\\3\\\"\${VERSION_COMMIT_AUTHOR_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_COMMIT_EMAIL\\w*)(\\s*)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_COMMIT_EMAIL}\\\\3\\\"\${VERSION_COMMIT_EMAIL_RQREG}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_SHA_SHORT\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_SHA_SHORT}\\\\3\\\"\${VERSION_SHA_SHORT}\\\"\\\\5/\" \\
+		-e \"s/^(\\s*)(\\w*VERSION_SHA_LONG\\w*)(\\s+)(\\\".*\\\")(.*)$/\\1\${NAME_VERSION_SHA_LONG}\\\\3\\\"\${VERSION_SHA_LONG}\\\"\\\\5/\" \\
+	| __STORE_LF__ \"\$1\"
+}
+" >CUSTOM/version-stamper-plugin-XXX
+echo "git add ."
+git add .
+echo "git commit -m \"Add custom-dir\""
+git commit -m "Add custom-dir"
 echo "> popd"
+popd >/dev/null
+
+echo "> popd (final)"
 popd >/dev/null

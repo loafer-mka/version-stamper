@@ -8,7 +8,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2023-2026
 
 . "$(dirname "$0")/lib.sh"
 
@@ -20,7 +20,8 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./detach-f"  -a -d "./detach-p"    -a \
   -d "./clone-a"   -a -d "./clone-e"     -a \
   -d "./clone-x"   -a -d "./clone-x.git" -a \
-  -d "./clone-m"   -a -d "./worktree"       \
+  -d "./clone-m"   -a -d "./worktree"    -a \
+  -d "./customdir" \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS fresh/.git
@@ -30,8 +31,8 @@ sleep 2s
 ../../version-stamper -p -cd fresh | LOAD_B
 ((D=B["VERSION_UNIXTIME"]-A["VERSION_UNIXTIME"]))
 
-# PRINT_A_B
-# echo "D=$D"
+#PRINT_A_B
+#echo "D=$D"
 
 # VERSION_DATE, VERSION_SHORTDATE, VERSION_UNIXTIME - is a time of
 # version-stamper run, so it may be same or may differs for 1..2 sec.

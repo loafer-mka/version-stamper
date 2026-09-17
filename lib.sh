@@ -8,7 +8,7 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2023-2026
 
 # disable history support; this enables 'echo "foo!"' (this sample with enabled history produces 'bash: !: event not found')
 set +H
@@ -49,11 +49,11 @@ function LEN
 }
 function LOAD_A
 {
-	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*([_+[:alnum:]()?].*)?$/A["\1"]="\2"/; s/^(A\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L ; done
+	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*([_+[:alnum:]()?-].*)?$/A["\1"]="\2"/; s/^(A\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L ; done
 }
 function LOAD_B
 {
-	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*([_+[:alnum:]()?].*)?$/B["\1"]="\2"/; s/^(B\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L ; done
+	sed -r -n -e 's/^\s+(\w)/\1/; s/^(\w+)=\s*([_+[:alnum:]()?-].*)?$/B["\1"]="\2"/; s/^(B\[\"VERSION_.*)$/\1/p' | while read L ; do eval $L ; done
 }
 function PRINT_A_B
 {

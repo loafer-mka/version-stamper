@@ -8,18 +8,20 @@
 #        email: Andrey Makarov <mka-at-mailru@mail.ru>
 # Project home: https://github.com/loafer-mka/version-stamper.git
 #
-#               Copyright (c) Andrey Makarov 2023
+#               Copyright (c) Andrey Makarov 2023-2026
 
 . "$(dirname "$0")/lib.sh"
 
 pushd "$(dirname "$0")/repos" >/dev/null 2>&1
 
 [ \
-  -d "./bare0.git" -a -d "./bare1.git" -a \
-  -d "./fresh"     -a -d "./contrib"   -a \
-  -d "./detach-f"  -a -d "./detach-p"   -a \
-  -d "./clone-a"   -a -d "./clone-e"   -a \
-  -d "./clone-m"   -a -d "./worktree" \
+  -d "./bare0.git" -a -d "./bare1.git"   -a \
+  -d "./fresh"     -a -d "./contrib"     -a \
+  -d "./detach-f"  -a -d "./detach-p"    -a \
+  -d "./clone-a"   -a -d "./clone-e"     -a \
+  -d "./clone-x"   -a -d "./clone-x.git" -a \
+  -d "./clone-m"   -a -d "./worktree"    -a \
+  -d "./customdir" \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS contrib/.git

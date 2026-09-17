@@ -20,16 +20,19 @@ pushd "$(dirname "$0")/repos" >/dev/null 2>&1
   -d "./detach-f"  -a -d "./detach-p"    -a \
   -d "./clone-a"   -a -d "./clone-e"     -a \
   -d "./clone-x"   -a -d "./clone-x.git" -a \
-  -d "./clone-m"   -a -d "./worktree"       \
+  -d "./clone-m"   -a -d "./worktree"    -a \
+  -d "./customdir" \
 ] || ../000-init-repos.sh
 
 CLEAN_HOOKS fresh/.git
 
 unset A B
+declare -A A B
+
 pushd fresh >/dev/null 2>&1
-../../../version-stamper -p | LOAD_A | while read L ; do eval $L; done
+../../../version-stamper -p | LOAD_A
 popd >/dev/null 2>&1
-../../version-stamper -p -cd fresh | LOAD_B | while read L ; do eval $L; done
+../../version-stamper -p -cd fresh | LOAD_B
 
 # PRINT_A_B
 

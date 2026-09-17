@@ -11,5 +11,9 @@
 #               Copyright (c) Andrey Makarov 2023
 
 ls -1 "$(dirname "$0")/"[0-9][0-9]-*.sh | sort | while read T ; do
-	./$T
+	if [[ ${T:0:2} == "./" || ${T:0:1} == "/" ]]; then
+		$T
+	else
+		./$T
+	fi
 done

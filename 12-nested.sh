@@ -45,16 +45,16 @@ sed -i -r \
 	${WIN_SED_EOL} \
 	foo/bar/.version-stamper
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
+# note: .git/branches can be missing or not .. it depends ongit version
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git\/branches|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
-[ "${text}" == ".
+[[ ${text} == ".
 ./foo
 ./foo/bar
 ./foo/bar/.gitattributes
 ./foo/bar/.version-stamper
 ./.git
-./.git/branches
 ./.git/config
 ./.git/description
 ./.git/HEAD
@@ -67,22 +67,22 @@ text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/obj
 ./.git/objects/pack
 ./.git/refs
 ./.git/refs/heads
-./.git/refs/tags" ] || DIE 1 "[FAIL]  $0     Mismatch files after --config and --setup"
+./.git/refs/tags" ]] || DIE 1 "[FAIL]  $0     Mismatch files after --config and --setup"
 
 git --no-pager add . >/dev/null 2>&1
 git commit -am "Initial commit" >/dev/null 2>&1
 # no installed hooks here
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
+# note: .git/branches can be missing or not .. it depends ongit version
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git\/branches|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
-[ "${text}" == ".
+[[ ${text} == ".
 ./foo
 ./foo/bar
 ./foo/bar/.gitattributes
 ./foo/bar/.version-stamper
 ./.git
-./.git/branches
 ./.git/COMMIT_EDITMSG
 ./.git/config
 ./.git/description
@@ -102,16 +102,17 @@ text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/obj
 ./.git/refs
 ./.git/refs/heads
 ./.git/refs/heads/MASTER
-./.git/refs/tags" ] || DIE 1 "[FAIL]  $0     Mismatch files after git commit"
+./.git/refs/tags" ]] || DIE 1 "[FAIL]  $0     Mismatch files after git commit"
 
 
 ../../../version-stamper -cd foo/bar --generate
-[ -f foo/bar/ver.sh ] && source foo/bar/ver.sh
+[[ -f foo/bar/ver.sh ]] && source foo/bar/ver.sh
 
-text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
+# note: .git/branches can be missing or not .. it depends ongit version
+text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git\/branches|\./\.git/objects/[0-9a-fA-F/]+)$' |sort --ignore-nonprinting --ignore-case --dictionary-order)"
 #echo "'${text}'"
 
-[ "${text}" == ".
+[[ ${text} == ".
 ./foo
 ./foo/bar
 ./foo/bar/.gitattributes
@@ -119,7 +120,6 @@ text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/obj
 ./foo/bar/ver.sh
 ./foo/bar/.version-stamper
 ./.git
-./.git/branches
 ./.git/COMMIT_EDITMSG
 ./.git/config
 ./.git/description
@@ -140,15 +140,15 @@ text="$(find . |grep -v -E '^(\./\.git/hooks/[[:alnum:]_+-]+.sample|\./\.git/obj
 ./.git/refs/heads
 ./.git/refs/heads/MASTER
 ./.git/refs/tags" \
-	-a -n "$(grep -E "^ver\.sh\s+" foo/bar/.gitattributes)" \
-	-a -n "$(grep -E "^ver\.sh$" foo/bar/.gitignore)" \
-] || DIE 1 "[FAIL]  $0     Mismatch files after generate"
+	&& -n "$(grep -E "^ver\.sh\s+" foo/bar/.gitattributes)" \
+	&& -n "$(grep -E "^ver\.sh$" foo/bar/.gitignore)" \
+]] || DIE 1 "[FAIL]  $0     Mismatch files after generate"
 
-[ \
-	   "${T12_VERSION_ID}" == "0x00000001" \
-	-a "${T12_VERSION_TEXT}" == "v0.0.1-MASTER" \
-	-a "${T12_VERSION_BRANCH}" == "MASTER" \
-] || DIE 1 "[FAIL]  $0     Bad version data after generate"
+[[ \
+	   ${T12_VERSION_ID} == "0x00000001" \
+	&& ${T12_VERSION_TEXT} == "v0.0.1-MASTER" \
+	&& ${T12_VERSION_BRANCH} == "MASTER" \
+]] || DIE 1 "[FAIL]  $0     Bad version data after generate"
 
 echo "[ OK ]  $0     Nested pathes OK"
 

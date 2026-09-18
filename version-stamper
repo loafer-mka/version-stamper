@@ -2019,6 +2019,9 @@ fi
 # build default VERSION_TEXT string
 VERSION_TEXT="${VERSION_PREFIX}${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}-${VERSION_BRANCH}${VERSION_DIRTY}"
 
+# save VERSION_DIRTY to check changes later (textoize script below can change VERSION_DIRTY representation)
+SAVED_VERSION_DIRTY="${VERSION_DIRTY}"
+
 # use stamper to modify version strings
 [[ -n ${STAMPER_TEXTOIZE} ]] && source "${STAMPER_TEXTOIZE}"
 
@@ -2224,7 +2227,7 @@ if [[ "true" == ${STAMPER_GENERATE} ]]; then
 			__VERBOSE__ ".      was read ${#indata} bytes\n.   check version of file \"${target}\" using __PLUGIN_${plugin}_GETVER__"
 			existing_version="$(__PLUGIN_${plugin}_GETVER__ <<<"${indata}")"
 
-			if [[ ${existing_version} == ${VERSION_TEXT} && -z ${VERSION_DIRTY} ]]; then
+			if [[ ${existing_version} == ${VERSION_TEXT} && -z ${SAVED_VERSION_DIRTY} ]]; then
 				__VERBOSE__ ".   NOW \"$existing_version\" is same as generated \"${VERSION_TEXT}\" REMAIN UNCHANGED \"${target}\""
 			else
 				# generate new file 1) if versions mismatch and/or 2) if dirty flag set because 'date of sources' will be changed every time
@@ -3115,7 +3118,7 @@ if [[ "false" != ${STAMPER_SETUP_HOOKS} ]]; then
 		echo "Warning: do not update git hooks because \"${VERSION_CONFIG_DIR}\" differs from worktree root \"${VERSION_ROOT_DIR}\"" >&2
 	else
 		if [[ -z ${VERSION_HOOKS_DIR} ]]; then
-			echo "Warning: cannot find '.git/hooks' folder to update git hooks" >&2
+			__VERBOSE__ "Info: do not update git hooks because missing '.git/hooks' folder"
 		else
 			__VERBOSE__ "Update hooks now"
 			

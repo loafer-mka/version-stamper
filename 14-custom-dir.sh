@@ -28,6 +28,8 @@ CLEAN_HOOKS customdir/.git
 
 declare -A A B
 
+# ------ stage 1: fill hardcoded array ------
+
 A["VERSION_ID"]="0x01021103"
 A["VERSION_TEXT"]="_x1.1.3-F_"
 A["VERSION_PREFIX"]="_x_"
@@ -49,6 +51,8 @@ A["VERSION_COMMIT_AUTHOR"]="XXX YYY"
 A["VERSION_COMMIT_EMAIL"]="xxx@yyy.zzz"
 A["VERSION_LEADER"]="CUSTOM_"
 A["VERSION_TRAILER"]="_DIR"
+
+# ------ stage 2: get modified by textoize values and compare with hardcoded ------
 
 pushd customdir >/dev/null 2>&1
 ../../../version-stamper -p | LOAD_B
@@ -79,6 +83,39 @@ popd >/dev/null 2>&1
 	-a "${A[VERSION_LEADER]}" == "${B[VERSION_LEADER]}" \
 	-a "${A[VERSION_TRAILER]}" == "${B[VERSION_TRAILER]}" \
 ] || DIE 1 "[FAIL]  $0  WRONG DATA"
+
+# ------ stage 3: use other textoize, so all data must mismatch ------
+
+unset B
+declare -A B
+
+pushd customdir >/dev/null 2>&1
+../../../version-stamper -p --textoize alt 2>/dev/null | LOAD_B
+popd >/dev/null 2>&1
+
+# PRINT_A_B
+
+# note: MAJOR, LEADEER and TRAILER remains unchanged by XXX textoize
+[ \
+	   "${A[VERSION_ID]}" != "${B[VERSION_ID]}" \
+	-a "${A[VERSION_TEXT]}" != "${B[VERSION_TEXT]}" \
+	-a "${A[VERSION_PREFIX]}" != "${B[VERSION_PREFIX]}" \
+	-a "${A[VERSION_MINOR]}" != "${B[VERSION_MINOR]}" \
+	-a "${A[VERSION_BUILD]}" != "${B[VERSION_BUILD]}" \
+	-a "${A[VERSION_BRANCH]}" != "${B[VERSION_BRANCH]}" \
+	-a "${A[VERSION_DIRTY]}" != "${B[VERSION_DIRTY]}" \
+	-a "${A[VERSION_DATE]}" != "${B[VERSION_DATE]}" \
+	-a "${A[VERSION_SHORTDATE]}" != "${B[VERSION_SHORTDATE]}" \
+	-a "${A[VERSION_SHA_LONG]}" != "${B[VERSION_SHA_LONG]}" \
+	-a "${A[VERSION_SHA_SHORT]}" != "${B[VERSION_SHA_SHORT]}" \
+	-a "${A[VERSION_HOSTINFO]}" != "${B[VERSION_HOSTINFO]}" \
+	-a "${A[VERSION_AUTHORSHIP]}" != "${B[VERSION_AUTHORSHIP]}" \
+	-a "${A[VERSION_DECLARATION]}" != "${B[VERSION_DECLARATION]}" \
+	-a "${A[VERSION_SUBMOD_NAME]}" != "${B[VERSION_SUBMOD_NAME]}" \
+	-a "${A[VERSION_SUBMOD_PATH]}" != "${B[VERSION_SUBMOD_PATH]}" \
+	-a "${A[VERSION_COMMIT_AUTHOR]}" != "${B[VERSION_COMMIT_AUTHOR]}" \
+	-a "${A[VERSION_COMMIT_EMAIL]}" != "${B[VERSION_COMMIT_EMAIL]}" \
+] || DIE 1 "[FAIL]  $0  DATA MUST BE CHANGED BY 'XXX' TEXTOIZE"
 
 [ "true" == "$(HOOKS_EXIST fresh/.git)" ] && DIE 1 "[FAIL]  $0  UNWANTED HOOK FOUND"
 

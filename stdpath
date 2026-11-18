@@ -140,19 +140,19 @@ This script may be included by other script and then used as function
 		[ -n "${var_name}" ] && declare -gx ${var_name}
 
 		if [ "${mode}" == "auto" ]; then
-			for lib in /usr/bin/msys-[0-9]*.dll /usr/bin/cygwin[0-9]*.dll /bin/msys-[0-9]*.dll /bin/cygwin[0-9]*.dll; do
-				case "${lib}" in
-				*bin/msys-[0-9]*)
-					mode="msys"			# msys-2.0.dll
-					break
-					;;
-				*bin/cygwin[0-9]*)		# cygwin1.dll
-					mode="cygwin"
-					break
-					;;
-				esac
-			done
-			[ "${mode}" == "auto" ] && mode="unix"
+			# msys can be detected by the msys-2.0.dll under /bin or /usr/bin
+			# and cygwin --"--"-- cygwin1.dll in same folders
+			if [[ -d /cygdrive ]]; then
+				mode="cygwin"
+			elif [[ -d /dev/fs ]]; then
+				mode="sua"
+			elif [[ -v MSYSTEM || -v MSYSTEM_PREFIX || -v MSYS ]]; then
+				mode="msys"
+			elif [[ ${OS} == "Windows_NT" ]]; then
+				mode="windows"
+			else
+				mode="unix"
+			fi
 		fi
 
 		if [ -n "${__stdpath_start_dir__}" ]; then

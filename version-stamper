@@ -728,6 +728,7 @@ declare -A STAMPER_PLUGINS
 function __load_plugins__
 {
 	for plugin in "$@"; do
+		[[ -f ${plugin} ]] || continue
 		source "${plugin}"
 		temp="${plugin##*/${STAMPER_SCRIPT_NAME}-plugin-}"
 		__VERBOSE__ ".   $temp: $plugin"
@@ -1181,7 +1182,7 @@ for arg in "$@"; do
 		esac
 	elif [[ -n ${temp_plugin} ]]; then
 		# plugin specification; optional arguments -i | --gitignore and -a | --gitattributes
-		__VERBOSE__ ".        plugin arg ${an}: \"${arg}\""
+		__VERBOSE__ ".        plugin arg ${an}: \"${arg//\\/\\\\}\""
 		case "${arg}" in
 		"")
 			;;				# skip empty arg
@@ -1218,7 +1219,8 @@ for arg in "$@"; do
 				;;
 			*)
 				# any other path (change \ to / and strip leading ./ and / -- usefull for pathes given by stamper config)
-				__STDPATH_FUNCTION__ --var temp_target --base "${VERSION_CONFIG_DIR}" --mixed -- "${VERSION_CONFIG_DIR}/${arg/#+(.\/|\/)/}"
+				arg="${arg//\\//}";     arg="${arg#./}";        arg="${arg#/}"
+				__STDPATH_FUNCTION__ --var temp_target --base "${VERSION_CONFIG_DIR}" --mixed -- "${VERSION_CONFIG_DIR}/${arg}"
 				;;
 			esac
 			if [[ -n ${STAMPER_KNOWN_TARGETS[${temp_target}]} && "//-" != ${temp_target} && "//--" != ${temp_target} ]]; then
@@ -1306,7 +1308,7 @@ Available options are:
               and leading '/' and/or '.'). This option turns on special processing during hook execution.
               Note: do not set it manually (except for test only), it must be used by corrresponding git hooks.
 
-Available сommands are
+Available commands are
               PLUGIN [plugin_options] FILE
 
 Available plugin_options are:

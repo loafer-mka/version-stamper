@@ -672,7 +672,7 @@ fi
 #
 # Translate path to use inside regex
 #
-# value encoded for substitution into awk's block regexp 
+# value encoded for substitution into awk's block regexp
 # /block-regexp/ { ... }
 function __AS_REGEX_IN__
 {
@@ -883,7 +883,7 @@ if [[ -r ${VERSION_CONFIG_PATH} ]]; then
 			fi
 			;;
 		verbose:)
-			if [[ -z ${STAMPER_VERBOSE} ]]; then 
+			if [[ -z ${STAMPER_VERBOSE} ]]; then
 				case "${value,,}" in
 				verbose | true | t | yes | y | ok | set | on | simple | 1)
 					STAMPER_VERBOSE="simple"
@@ -2901,7 +2901,7 @@ function __update_this_hook_async__
 	local	usleep="$(which usleep 2>/dev/null)"
 	local	ps="$(which ps 2>/dev/null)"
 
-	# stdout and stderr both are redirected, so change __VERBOSE__ to use logger 
+	# stdout and stderr both are redirected, so change __VERBOSE__ to use logger
 	if [[ "Windows_NT" == ${OS} ]]; then
 		# if stdout and stderr are closed ... I do'nt known how to
 		# access windows syslog from msys2 bash script
@@ -3123,7 +3123,7 @@ if [[ "false" != ${STAMPER_SETUP_HOOKS} ]]; then
 			__VERBOSE__ "Info: do not update git hooks because missing '.git/hooks' folder"
 		else
 			__VERBOSE__ "Update hooks now"
-			
+
 			if [[ -n ${STAMPER_HOOKS[${STAMPER_SCRIPT_NAME}]} ]]; then
 				# for version stamper project itself executed plugin may change
 				# current version data, so reload version file before updating hooks.

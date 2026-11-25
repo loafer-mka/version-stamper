@@ -103,7 +103,7 @@ function __PLUGIN_CS_MODIFY__
 	# get day starting from 2000-01-01
 	# the AssemblyVersion and AssemblyFileVersion members must be 0..65535 (16-bit unsigned)
 	local vt au dc
-	
+
 	vt="${VERSION_TEXT_RQREG} ${VERSION_DATE_RQREG} ${VERSION_HOSTINFO_RQREG} ${VERSION_SHA_SHORT}"
 	vt="${vt//\\&/\&}"
 	vt="${vt//\\\//\/}"
@@ -111,7 +111,7 @@ function __PLUGIN_CS_MODIFY__
 	au="${au//\\\//\/}"
 	dc="${VERSION_DECLARATION_RQREG//\\&/\&}"
 	dc="${dc//\\\//\/}"
-	
+
 	awk -v RS='(\r\n|\n\r|\r|\n)' \
 		-v VN="${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_SUFFIX}.${VERSION_BUILD}" \
 		-v VT="${vt}" -v AU="${au}" -v DC="${dc}" \

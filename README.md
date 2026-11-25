@@ -333,7 +333,7 @@ Available options:
      CURRENT_DIR=        /home/your_name/your_project
      GIT_DIR=            /home/your_name/your_project/.git
      ROOT_DIR=           /home/your_name/your_project
-     SUPERPROJECT_DIR=   
+     SUPERPROJECT_DIR=
 
      Plugin   = Target file                        Information
   -----------------------------------------------------------------------
@@ -375,7 +375,7 @@ Available options:
      VERSION_SUFFIX=
      VERSION_BUILD=         333
      VERSION_BRANCH=        branchname
-     VERSION_DIRTY=       
+     VERSION_DIRTY=
      VERSION_DATE=          2023-11-06 22:17:09
      VERSION_SHORTDATE=     231106221709
      VERSION_UNIXTIME       1699298229
@@ -386,10 +386,10 @@ Available options:
      VERSION_DECLARATION=   Copyright (c) Your Name 2023
      VERSION_COMMIT_AUTHOR= Your Name
      VERSION_COMMIT_EMAIL=  your@email.org
-     VERSION_SUBMOD_NAME= 
-     VERSION_SUBMOD_PATH= 
-     VERSION_LEADER=      
-     VERSION_TRAILER=     
+     VERSION_SUBMOD_NAME=
+     VERSION_SUBMOD_PATH=
+     VERSION_LEADER=
+     VERSION_TRAILER=
      Note. The identifier names listed here are exposed in the plugin, not in the target file.
 ```
 
@@ -408,7 +408,7 @@ Available options:
   is a leading symbol ('v' in most cases) and `VERSION_SUFFIX` is empty
   string, except complex tag name used (for example if tag name is
   'v1.22.333' then `VERSION_SUFFIX` becomes '.333').
-  
+
   The name of the current branch `VERSION_BRANCH` is either the name of
   the attached branch, or calculated if HEAD is detached (which is often
   the case for submodules). Computation cannot guarantee the correctness
@@ -434,11 +434,11 @@ Available options:
   initially assigned based on the username, git configuration and default
   value of parameter `STAMPER_DEFAULT_DECL` in the `version-stamper-config`
   file.
-  
+
   `VERSION_COMMIT_AUTHOR` and `VERSION_COMMIT_EMAIL` - retrieved from
   current commit description. If the repository is completely empty, then
   based on the username and e-mail in the git configuration.
-   
+
   `VERSION_LEADER` and `VERSION_TRAILER` - are taken from the
   `.version-stamper` configuration file, when it is created, they
   initially remain either empty lines, and in the case of a submodule,
@@ -674,7 +674,7 @@ Valid parameters:
    or the current year if the project is still empty.
 
 6. `default-cmd` - a command substituted by default if there are no
-   essential commands and parameters on the version-stamper command line. 
+   essential commands and parameters on the version-stamper command line.
    The usual value is either `--help` (suitable for just started projects),
    or `--list` and/or `--print`, which can be convenient when you are
    already used to the version-stamper command and it is more important
@@ -1314,7 +1314,7 @@ pre-commit  ->  prepare-commit-msg  ->  commit-msg  ->  post-commit
 <---------------- o l d   c o m m i t ----------------><-- n e w -->
                                                        (distance increased)
 ```
-                                                           
+
 **Amend** commit:
 
 ```

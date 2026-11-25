@@ -298,7 +298,7 @@ This script may be included by other script and then used as function
 				[ 0 -eq ${no_root} ] && r="${r:-/}"
 			fi
 			unset R
-			
+
 			case "${mode}" in
 			sua)
 				case "${r}" in

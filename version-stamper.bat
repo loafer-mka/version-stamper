@@ -53,7 +53,7 @@ if "!SHELLUTIL!" == "" (
 set PATHUTIL=
 for /F "tokens=*" %%P in ('"%~0" CYGPATH-PATH !GITPATH!') do set PATHUTIL=%%~sP
 if "!PATHUTIL!" == "" (
-	echo FATAL: %0 cannot find bash.exe and/or sh.exe utility, install please git for windows https://git-scm.com/download/win/
+	echo FATAL: %0 cannot find cygpath.exe utility, install please git for windows https://git-scm.com/download/win/
 	goto :EOF
 )
 

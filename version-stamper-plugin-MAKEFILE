@@ -56,7 +56,7 @@ function __PLUGIN_MAKEFILE_MODIFY__
 {
 	local text branch date hostinfo authorship declaration commit
 	__AS_REGEX_OUT__ declaration "${VERSION_DECLARATION}"
-	
+
 	sed --binary --regexp-extended \
 		-e "s/^(\s*)(\w*VERSION_ID\w*)(\s*:=\s*)([0-9A-Fa-f]+)(\s*)$/\\1${NAME_VERSION_ID}\\3${VERSION_ID}\\5/" \
 		-e "s/^(\s*)(\w*VERSION_TEXT\w*)(\s*:=\s*)([^ \t\r\n]+)(\s*)$/\\1${NAME_VERSION_TEXT}\\3${VERSION_TEXT//\//\\\/}/" \

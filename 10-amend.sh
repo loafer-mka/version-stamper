@@ -39,9 +39,9 @@ function LOAD_FILES
     shift
     unset ${var}
     declare -Ag ${var}
-    
+
     [ -z "$1" ] && set -- "."
-    
+
     while [ -n "$1" ]; do
         if [ "." == "$1" ]; then
             p=""

@@ -132,7 +132,7 @@ function GIT_INIT
 	#
 	# note: current git needs in renamed default branch; i.e. must be used:
 	#
-	# --initial-branch master 
+	# --initial-branch master
 	#    or
 	# -c init.defaultBranch=master
 	#
